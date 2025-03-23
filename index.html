@@ -12,7 +12,7 @@
   <header class="hero">
     <div class="hero-content">
       <h1>himiyosh</h1>
-      <p>Engineer / カメラ・映画・ダンス</p>
+      <p class="typing-text" id="typing"></p>
       <nav>
         <a href="#about">About</a>
         <a href="#skills">Skills</a>
@@ -31,12 +31,13 @@
       <h2>Skills</h2>
       <ul>
         <li>クラウド・コラボレーションツールに関する技術サポート</li>
-        <li>色々と勉強中</li>
+        <li>色々と学習中</li>
       </ul>
     </section>
 
     <section id="contact" class="fade-in">
       <h2>Contact</h2>
+      <p>Email: <a href="mailto:himiyosh@gmail.com">himiyosh@gmail.com</a></p>
       <p>GitHub: <a href="https://github.com/himiyosh" target="_blank">himiyosh</a></p>
     </section>
   </main>
@@ -46,6 +47,20 @@
   </footer>
 
   <script>
+    const text = "Engineer / カメラ・映画・ダンス";
+    const typingTarget = document.getElementById("typing");
+    let index = 0;
+
+    function typeWriter() {
+      if (index < text.length) {
+        typingTarget.textContent += text.charAt(index);
+        index++;
+        setTimeout(typeWriter, 80);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', typeWriter);
+
     // スクロール時フェードイン
     const faders = document.querySelectorAll('.fade-in');
     const appearOptions = {
