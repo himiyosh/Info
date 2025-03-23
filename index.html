@@ -1,85 +1,71 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>himiyosh - Profile</title>
-  <link rel="stylesheet" href="styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>himiyosh - Portfolio</title>
+  <!-- CSSを読み込み -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- GSAP for scroll animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+
+  <!-- particles.js で幾何学模様を描画 -->
+  <script src="https://cdn.jsdelivr.net/npm/particles.js"></script>
+
+  <!-- i18next for multi-language support -->
+  <script src="https://unpkg.com/i18next@21.6.16/dist/umd/i18next.min.js"></script>
 </head>
 <body>
-
-  <header class="hero">
-    <div class="hero-content">
-      <h1>himiyosh</h1>
-      <p class="typing-text" id="typing"></p>
-      <nav>
-        <a href="#about">About</a>
-        <a href="#skills">Skills</a>
-        <a href="#contact">Contact</a>
-      </nav>
-    </div>
+  <!-- 固定ヘッダー -->
+  <header id="header" class="header">
+    <div class="logo">himiyosh</div>
+    <nav>
+      <a href="#about" data-i18n="nav.about">About</a>
+      <a href="#projects" data-i18n="nav.projects">Projects</a>
+      <a href="#contact" data-i18n="nav.contact">Contact</a>
+      <button id="lang-toggle">EN</button>
+    </nav>
   </header>
 
-  <main>
-    <section id="about" class="fade-in">
-      <h2>About</h2>
-      <p>某グローバルIT企業にてテクノロジー領域の課題解決に携わるエンジニアとして活動中。人の役に立つ知識・技術の探求を楽しんでいます。</p>
-    </section>
+  <!-- 幾何学模様を表示する領域：背景の最背面に配置 -->
+  <div id="particles-js"></div>
 
-    <section id="skills" class="fade-in">
-      <h2>Skills</h2>
-      <ul>
-        <li>クラウド・コラボレーションツールに関する技術サポート</li>
-        <li>色々と学習中</li>
-      </ul>
-    </section>
+  <!-- ヒーローセクション（画像＋グラデーション背景） -->
+  <section class="hero">
+    <h1>himiyosh</h1>
+    <p class="typing-text" id="typing"></p>
+  </section>
 
-    <section id="contact" class="fade-in">
-      <h2>Contact</h2>
-      <p>Email: <a href="mailto:himiyosh@gmail.com">himiyosh@gmail.com</a></p>
-      <p>GitHub: <a href="https://github.com/himiyosh" target="_blank">himiyosh</a></p>
-    </section>
-  </main>
+  <!-- About セクション -->
+  <section id="about" class="fade-section">
+    <h2 data-i18n="about.title">About</h2>
+    <p data-i18n="about.content">
+      某グローバルIT企業にてテクノロジー領域の課題解決に携わるエンジニア。人の役に立つ知識・技術の探求が大好き。
+    </p>
+  </section>
 
+  <!-- Projects セクション -->
+  <section id="projects" class="fade-section">
+    <h2 data-i18n="projects.title">Projects</h2>
+    <div class="projects-container" id="projects-container"></div>
+  </section>
+
+  <!-- Contact セクション -->
+  <section id="contact" class="fade-section">
+    <h2 data-i18n="contact.title">Contact</h2>
+    <p>Email: <a href="mailto:himiyosh@gmail.com">himiyosh@gmail.com</a></p>
+    <p>GitHub: <a href="https://github.com/himiyosh" target="_blank">himiyosh</a></p>
+  </section>
+
+  <!-- フッター -->
   <footer>
     <p>&copy; 2025 himiyosh</p>
   </footer>
 
-  <script>
-    const text = "Engineer / カメラ・映画・ダンス";
-    const typingTarget = document.getElementById("typing");
-    let index = 0;
-
-    function typeWriter() {
-      if (index < text.length) {
-        typingTarget.textContent += text.charAt(index);
-        index++;
-        setTimeout(typeWriter, 80);
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', typeWriter);
-
-    // スクロール時フェードイン
-    const faders = document.querySelectorAll('.fade-in');
-    const appearOptions = {
-      threshold: 0.2,
-      rootMargin: "0px 0px -50px 0px"
-    };
-    const appearOnScroll = new IntersectionObserver(function(entries, observer) {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("appear");
-          observer.unobserve(entry.target);
-        }
-      });
-    }, appearOptions);
-
-    faders.forEach(fader => {
-      appearOnScroll.observe(fader);
-    });
-  </script>
-
+  <!-- メインロジック読み込み -->
+  <script src="script.js"></script>
+  <script src="i18n.js"></script>
 </body>
 </html>
