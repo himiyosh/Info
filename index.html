@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>himiyosh - Profile</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header class="hero">
+    <div class="hero-content">
+      <h1>himiyosh</h1>
+      <p>Engineer / カメラ・映画・ダンス</p>
+      <nav>
+        <a href="#about">About</a>
+        <a href="#skills">Skills</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section id="about" class="fade-in">
+      <h2>About</h2>
+      <p>某グローバルIT企業にてテクノロジー領域の課題解決に携わるエンジニアとして活動中。人の役に立つ知識・技術の探求を楽しんでいます。</p>
+    </section>
+
+    <section id="skills" class="fade-in">
+      <h2>Skills</h2>
+      <ul>
+        <li>クラウド・コラボレーションツールに関する技術サポート</li>
+        <li>色々と勉強中</li>
+      </ul>
+    </section>
+
+    <section id="contact" class="fade-in">
+      <h2>Contact</h2>
+      <p>GitHub: <a href="https://github.com/himiyosh" target="_blank">himiyosh</a></p>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 himiyosh</p>
+  </footer>
+
+  <script>
+    // スクロール時フェードイン
+    const faders = document.querySelectorAll('.fade-in');
+    const appearOptions = {
+      threshold: 0.2,
+      rootMargin: "0px 0px -50px 0px"
+    };
+    const appearOnScroll = new IntersectionObserver(function(entries, observer) {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("appear");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, appearOptions);
+
+    faders.forEach(fader => {
+      appearOnScroll.observe(fader);
+    });
+  </script>
+
+</body>
+</html>

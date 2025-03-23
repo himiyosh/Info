@@ -1,0 +1,105 @@
+* {
+    box-sizing: border-box;
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+    background-color: #121212;
+    color: #f5f5f5;
+  }
+  
+  .hero {
+    height: 100vh;
+    background: url('assets/profile.jpg') center/cover no-repeat;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .hero::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 1;
+  }
+  
+  .hero-content {
+    position: relative;
+    z-index: 2;
+  }
+  
+  .hero-content h1 {
+    font-size: 3.5em;
+    margin-bottom: 0.3em;
+    font-weight: 600;
+  }
+  
+  .hero-content p {
+    font-size: 1.2em;
+    margin-bottom: 1em;
+  }
+  
+  nav a {
+    color: #f5f5f5;
+    text-decoration: none;
+    margin: 0 1em;
+    font-weight: 300;
+    transition: color 0.3s ease;
+  }
+  
+  nav a:hover {
+    color: #90caf9;
+  }
+  
+  section {
+    padding: 4em 2em;
+    max-width: 800px;
+    margin: auto;
+  }
+  
+  h2 {
+    font-size: 2em;
+    margin-bottom: 0.5em;
+    border-bottom: 2px solid #90caf9;
+    display: inline-block;
+  }
+  
+  footer {
+    text-align: center;
+    padding: 2em;
+    background-color: #1e1e1e;
+    font-size: 0.9em;
+    color: #aaa;
+  }
+  
+  /* フェードイン */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s ease-out;
+  }
+  
+  .fade-in.appear {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  /* レスポンシブ */
+  @media (max-width: 600px) {
+    .hero-content h1 {
+      font-size: 2em;
+    }
+  
+    nav a {
+      display: block;
+      margin: 0.5em 0;
+    }
+  }
+  
