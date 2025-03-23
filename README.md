@@ -1,2 +1,2 @@
 ## Info
-Site: https://himiyosh.github.io/Index/
+- Site: https://himiyosh.github.io/Info/
