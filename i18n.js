@@ -18,7 +18,9 @@ i18next.init({
           },
           contact: {
             title: "Contact"
-          }
+          },
+          // 日本語ディスクレーマー（やや控えめ）
+          disclaimer: "[免責事項] このアカウントは個人的利用を目的としています。所属組織の公式見解を代表するものではありません。"
         }
       },
       en: {
@@ -37,7 +39,9 @@ i18next.init({
           },
           contact: {
             title: "Contact"
-          }
+          },
+          // 英語ディスクレーマー（控えめ）
+          disclaimer: "[Disclaimer] This account is for personal usage. Does not represent the official views of the organization."
         }
       }
     }
@@ -45,7 +49,6 @@ i18next.init({
     updateContent();
   });
   
-  // 言語が変わるたびに各要素のテキストを再描画
   i18next.on('languageChanged', () => updateContent());
   
   function updateContent() {

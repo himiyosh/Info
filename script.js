@@ -1,7 +1,8 @@
 // script.js
 document.addEventListener("DOMContentLoaded", () => {
     // タイピングアニメ
-    const text = "Engineer / カメラ・映画・ダンス";
+    // ↓ ここを "Engineer / Rookie Dad / Camera, Travel, Movie" に変更
+    const text = "Engineer / Rookie Dad / Camera, Travel, Movie";
     const typingTarget = document.getElementById("typing");
     let index = 0;
   
@@ -54,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       });
   
-    // ここで幾何学模様をロード (particles.json)
+    // 幾何学模様のロード
     particlesJS.load("particles-js", "particles.json?v=1", () => {
       console.log("particles.js loaded with geometric polygons");
     });
