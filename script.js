@@ -2,7 +2,7 @@
 document.addEventListener("DOMContentLoaded", () => {
     // タイピングアニメ
     // ↓ ここを "Engineer / Rookie Dad / Camera, Travel, Movie" に変更
-    const text = "Engineer / Rookie Dad / Camera, Travel, Movie";
+    const text = "Engineer / Rookie Dad";
     const typingTarget = document.getElementById("typing");
     let index = 0;
   
