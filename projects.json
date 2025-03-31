@@ -1,7 +1,17 @@
 [
   {
-    "title": "Portfolio Site",
+    "title": "Portfolio",
     "description": "Simple portfolio site. Built with HTML, CSS, JS and modern UI tools like GSAP and particles.js.",
     "link": "https://github.com/himiyosh/Info"
+  },
+  {
+    "title": "URLDecoder",
+    "description": "Simple URL Encoder/Decoder site.",
+    "link": "https://himiyosh.github.io/URLDecoder/"
+  },
+  {
+    "title": "ImageResizer",
+    "description": "Convert image to 192px or 32px square icon.",
+    "link": "https://himiyosh.github.io/ImageResizer/"
   }
 ]
