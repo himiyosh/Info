@@ -1,7 +1,22 @@
 // script.js
 document.addEventListener("DOMContentLoaded", () => {
+    const hamburgerMenu = document.getElementById("hamburger-menu");
+    const navMenu = document.getElementById("nav-menu");
+  
+    // Hide the hamburger menu icon and disable the button when the menu is active
+    hamburgerMenu.addEventListener("click", () => {
+      navMenu.classList.toggle("active");
+
+      if (navMenu.classList.contains("active")) {
+        hamburgerMenu.style.display = "none"; // Hide the icon
+        hamburgerMenu.disabled = true; // Disable the button
+      } else {
+        hamburgerMenu.style.display = "block"; // Show the icon
+        hamburgerMenu.disabled = false; // Enable the button
+      }
+    });
+
     // タイピングアニメ
-    // ↓ ここを "Engineer / Rookie Dad / Camera, Travel, Movie" に変更
     const text = "Engineer / Rookie Dad";
     const typingTarget = document.getElementById("typing");
     let index = 0;
@@ -68,5 +83,42 @@ document.addEventListener("DOMContentLoaded", () => {
       langToggle.textContent = currentLang === "ja" ? "EN" : "JP";
       i18next.changeLanguage(currentLang);
     });
+
+    // Adjust the logo to be centered in mobile view
+    const logo = document.querySelector('.logo');
+
+    if (window.innerWidth <= 768) {
+      logo.style.position = 'absolute';
+      logo.style.left = '50%';
+      logo.style.transform = 'translateX(-50%)';
+    }
   });
-  
+
+// Close the hamburger menu when clicking outside of it
+document.addEventListener("click", (event) => {
+  const navMenu = document.getElementById("nav-menu");
+  const hamburgerMenu = document.getElementById("hamburger-menu");
+
+  if (
+    navMenu.classList.contains("active") &&
+    !navMenu.contains(event.target) &&
+    !hamburgerMenu.contains(event.target)
+  ) {
+    navMenu.classList.remove("active");
+    hamburgerMenu.style.display = "block"; // Show the icon
+    hamburgerMenu.disabled = false; // Enable the button
+  }
+});
+
+// Ensure the hamburger menu icon is hidden when switching to PC view
+window.addEventListener("resize", () => {
+  const hamburgerMenu = document.getElementById("hamburger-menu");
+  const navMenu = document.getElementById("nav-menu");
+
+  if (window.innerWidth >= 769) {
+    hamburgerMenu.style.display = "none"; // Hide the hamburger menu icon
+    navMenu.classList.remove("active"); // Ensure the menu is not active
+  } else {
+    hamburgerMenu.style.display = "block"; // Show the hamburger menu icon for mobile view
+  }
+});

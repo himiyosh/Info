@@ -53,6 +53,14 @@ body {
   color: #64b5f6; /* 寒色の青 */
 }
 
+@media (max-width: 768px) {
+  .logo {
+    position: absolute;
+    top: 1.5em; /* ハンバーガーメニューと同じ高さ */
+    left: 1em; /* 左端に配置 */
+  }
+}
+
 /* ナビゲーション & ボタン */
 nav a,
 nav button {
@@ -70,6 +78,38 @@ nav button {
 nav a:hover,
 nav button:hover {
   color: #ffffff;
+}
+
+/* Hamburger menu button */
+.hamburger-menu {
+  display: block;
+  font-size: 2em;
+  background: none;
+  border: none;
+  color: #64b5f6;
+  cursor: pointer;
+  z-index: 1001;
+  position: fixed;
+  top: 1.5em;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Adjusting the .nav-menu to avoid overlapping with the hamburger menu icon */
+.nav-menu {
+  position: absolute;
+  top: calc(100% + 1em); /* Place the menu below the hamburger icon */
+  right: 0;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 1em;
+  border-radius: 8px;
+  z-index: 1000;
+  display: none; /* Hidden by default */
+  flex-direction: column;
+}
+
+.nav-menu.active {
+  display: flex; /* Show the menu when active */
 }
 
 /* ヒーローセクション（画像＋グラデーション） */
@@ -186,5 +226,70 @@ footer {
   }
   .header {
     flex-direction: column;
+  }
+  .hamburger-menu {
+    display: block;
+    position: fixed; /* 固定位置に変更 */
+    top: 1.5em; /* ヘッダー内で少し下に配置 */
+    left: 80%; /* Move further to the right */
+    transform: none; /* Remove centering transformation */
+  }
+
+  .nav-menu {
+    display: none;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 1em;
+    border-radius: 8px;
+    z-index: 1000;
+  }
+
+  .nav-menu.active {
+    display: flex;
+  }
+
+  .header {
+    z-index: 1000; /* Ensure header stays above content */
+  }
+
+  .hero {
+    padding-top: 120px; /* Add padding to prevent overlap with header */
+  }
+}
+
+/* Ensure navigation menu is displayed inline for PC view */
+@media (min-width: 769px) {
+  .nav-menu {
+    display: flex !important; /* Always show menu items inline */
+    position: static; /* Remove absolute positioning */
+    flex-direction: row; /* Align items horizontally */
+    background: none; /* Remove background */
+    padding: 0; /* Remove padding */
+    gap: 1em; /* Add spacing between items */
+  }
+
+  .hamburger-menu {
+    display: none; /* Hide hamburger menu icon */
+  }
+}
+
+/* Ensure navigation menu is displayed on the right for PC view */
+@media (min-width: 769px) {
+  .nav-menu {
+    justify-content: flex-end; /* Align menu items to the right */
+  }
+}
+
+/* Ensure the navigation menu aligns to the right for PC view */
+@media (min-width: 769px) {
+  .header {
+    justify-content: space-between; /* Ensure header items are spaced */
+  }
+
+  .nav-menu {
+    margin-left: auto; /* Push the menu to the right */
   }
 }
