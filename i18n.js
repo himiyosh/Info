@@ -12,10 +12,16 @@ if (typeof window.i18next === "undefined") {
 
   function updateContent() {
     document.documentElement.lang = i18next.resolvedLanguage;
+    document.title = i18next.t("meta.title");
 
     document.querySelectorAll("[data-i18n]").forEach((el) => {
       const key = el.getAttribute("data-i18n");
       el.textContent = i18next.t(key);
+    });
+
+    document.querySelectorAll("[data-i18n-content]").forEach((el) => {
+      const key = el.getAttribute("data-i18n-content");
+      el.setAttribute("content", i18next.t(key));
     });
 
     const langToggle = document.getElementById("lang-toggle");
@@ -31,6 +37,12 @@ if (typeof window.i18next === "undefined") {
     resources: {
       ja: {
         translation: {
+          meta: {
+            title: "himiyosh | エンジニアのポートフォリオ",
+            description: "エンジニア himiyosh の個人ポートフォリオ。技術への関心、公開プロジェクト、連絡先を日本語と英語で紹介します。",
+            locale: "ja_JP",
+            alternateLocale: "en_US"
+          },
           nav: {
             about: "About",
             projects: "Projects",
@@ -55,6 +67,12 @@ if (typeof window.i18next === "undefined") {
       },
       en: {
         translation: {
+          meta: {
+            title: "himiyosh | Engineer Portfolio",
+            description: "Personal portfolio of engineer himiyosh, featuring technical interests, public projects, and contact links in Japanese and English.",
+            locale: "en_US",
+            alternateLocale: "ja_JP"
+          },
           nav: {
             about: "About",
             projects: "Projects",
