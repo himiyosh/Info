@@ -1,5 +1,32 @@
-// i18n.js
-i18next.init({
+if (typeof window.i18next === "undefined") {
+  console.error("Translations are unavailable because i18next did not load.");
+} else {
+  window.updateNavigationLabel = function updateNavigationLabel() {
+    const menuButton = document.getElementById("hamburger-menu");
+    const labelKey =
+      menuButton.getAttribute("aria-expanded") === "true"
+        ? "nav.closeMenu"
+        : "nav.openMenu";
+    menuButton.setAttribute("aria-label", i18next.t(labelKey));
+  };
+
+  function updateContent() {
+    document.documentElement.lang = i18next.resolvedLanguage;
+
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      const key = el.getAttribute("data-i18n");
+      el.textContent = i18next.t(key);
+    });
+
+    const langToggle = document.getElementById("lang-toggle");
+    langToggle.textContent = i18next.resolvedLanguage === "ja" ? "EN" : "JP";
+    langToggle.setAttribute("aria-label", i18next.t("nav.switchLanguage"));
+    window.updateNavigationLabel();
+  }
+
+  i18next.on("languageChanged", updateContent);
+
+  i18next.init({
     lng: "ja",
     resources: {
       ja: {
@@ -7,7 +34,10 @@ i18next.init({
           nav: {
             about: "About",
             projects: "Projects",
-            contact: "Contact"
+            contact: "Contact",
+            openMenu: "ナビゲーションを開く",
+            closeMenu: "ナビゲーションを閉じる",
+            switchLanguage: "EN（英語に切り替える）"
           },
           about: {
             title: "About",
@@ -28,7 +58,10 @@ i18next.init({
           nav: {
             about: "About",
             projects: "Projects",
-            contact: "Contact"
+            contact: "Contact",
+            openMenu: "Open navigation",
+            closeMenu: "Close navigation",
+            switchLanguage: "JP (Switch to Japanese)"
           },
           about: {
             title: "About",
@@ -45,16 +78,11 @@ i18next.init({
         }
       }
     }
-  }, function(err, t) {
+  }, function(err) {
+    if (err) {
+      console.error("Unable to initialize translations:", err);
+      return;
+    }
     updateContent();
   });
-  
-  i18next.on('languageChanged', () => updateContent());
-  
-  function updateContent() {
-    document.querySelectorAll('[data-i18n]').forEach((el) => {
-      const key = el.getAttribute('data-i18n');
-      el.textContent = i18next.t(key);
-    });
-  }
-  
+}
