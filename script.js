@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
       throw new TypeError(`Project ${index + 1} must be an object.`);
     }
 
-    ["title", "description", "kind", "action", "link"].forEach((field) => {
+    ["title", "description", "kind", "action", "link", "image", "imageAlt"].forEach((field) => {
       if (!project[field]) {
         throw new TypeError(`Project ${index + 1} is missing ${field}.`);
       }
@@ -103,6 +103,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const url = new URL(project.link, window.location.href);
     if (!["http:", "https:"].includes(url.protocol)) {
       throw new TypeError(`Project ${index + 1} has an unsupported link protocol.`);
+    }
+
+    const imageUrl = new URL(project.image, window.location.href);
+    if (imageUrl.origin !== window.location.origin) {
+      throw new TypeError(`Project ${index + 1} preview must be a local asset.`);
     }
 
     if (project.stack && !Array.isArray(project.stack)) {
@@ -118,6 +123,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const fragment = document.createDocumentFragment();
     projects.forEach((project) => {
       const article = document.createElement("article");
+      const media = document.createElement("div");
+      const image = document.createElement("img");
+      const content = document.createElement("div");
       const headingGroup = document.createElement("div");
       const title = document.createElement("h3");
       const kind = document.createElement("p");
@@ -128,6 +136,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const linkArrow = document.createElement("span");
 
       article.className = "project-row";
+      media.className = "project-media";
+      image.src = project.image;
+      image.alt = localizedValue(project.imageAlt);
+      image.width = 960;
+      image.height = 540;
+      image.loading = "lazy";
+      image.decoding = "async";
+      media.append(image);
+      content.className = "project-content";
       headingGroup.className = "project-heading";
       title.textContent = localizedValue(project.title);
       kind.className = "project-kind";
@@ -155,7 +172,8 @@ document.addEventListener("DOMContentLoaded", () => {
       linkArrow.textContent = "\u2197";
       link.append(linkText, linkArrow);
 
-      article.append(headingGroup, details, link);
+      content.append(headingGroup, details, link);
+      article.append(media, content);
       fragment.append(article);
     });
 

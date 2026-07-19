@@ -12,6 +12,11 @@
       "ja": "このポートフォリオのソースコード。日本語と英語の切り替え、レスポンシブ表示、アクセシビリティを備えた静的サイトです。",
       "en": "The source for this portfolio: a static bilingual site with responsive behavior and accessible interactions."
     },
+    "image": "assets/portfolio-preview.jpg",
+    "imageAlt": {
+      "ja": "himiyosh ポートフォリオのヒーロー画面",
+      "en": "Hero view of the himiyosh portfolio"
+    },
     "stack": ["HTML", "CSS", "JavaScript"],
     "action": {
       "ja": "GitHub でコードを見る",
@@ -32,6 +37,11 @@
       "ja": "URL のエンコードとデコードをブラウザーで行う、シンプルなユーティリティです。",
       "en": "A simple browser utility for encoding and decoding URLs."
     },
+    "image": "assets/url-decoder-preview.jpg",
+    "imageAlt": {
+      "ja": "入力欄と操作ボタンを備えた URLDecoder の画面",
+      "en": "URLDecoder interface with input, output, and action controls"
+    },
     "action": {
       "ja": "ツールを開く",
       "en": "Open the tool"
@@ -50,6 +60,11 @@
     "description": {
       "ja": "画像を 192px または 32px の正方形アイコンに変換する、ブラウザー上のツールです。",
       "en": "A browser tool that converts an image into a 192px or 32px square icon."
+    },
+    "image": "assets/image-resizer-preview.jpg",
+    "imageAlt": {
+      "ja": "画像を選択し、2 種類のサイズをダウンロードできる ImageResizer の画面",
+      "en": "ImageResizer interface with a selected image and two download sizes"
     },
     "action": {
       "ja": "ツールを開く",
