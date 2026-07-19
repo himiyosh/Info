@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://himiyosh.github.io/Info/sitemap.xml
