@@ -1,17 +1,60 @@
 [
   {
-    "title": "Portfolio",
-    "description": "Simple portfolio site. Built with HTML, CSS, JavaScript, i18next and particles.js.",
+    "title": {
+      "ja": "Portfolio",
+      "en": "Portfolio"
+    },
+    "kind": {
+      "ja": "個人サイト / オープンソース",
+      "en": "Personal site / Open source"
+    },
+    "description": {
+      "ja": "このポートフォリオのソースコード。日本語と英語の切り替え、レスポンシブ表示、アクセシビリティを備えた静的サイトです。",
+      "en": "The source for this portfolio: a static bilingual site with responsive behavior and accessible interactions."
+    },
+    "stack": ["HTML", "CSS", "JavaScript"],
+    "action": {
+      "ja": "GitHub でコードを見る",
+      "en": "View code on GitHub"
+    },
     "link": "https://github.com/himiyosh/Info"
   },
   {
-    "title": "URLDecoder",
-    "description": "Simple URL Encoder/Decoder site.",
+    "title": {
+      "ja": "URLDecoder",
+      "en": "URLDecoder"
+    },
+    "kind": {
+      "ja": "Web ツール",
+      "en": "Web tool"
+    },
+    "description": {
+      "ja": "URL のエンコードとデコードをブラウザーで行う、シンプルなユーティリティです。",
+      "en": "A simple browser utility for encoding and decoding URLs."
+    },
+    "action": {
+      "ja": "ツールを開く",
+      "en": "Open the tool"
+    },
     "link": "https://himiyosh.github.io/URLDecoder/"
   },
   {
-    "title": "ImageResizer",
-    "description": "Convert image to 192px or 32px square icon.",
+    "title": {
+      "ja": "ImageResizer",
+      "en": "ImageResizer"
+    },
+    "kind": {
+      "ja": "Web ツール",
+      "en": "Web tool"
+    },
+    "description": {
+      "ja": "画像を 192px または 32px の正方形アイコンに変換する、ブラウザー上のツールです。",
+      "en": "A browser tool that converts an image into a 192px or 32px square icon."
+    },
+    "action": {
+      "ja": "ツールを開く",
+      "en": "Open the tool"
+    },
     "link": "https://himiyosh.github.io/ImageResizer/"
   }
 ]
