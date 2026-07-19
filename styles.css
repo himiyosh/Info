@@ -4,7 +4,7 @@
  */
 :root {
   --font-display: "Trebuchet MS", "Avenir Next", sans-serif;
-  --font-display-ja: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif CJK JP", serif;
+  --font-display-ja: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", "Noto Sans CJK JP", sans-serif;
   --font-body: "Avenir Next", "Segoe UI", sans-serif;
   --font-body-ja: "Hiragino Sans", "Yu Gothic Medium", "Yu Gothic", "Noto Sans CJK JP", sans-serif;
   --color-canvas: oklch(82% 0.035 250);
@@ -79,7 +79,8 @@ html:lang(ja) .hero h1,
 html:lang(ja) .about-statement {
   font-family: var(--font-display-ja);
   font-feature-settings: "palt" 1;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 body.menu-open {
