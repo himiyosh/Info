@@ -8,7 +8,7 @@
     content="エンジニア himiyosh の個人ポートフォリオ。技術への関心、公開プロジェクト、連絡先を日本語と英語で紹介します。"
     data-i18n-content="meta.description"
   />
-  <meta name="theme-color" content="#f4f7fb" />
+  <meta name="theme-color" content="#b9c5d4" />
   <meta name="color-scheme" content="light" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="himiyosh" />
@@ -29,11 +29,14 @@
     content="en_US"
     data-i18n-content="meta.alternateLocale"
   />
-  <meta property="og:image" content="https://himiyosh.github.io/Info/assets/profile.jpg" />
+  <meta property="og:image" content="https://himiyosh.github.io/Info/assets/portfolio-preview.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="960" />
+  <meta property="og:image:height" content="540" />
   <meta
     property="og:image:alt"
-    content="山岳風景の中で手を上げる himiyosh のシルエット"
-    data-i18n-content="meta.imageAlt"
+    content="ポートフォリオの見出しと山岳写真を組み合わせた himiyosh のトップ画面"
+    data-i18n-content="meta.shareImageAlt"
   />
   <meta name="twitter:card" content="summary_large_image" />
   <meta
@@ -46,11 +49,11 @@
     content="エンジニア himiyosh の個人ポートフォリオ。技術への関心、公開プロジェクト、連絡先を日本語と英語で紹介します。"
     data-i18n-content="meta.description"
   />
-  <meta name="twitter:image" content="https://himiyosh.github.io/Info/assets/profile.jpg" />
+  <meta name="twitter:image" content="https://himiyosh.github.io/Info/assets/portfolio-preview.jpg" />
   <meta
     name="twitter:image:alt"
-    content="山岳風景の中で手を上げる himiyosh のシルエット"
-    data-i18n-content="meta.imageAlt"
+    content="ポートフォリオの見出しと山岳写真を組み合わせた himiyosh のトップ画面"
+    data-i18n-content="meta.shareImageAlt"
   />
   <link rel="canonical" href="https://himiyosh.github.io/Info/" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -72,6 +75,9 @@
   <script src="script.js" defer></script>
 </head>
 <body>
+  <div class="scroll-progress" aria-hidden="true">
+    <span></span>
+  </div>
   <a class="skip-link" href="#main-content" data-i18n="accessibility.skip">
     メインコンテンツへ移動
   </a>
@@ -198,7 +204,7 @@
             <span data-i18n="contact.emailLabel">Email</span>
             <strong>himiyosh@gmail.com</strong>
           </a>
-          <a href="https://github.com/himiyosh" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/himiyosh" target="_blank" rel="me noopener noreferrer">
             <span>GitHub</span>
             <strong>@himiyosh</strong>
           </a>

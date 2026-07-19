@@ -13,9 +13,70 @@ document.addEventListener("DOMContentLoaded", () => {
   const navMenu = requireElement("nav-menu");
   const langToggle = requireElement("lang-toggle");
   const projectsContainer = requireElement("projects-container");
+  const heroVisual = document.querySelector(".hero-visual");
+  const root = document.documentElement;
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
+  const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let projects = null;
   let projectState = "loading";
+  let projectObserver = null;
+
+  if (!reducedMotion.matches) {
+    root.classList.add("motion-ready");
+  }
+
+  let progressFrame = null;
+  function updateScrollProgress() {
+    const scrollable = root.scrollHeight - window.innerHeight;
+    const progress = scrollable > 0 ? Math.min(1, window.scrollY / scrollable) : 0;
+    root.style.setProperty("--scroll-progress", progress.toFixed(4));
+    progressFrame = null;
+  }
+
+  function requestScrollProgressUpdate() {
+    if (progressFrame === null) {
+      progressFrame = window.requestAnimationFrame(updateScrollProgress);
+    }
+  }
+
+  window.addEventListener("scroll", requestScrollProgressUpdate, { passive: true });
+  window.addEventListener("resize", requestScrollProgressUpdate, { passive: true });
+  updateScrollProgress();
+
+  function resetHeroTilt() {
+    if (!heroVisual) {
+      return;
+    }
+    heroVisual.classList.remove("is-tilting");
+    heroVisual.style.setProperty("--tilt-x", "0deg");
+    heroVisual.style.setProperty("--tilt-y", "0deg");
+    heroVisual.style.setProperty("--back-x", "0px");
+    heroVisual.style.setProperty("--back-y", "0px");
+  }
+
+  function updateHeroTilt(event) {
+    if (!heroVisual || reducedMotion.matches || !finePointer.matches) {
+      return;
+    }
+    const bounds = heroVisual.getBoundingClientRect();
+    const horizontal = (event.clientX - bounds.left) / bounds.width - 0.5;
+    const vertical = (event.clientY - bounds.top) / bounds.height - 0.5;
+    heroVisual.classList.add("is-tilting");
+    heroVisual.style.setProperty("--tilt-x", `${(horizontal * 5).toFixed(2)}deg`);
+    heroVisual.style.setProperty("--tilt-y", `${(-vertical * 5).toFixed(2)}deg`);
+    heroVisual.style.setProperty("--back-x", `${(-horizontal * 8).toFixed(2)}px`);
+    heroVisual.style.setProperty("--back-y", `${(-vertical * 8).toFixed(2)}px`);
+  }
+
+  heroVisual?.addEventListener("pointermove", updateHeroTilt);
+  heroVisual?.addEventListener("pointerleave", resetHeroTilt);
+  reducedMotion.addEventListener("change", (event) => {
+    root.classList.toggle("motion-ready", !event.matches);
+    if (event.matches) {
+      resetHeroTilt();
+    }
+  });
 
   function updateNavigationLabel() {
     const labelKey =
@@ -121,7 +182,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const fragment = document.createDocumentFragment();
-    projects.forEach((project) => {
+    projects.forEach((project, index) => {
       const article = document.createElement("article");
       const media = document.createElement("div");
       const image = document.createElement("img");
@@ -136,6 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const linkArrow = document.createElement("span");
 
       article.className = "project-row";
+      article.style.setProperty("--project-index", String(index));
       media.className = "project-media";
       image.src = project.image;
       image.alt = localizedValue(project.imageAlt);
@@ -180,6 +242,33 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsContainer.replaceChildren(fragment);
     projectsContainer.setAttribute("aria-busy", "false");
     projectState = "ready";
+    setupProjectMotion();
+  }
+
+  function setupProjectMotion() {
+    projectObserver?.disconnect();
+    const rows = [...projectsContainer.querySelectorAll(".project-row")];
+    if (
+      reducedMotion.matches ||
+      !root.classList.contains("motion-ready") ||
+      !("IntersectionObserver" in window)
+    ) {
+      rows.forEach((row) => row.classList.add("is-visible"));
+      return;
+    }
+
+    projectObserver = new IntersectionObserver(
+      (entries, observer) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.18 }
+    );
+    rows.forEach((row) => projectObserver.observe(row));
   }
 
   function renderProjectLoading() {

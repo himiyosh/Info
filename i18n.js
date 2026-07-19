@@ -13,7 +13,8 @@
           "エンジニア himiyosh の個人ポートフォリオ。技術への関心、公開プロジェクト、連絡先を日本語と英語で紹介します。",
         locale: "ja_JP",
         alternateLocale: "en_US",
-        imageAlt: "山岳風景の中で手を上げる himiyosh のシルエット"
+        imageAlt: "山岳風景の中で手を上げる himiyosh のシルエット",
+        shareImageAlt: "ポートフォリオの見出しと山岳写真を組み合わせた himiyosh のトップ画面"
       },
       accessibility: {
         skip: "メインコンテンツへ移動"
@@ -71,7 +72,8 @@
           "Personal portfolio of engineer himiyosh, featuring technical interests, public projects, and contact links in Japanese and English.",
         locale: "en_US",
         alternateLocale: "ja_JP",
-        imageAlt: "Silhouette of himiyosh raising a hand in a mountain landscape"
+        imageAlt: "Silhouette of himiyosh raising a hand in a mountain landscape",
+        shareImageAlt: "Portfolio hero pairing the himiyosh headline with a mountain photograph"
       },
       accessibility: {
         skip: "Skip to main content"
@@ -170,6 +172,20 @@
     }
   }
 
+  function updateLanguageUrl(language) {
+    const url = new URL(window.location.href);
+    if (language === DEFAULT_LANGUAGE) {
+      url.searchParams.delete("lang");
+    } else {
+      url.searchParams.set("lang", language);
+    }
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${url.pathname}${url.search}${url.hash}`
+    );
+  }
+
   function updateTextContent() {
     document.querySelectorAll("[data-i18n]").forEach((element) => {
       element.textContent = getTranslation(
@@ -220,6 +236,7 @@
 
     if (persist) {
       persistLanguage(language);
+      updateLanguageUrl(language);
     }
     if (typeof window.updateNavigationLabel === "function") {
       window.updateNavigationLabel();

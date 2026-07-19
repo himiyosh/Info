@@ -3,29 +3,32 @@
  * contrast: verified · mobile: 320 / 375 / 414 / 768
  */
 :root {
-  --font-display: "Trebuchet MS", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-  --font-body: "Avenir Next", "Segoe UI", "Hiragino Sans", "Yu Gothic UI", sans-serif;
-  --color-canvas: oklch(97.5% 0.012 250);
-  --color-surface: oklch(99.2% 0.006 250);
-  --color-ink: oklch(24% 0.04 255);
-  --color-body: oklch(35% 0.03 255);
-  --color-muted: oklch(43% 0.025 255);
-  --color-rule: oklch(84% 0.025 252);
-  --color-rule-dark: oklch(38% 0.035 255);
-  --color-accent: oklch(47% 0.2 259);
-  --color-accent-strong: oklch(40% 0.19 259);
-  --color-accent-soft: oklch(91% 0.05 250);
-  --color-accent-ink: oklch(98% 0.01 250);
-  --color-sky: oklch(78% 0.12 225);
-  --color-coral: oklch(82% 0.13 52);
-  --color-coral-strong: oklch(77% 0.15 48);
-  --color-dark: oklch(20% 0.04 255);
-  --color-dark-surface: oklch(25% 0.04 255);
-  --color-dark-text: oklch(93% 0.016 245);
-  --color-dark-muted: oklch(76% 0.025 245);
+  --font-display: "Trebuchet MS", "Avenir Next", sans-serif;
+  --font-display-ja: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif CJK JP", serif;
+  --font-body: "Avenir Next", "Segoe UI", sans-serif;
+  --font-body-ja: "Hiragino Sans", "Yu Gothic Medium", "Yu Gothic", "Noto Sans CJK JP", sans-serif;
+  --color-canvas: oklch(82% 0.035 250);
+  --color-surface: oklch(88% 0.025 250);
+  --color-surface-deep: oklch(75% 0.045 250);
+  --color-ink: oklch(20% 0.045 255);
+  --color-body: oklch(29% 0.038 255);
+  --color-muted: oklch(37% 0.03 255);
+  --color-rule: oklch(66% 0.045 252);
+  --color-rule-dark: oklch(36% 0.04 255);
+  --color-accent: oklch(42% 0.2 259);
+  --color-accent-strong: oklch(34% 0.18 259);
+  --color-accent-soft: oklch(74% 0.075 250);
+  --color-accent-ink: oklch(96% 0.012 250);
+  --color-sky: oklch(74% 0.13 225);
+  --color-coral: oklch(69% 0.14 50);
+  --color-coral-strong: oklch(63% 0.15 47);
+  --color-dark: oklch(17% 0.04 255);
+  --color-dark-surface: oklch(23% 0.045 255);
+  --color-dark-text: oklch(91% 0.018 245);
+  --color-dark-muted: oklch(73% 0.03 245);
   --color-focus: oklch(52% 0.2 35);
-  --color-shadow: oklch(22% 0.04 255 / 0.18);
-  --color-shadow-soft: oklch(22% 0.04 255 / 0.08);
+  --color-shadow: oklch(17% 0.04 255 / 0.24);
+  --color-shadow-soft: oklch(17% 0.04 255 / 0.14);
   --color-transparent: transparent;
   --page-gutter: max(clamp(1rem, 4vw, 4rem), env(safe-area-inset-left));
   --section-space: clamp(5rem, 10vw, 9rem);
@@ -36,8 +39,11 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 140ms;
   --duration-medium: 260ms;
+  --duration-long: 720ms;
   --z-menu: 20;
+  --z-progress: 25;
   --z-skip: 30;
+  --scroll-progress: 0;
 }
 
 *,
@@ -61,6 +67,19 @@ body {
   line-height: 1.7;
   overflow-x: clip;
   text-rendering: optimizeLegibility;
+  font-kerning: normal;
+  font-optical-sizing: auto;
+}
+
+html:lang(ja) body {
+  font-family: var(--font-body-ja);
+}
+
+html:lang(ja) .hero h1,
+html:lang(ja) .about-statement {
+  font-family: var(--font-display-ja);
+  font-feature-settings: "palt" 1;
+  font-weight: 600;
 }
 
 body.menu-open {
@@ -94,6 +113,24 @@ button {
 :where(button:disabled, [aria-disabled="true"]) {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.scroll-progress {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: var(--z-progress);
+  height: 3px;
+  pointer-events: none;
+}
+
+.scroll-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--color-coral);
+  transform: scaleX(var(--scroll-progress));
+  transform-origin: left center;
 }
 
 .skip-link {
@@ -150,6 +187,7 @@ button {
   background: var(--color-accent);
   box-shadow: 0.3rem 0.3rem 0 var(--color-coral);
   transform: rotate(8deg);
+  transition: transform var(--duration-medium) var(--ease-out);
 }
 
 .menu-toggle {
@@ -283,7 +321,7 @@ button {
   font-size: clamp(3rem, 10vw, 6rem);
   font-weight: 700;
   letter-spacing: -0.04em;
-  line-height: 0.98;
+  line-height: 1.02;
   text-wrap: balance;
   overflow-wrap: anywhere;
   min-width: 0;
@@ -351,10 +389,20 @@ button {
 }
 
 .hero-visual {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --back-x: 0px;
+  --back-y: 0px;
   position: relative;
   margin: 0;
   padding: 0 0.75rem 0.75rem 0;
   min-width: 0;
+  transform:
+    perspective(900px)
+    rotateX(var(--tilt-y))
+    rotateY(var(--tilt-x));
+  transform-style: preserve-3d;
+  transition: transform 360ms var(--ease-out);
 }
 
 .hero-visual::before {
@@ -363,6 +411,22 @@ button {
   inset: 1.25rem 0 0 1.25rem;
   background: var(--color-coral);
   border-radius: var(--radius-medium);
+  transform: translate(var(--back-x), var(--back-y)) rotate(-1.5deg);
+  transition: transform 360ms var(--ease-out);
+}
+
+.hero-visual::after {
+  content: "";
+  position: absolute;
+  inset-block-start: -0.65rem;
+  inset-inline-end: 0.9rem;
+  z-index: 2;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: var(--color-accent);
+  border: 3px solid var(--color-surface);
+  box-shadow: 0.42rem 0.42rem 0 var(--color-coral);
+  transform: rotate(12deg);
 }
 
 .hero-visual img {
@@ -489,6 +553,11 @@ button {
   background: var(--color-dark-surface);
   border: 1px solid var(--color-rule-dark);
   border-radius: var(--radius-small);
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--duration-long) var(--ease-out),
+    transform var(--duration-long) var(--ease-out);
 }
 
 .project-media img {
@@ -682,7 +751,96 @@ button {
   white-space: nowrap;
 }
 
+.motion-ready .hero h1 span {
+  animation: title-arrival var(--duration-long) var(--ease-out) both;
+}
+
+.motion-ready .hero h1 span:nth-child(2) {
+  animation-delay: 90ms;
+}
+
+.motion-ready .hero-lede,
+.motion-ready .hero-actions {
+  animation: copy-arrival 620ms var(--ease-out) both;
+}
+
+.motion-ready .hero-lede {
+  animation-delay: 150ms;
+}
+
+.motion-ready .hero-actions {
+  animation-delay: 220ms;
+}
+
+.motion-ready .hero-visual img {
+  animation: photo-develop 820ms var(--ease-out) both;
+}
+
+.motion-ready .hero-visual::after {
+  animation: brand-marker 5s var(--ease-out) 900ms infinite alternate;
+}
+
+.motion-ready .project-row:not(.is-visible) .project-media {
+  opacity: 0.78;
+  transform: translateY(1rem) rotate(-0.6deg);
+}
+
+.motion-ready .project-row.is-visible .project-media {
+  transition-delay: calc(var(--project-index, 0) * 60ms);
+}
+
+.hero-visual.is-tilting,
+.hero-visual.is-tilting::before {
+  transition-duration: 90ms;
+}
+
+@keyframes title-arrival {
+  from {
+    opacity: 0.35;
+    transform: translateY(0.45em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes copy-arrival {
+  from {
+    opacity: 0.45;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes photo-develop {
+  from {
+    clip-path: inset(5% 6% 5% 6% round var(--radius-medium));
+    filter: saturate(0.45) contrast(1.08);
+  }
+  to {
+    clip-path: inset(0 round var(--radius-medium));
+    filter: saturate(0.92) contrast(1.04);
+  }
+}
+
+@keyframes brand-marker {
+  from {
+    transform: translate(0, 0) rotate(12deg);
+  }
+  to {
+    transform: translate(-0.35rem, 0.45rem) rotate(102deg);
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
+  .wordmark:hover .wordmark-mark {
+    transform: rotate(98deg);
+  }
+
   .nav-menu a:hover,
   .language-toggle:hover {
     background: var(--color-accent-soft);
@@ -786,12 +944,8 @@ button {
 }
 
 @media (min-width: 80rem) {
-  .hero-visual {
-    transform: rotate(1.5deg);
-  }
-
   .hero-visual figcaption {
-    transform: rotate(-1.5deg);
+    margin-inline-start: 0.35rem;
   }
 }
 
@@ -811,6 +965,11 @@ button {
 
   .hero-visual,
   .hero-visual figcaption {
+    transform: none;
+  }
+
+  .motion-ready .project-row:not(.is-visible) .project-media {
+    opacity: 1;
     transform: none;
   }
 }
