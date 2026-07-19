@@ -26,6 +26,106 @@
   },
   {
     "title": {
+      "ja": "TechDB",
+      "en": "TechDB"
+    },
+    "kind": {
+      "ja": "AIニュース / 自動化ポータル",
+      "en": "AI news / Automation portal"
+    },
+    "description": {
+      "ja": "AIエコシステムの更新情報を14カテゴリで収集・要約し、読む順番や検索、運用状況を一か所にまとめる自動更新ポータルです。",
+      "en": "An automatically updated portal that collects and summarizes AI ecosystem news across 14 categories, with reading priority, search, and service status in one place."
+    },
+    "image": "assets/techdb-preview.jpg",
+    "imageAlt": {
+      "ja": "AI関連ニュースとトレンドを一覧表示するTechDBのダッシュボード",
+      "en": "TechDB dashboard showing AI news, categories, and trending topics"
+    },
+    "stack": ["Astro", "TypeScript", "Cloudflare", "AI agents"],
+    "action": {
+      "ja": "TechDBを開く",
+      "en": "Open TechDB"
+    },
+    "link": "https://techdb.studio344.net/"
+  },
+  {
+    "title": {
+      "ja": "UCFitness",
+      "en": "UCFitness"
+    },
+    "kind": {
+      "ja": "フィットネスサービス",
+      "en": "Fitness service"
+    },
+    "description": {
+      "ja": "Fitbitの歩数、残り歩数、達成率、仲間とのランキング、UCやバッジを一つの画面で追えるフィットネスサービスです。",
+      "en": "A Fitbit-connected fitness service for tracking steps, progress, group competition, UC rewards, and badges in one place."
+    },
+    "image": "assets/ucfitness-preview.jpg",
+    "imageAlt": {
+      "ja": "Fitbitの歩数と達成率を表示するUCFitnessのトップ画面",
+      "en": "UCFitness landing page showing Fitbit steps and goal progress"
+    },
+    "stack": ["Fitbit", "PWA"],
+    "action": {
+      "ja": "UCFitnessを開く",
+      "en": "Open UCFitness"
+    },
+    "link": "https://ucfitness.studio344.net/"
+  },
+  {
+    "title": {
+      "ja": "Encode / Decode Tool",
+      "en": "Encode / Decode Tool"
+    },
+    "kind": {
+      "ja": "エンコード / デコードツール",
+      "en": "Encode / decode tool"
+    },
+    "description": {
+      "ja": "URL、Base64、JWT、Unicode、QRコードをブラウザーでエンコード・デコードできる、複数形式対応のユーティリティです。",
+      "en": "A multi-format browser utility for encoding and decoding URL, Base64, JWT, Unicode, and QR code data."
+    },
+    "image": "assets/encode-decode-preview.jpg",
+    "imageAlt": {
+      "ja": "複数の形式を切り替えられるEncode / Decode Toolの画面",
+      "en": "Encode / Decode Tool interface with multiple format tabs"
+    },
+    "stack": ["React", "Tailwind CSS", "Vite"],
+    "action": {
+      "ja": "ツールを開く",
+      "en": "Open the tool"
+    },
+    "link": "https://himiyosh.github.io/encode-decode-tool/"
+  },
+  {
+    "title": {
+      "ja": "Network+",
+      "en": "Network+"
+    },
+    "kind": {
+      "ja": "Edge DevTools拡張",
+      "en": "Edge DevTools extension"
+    },
+    "description": {
+      "ja": "Microsoft Edge DevToolsに、複数キーワード検索、カラム別フィルター、リクエスト詳細、HAR出力を追加するネットワーク分析拡張です。",
+      "en": "A network analysis extension for Microsoft Edge DevTools with multi-keyword search, column filters, request details, and HAR export."
+    },
+    "image": "assets/network-plus-preview.jpg",
+    "imageAlt": {
+      "ja": "リクエスト一覧と詳細ペインを備えたNetwork+のDevToolsパネル",
+      "en": "Network+ DevTools panel with a request list and detail panes"
+    },
+    "stack": ["Manifest V3", "JavaScript", "Edge DevTools", "Jest"],
+    "action": {
+      "ja": "GitHubでコードを見る",
+      "en": "View code on GitHub"
+    },
+    "link": "https://github.com/himiyosh/network-plus-extension"
+  },
+  {
+    "title": {
       "ja": "URLDecoder",
       "en": "URLDecoder"
     },
