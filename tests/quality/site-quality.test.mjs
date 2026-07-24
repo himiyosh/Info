@@ -575,16 +575,23 @@ test("hero image has fetchpriority and responsive srcset sources exist", async (
   }
 });
 
-test("hero entrance animation does not use clip-path", async () => {
+test("hero image has no entrance animation and decorative keyframes are removed", async () => {
   const stylesSource = await readUtf8("styles.css");
-  const keyframesBlocks = [...stylesSource.matchAll(/@keyframes\s+photo-[\w-]+\s*\{([\s\S]*?)\n\}/g)];
-  assert.ok(keyframesBlocks.length > 0, "A photo hero keyframe animation must exist");
-  for (const [, body] of keyframesBlocks) {
-    assert.ok(
-      !body.includes("clip-path"),
-      "Hero photo keyframe animation must not use clip-path (causes forced layout/composite)"
-    );
-  }
+  assert.doesNotMatch(
+    stylesSource,
+    /\.motion-ready\s+\.hero-visual\s+img\s*\{[^}]*animation:/,
+    "Hero visual img must not have an entrance animation (delays LCP under throttling)"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /@keyframes\s+photo-/,
+    "No photo-* keyframe animation must exist for the hero image"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /@keyframes\s+brand-marker/,
+    "brand-marker keyframes must be removed (decorative GPU animation)"
+  );
 });
 
 test("pointer-tilt handler uses requestAnimationFrame to avoid forced reflow", async () => {

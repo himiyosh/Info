@@ -48,9 +48,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  window.addEventListener("scroll", requestScrollProgressUpdate, { passive: true });
-  window.addEventListener("resize", requestScrollProgressUpdate, { passive: true });
-  updateScrollProgress();
+  window.addEventListener("scroll", () => {
+    tiltBounds = null;
+    requestScrollProgressUpdate();
+  }, { passive: true });
+  window.addEventListener("resize", () => {
+    tiltBounds = null;
+    requestScrollProgressUpdate();
+  }, { passive: true });
+  requestScrollProgressUpdate();
 
   let tiltBounds = null;
   let pendingTiltH = 0;
@@ -74,6 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
       window.cancelAnimationFrame(tiltFrame);
       tiltFrame = null;
     }
+    tiltBounds = null;
     if (!heroVisual) {
       return;
     }
@@ -100,7 +107,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   heroVisual?.addEventListener("pointermove", updateHeroTilt);
   heroVisual?.addEventListener("pointerleave", resetHeroTilt);
-  window.addEventListener("resize", () => { tiltBounds = null; }, { passive: true });
   reducedMotion.addEventListener("change", (event) => {
     root.classList.toggle("motion-ready", !event.matches);
     if (event.matches) {
@@ -312,6 +318,7 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsContainer.replaceChildren(fragment);
     projectsContainer.setAttribute("aria-busy", "false");
     projectState = "ready";
+    requestScrollProgressUpdate();
     setupProjectMotion();
   }
 

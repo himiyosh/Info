@@ -84,7 +84,7 @@ html:lang(ja) .about-statement {
 }
 
 html:lang(ja) .hero h1 {
-  font-size: clamp(2rem, 10vw, 6rem);
+  font-size: clamp(2.5rem, 10vw, 6rem);
   word-break: keep-all;
 }
 
@@ -841,14 +841,6 @@ html:not(.js-enabled) .language-toggle {
   animation-delay: 220ms;
 }
 
-.motion-ready .hero-visual img {
-  animation: photo-arrive 820ms var(--ease-out) both;
-}
-
-.motion-ready .hero-visual::after {
-  animation: brand-marker var(--duration-long) var(--ease-out) 900ms both;
-}
-
 .motion-ready .project-row:not(.is-visible) .project-media {
   opacity: 0.78;
   transform: translateY(1rem) rotate(-0.6deg);
@@ -882,26 +874,6 @@ html:not(.js-enabled) .language-toggle {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes photo-arrive {
-  from {
-    opacity: 0.55;
-    transform: scale(1.012);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes brand-marker {
-  from {
-    transform: translate(0, 0) rotate(12deg);
-  }
-  to {
-    transform: translate(-0.35rem, 0.45rem) rotate(102deg);
   }
 }
 
