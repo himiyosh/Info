@@ -225,9 +225,17 @@ test("projects.json schema, localization, links, and preview assets are valid", 
 
     if (Object.hasOwn(project, "stack")) {
       assert.ok(Array.isArray(project.stack), `Project ${index + 1} stack must be an array when present`);
+      assert.ok(project.stack.length > 0, `Project ${index + 1} stack must not be empty when present`);
+      const seenStackValues = new Set();
       for (const stackValue of project.stack) {
         assert.equal(typeof stackValue, "string", `Project ${index + 1} stack entries must be strings`);
         assert.notEqual(stackValue.trim(), "", `Project ${index + 1} stack entries must not be empty`);
+        const normalizedStackValue = stackValue.trim().toLocaleLowerCase("en-US");
+        assert.ok(
+          !seenStackValues.has(normalizedStackValue),
+          `Project ${index + 1} stack entries must be unique: ${stackValue}`
+        );
+        seenStackValues.add(normalizedStackValue);
       }
     }
   }
@@ -297,6 +305,143 @@ test("required SEO and social metadata exist and are consistent", async () => {
   assert.ok(canonicalHref, "Canonical URL must be present");
   assert.ok(ogUrl, "og:url must be present");
   assert.equal(ogUrl, canonicalHref, "Canonical URL and og:url must match");
+
+  const alternateLinks = [...indexHtml.matchAll(
+    /<link[^>]*rel="alternate"[^>]*hreflang="([^"]+)"[^>]*href="([^"]+)"[^>]*>/gi
+  )];
+  assert.ok(alternateLinks.length >= 3, "Expected alternate language metadata links");
+  const alternateMap = new Map(alternateLinks.map(([, language, href]) => [language, href]));
+  assert.equal(
+    alternateMap.get("ja"),
+    "https://himiyosh.github.io/Info/?lang=ja",
+    'hreflang="ja" URL must match the Japanese query URL'
+  );
+  assert.equal(
+    alternateMap.get("en"),
+    "https://himiyosh.github.io/Info/?lang=en",
+    'hreflang="en" URL must match the English query URL'
+  );
+  assert.equal(
+    alternateMap.get("x-default"),
+    canonicalHref,
+    'hreflang="x-default" URL must match canonical URL'
+  );
+});
+
+test("noscript project links provide direct access to every listed project", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const projects = JSON.parse(await readUtf8("projects.json"));
+  const noscriptContent = indexHtml.match(/<noscript>([\s\S]*?)<\/noscript>/i)?.[1];
+  assert.ok(noscriptContent, "index.html must include a noscript fallback block");
+
+  const noscriptLinks = [...noscriptContent.matchAll(/\bhref="([^"]+)"/g)].map((match) => match[1]);
+  assert.ok(noscriptLinks.length > 0, "noscript fallback must include direct project links");
+  for (const project of projects) {
+    assert.ok(
+      noscriptLinks.includes(project.link),
+      `noscript fallback must include direct link for project: ${project.title.en}`
+    );
+  }
+});
+
+test("JoJo deck entries stay distinct and aligned with live deck routes", async () => {
+  const projects = JSON.parse(await readUtf8("projects.json"));
+  const jojoProjects = projects.filter((project) =>
+    [
+      "https://himiyosh.github.io/JoJo-AIAgent/",
+      "https://himiyosh.github.io/JoJo-Git/"
+    ].includes(project.link)
+  );
+  assert.equal(jojoProjects.length, 2, "Expected exactly two separate JoJo project entries");
+
+  const titles = new Set(jojoProjects.map((project) => project.title.en));
+  assert.ok(
+    titles.has("AI Agents: What Is Happening Right Now?"),
+    "JoJo-AIAgent entry must use the truthful public deck title"
+  );
+  assert.ok(titles.has("Git, Not Scary"), "JoJo-Git entry must use the truthful public deck title");
+
+  const links = new Set(jojoProjects.map((project) => project.link));
+  assert.equal(links.size, 2, "JoJo project links must remain distinct");
+  assert.ok(links.has("https://himiyosh.github.io/JoJo-AIAgent/"), "JoJo-AIAgent link must match live deck URL");
+  assert.ok(links.has("https://himiyosh.github.io/JoJo-Git/"), "JoJo-Git link must match live deck URL");
+
+  for (const project of jojoProjects) {
+    assert.deepEqual(
+      project.stack,
+      ["Slidev", "Vue", "Playwright", "GitHub Pages"],
+      `${project.title.en} stack must stay aligned with the deck implementation`
+    );
+  }
+});
+
+test("mobile navigation enhancement is progressive and keeps no-JS links usable", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const scriptSource = await readUtf8("script.js");
+  const stylesSource = await readUtf8("styles.css");
+
+  const enhancementScriptPattern =
+    /<script>\s*document\.documentElement\.classList\.add\("js-enabled"\);\s*<\/script>/;
+  assert.match(
+    indexHtml,
+    enhancementScriptPattern,
+    "index.html must set js-enabled synchronously in head to avoid no-JS flash"
+  );
+  const enhancementScriptIndex = indexHtml.search(enhancementScriptPattern);
+  const stylesheetIndex = indexHtml.indexOf('<link rel="stylesheet" href="styles.css" />');
+  assert.ok(enhancementScriptIndex !== -1, "Head enhancement script must exist");
+  assert.ok(stylesheetIndex !== -1, "Stylesheet link must exist");
+  assert.ok(
+    enhancementScriptIndex < stylesheetIndex,
+    "Head enhancement script must appear before styles.css"
+  );
+  assert.doesNotMatch(
+    scriptSource,
+    /classList\.add\("js-enabled"\)/,
+    "script.js should not be responsible for late js-enabled class mutation"
+  );
+  assert.match(
+    stylesSource,
+    /html:not\(\.js-enabled\)\s+\.nav-menu/,
+    "styles.css must define no-JS nav menu behavior"
+  );
+  assert.match(
+    stylesSource,
+    /@media\s*\(min-width:\s*48rem\)[\s\S]*\.js-enabled\s+\.nav-menu/,
+    "styles.css must provide desktop reset with js-enabled selector specificity"
+  );
+  assert.ok(
+    /<nav[\s\S]*id="nav-menu"[\s\S]*?<a href="#about"[\s\S]*?<a href="#projects"[\s\S]*?<a href="#contact"/i.test(
+      indexHtml
+    ),
+    "Primary nav links must be present directly in markup"
+  );
+});
+
+test("new-tab links include bilingual accessibility announcement text", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const scriptSource = await readUtf8("script.js");
+
+  assert.match(
+    indexHtml,
+    /<a href="https:\/\/github\.com\/himiyosh" target="_blank"[\s\S]*data-i18n="accessibility\.opensInNewTab"/,
+    "GitHub contact link must announce new-tab behavior via i18n text"
+  );
+  assert.match(
+    scriptSource,
+    /window\.siteI18n\.t\("accessibility\.opensInNewTab"\)/,
+    "Generated project links must include localized new-tab announcement text"
+  );
+});
+
+test("AdSense loader only runs when a real ad slot is present", async () => {
+  const scriptSource = await readUtf8("script.js");
+  assert.match(
+    scriptSource,
+    /ins\.adsbygoogle,\s*\[data-adsbygoogle-slot\],\s*\[data-ad-client\]/,
+    "AdSense loader must detect explicit ad slots before loading third-party script"
+  );
+  assert.match(scriptSource, /!hasAdSlot/, "AdSense loader must short-circuit when no ad slot exists");
 });
 
 test("index.html IDs are unique and internal anchors are valid", async () => {
@@ -390,4 +535,21 @@ test("preview assets are not stale or orphaned", async () => {
     0,
     `All project images must exist under assets/: ${orphanProjectImages.join(", ")}`
   );
+});
+
+test("removed legacy particles file is not referenced", async () => {
+  await assert.rejects(
+    stat(path.join(repoRoot, "particles.json")),
+    /ENOENT/,
+    "particles.json should be removed from the repository root"
+  );
+
+  const sourcesToCheck = ["index.html", "script.js", "styles.css"];
+  for (const sourcePath of sourcesToCheck) {
+    const sourceText = await readUtf8(sourcePath);
+    assert.ok(
+      !/(particles\.json|particlesJS|particles\.js)/i.test(sourceText),
+      `${sourcePath} must not reference legacy particles assets`
+    );
+  }
 });

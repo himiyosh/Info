@@ -51,6 +51,56 @@
   },
   {
     "title": {
+      "ja": "AIエージェント、いま何が起きている?",
+      "en": "AI Agents: What Is Happening Right Now?"
+    },
+    "kind": {
+      "ja": "公開スライドデッキ",
+      "en": "Public slide deck"
+    },
+    "description": {
+      "ja": "AIエージェントの全体像を Prompt→Context→Harness→Loop の流れで整理し、モバイル Reader でも追える入門向け公開スライドデッキです。",
+      "en": "A beginner-friendly public slide deck that explains AI agents through Prompt → Context → Harness → Loop, with a mobile reader mode."
+    },
+    "image": "assets/jojo-aiagent-preview.jpg",
+    "imageAlt": {
+      "ja": "Prompt→Context→Harness→Loop の章立てを表示する JoJo-AIAgent のスライド表紙",
+      "en": "JoJo-AIAgent cover slide showing the Prompt, Context, Harness, and Loop structure"
+    },
+    "stack": ["Slidev", "Vue", "Playwright", "GitHub Pages"],
+    "action": {
+      "ja": "デッキを開く",
+      "en": "Open the deck"
+    },
+    "link": "https://himiyosh.github.io/JoJo-AIAgent/"
+  },
+  {
+    "title": {
+      "ja": "Git、こわくない",
+      "en": "Git, Not Scary"
+    },
+    "kind": {
+      "ja": "公開スライドデッキ",
+      "en": "Public slide deck"
+    },
+    "description": {
+      "ja": "Git初心者向けに、clone/fetch/pull/fork と merge/rebase の判断を4領域モデルで視覚的に整理した Slidev デッキです。Reader の検索・モバイル・印刷にも対応しています。",
+      "en": "A Slidev deck for Git beginners that explains clone, fetch, pull, fork, and merge vs rebase decisions through a visual four-area model, with Reader search, mobile, and print support."
+    },
+    "image": "assets/jojo-git-preview.jpg",
+    "imageAlt": {
+      "ja": "4領域モデルでGit操作を整理した JoJo-Git のスライド表紙",
+      "en": "JoJo-Git cover slide presenting the four-area model for Git operations"
+    },
+    "stack": ["Slidev", "Vue", "Playwright", "GitHub Pages"],
+    "action": {
+      "ja": "デッキを開く",
+      "en": "Open the deck"
+    },
+    "link": "https://himiyosh.github.io/JoJo-Git/"
+  },
+  {
+    "title": {
       "ja": "UCFitness",
       "en": "UCFitness"
     },

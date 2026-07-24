@@ -21,6 +21,14 @@ document.addEventListener("DOMContentLoaded", () => {
   let projects = null;
   let projectState = "loading";
   let projectObserver = null;
+  const localizedProjectFields = ["title", "description", "kind", "action", "imageAlt"];
+
+  function requireNonEmptyString(value, fieldName) {
+    if (typeof value !== "string" || value.trim() === "") {
+      throw new TypeError(`${fieldName} must be a non-empty string.`);
+    }
+    return value.trim();
+  }
 
   if (!reducedMotion.matches) {
     root.classList.add("motion-ready");
@@ -150,29 +158,66 @@ document.addEventListener("DOMContentLoaded", () => {
     return value[window.siteI18n.language] ?? value.ja ?? value.en;
   }
 
-  function validateProject(project, index) {
+  function validateLocalizedField(project, index, fieldName) {
+    const localized = project[fieldName];
+    if (!localized || typeof localized !== "object" || Array.isArray(localized)) {
+      throw new TypeError(`Project ${index + 1} field "${fieldName}" must be a localized object.`);
+    }
+    for (const language of ["ja", "en"]) {
+      requireNonEmptyString(
+        localized[language],
+        `Project ${index + 1} field "${fieldName}.${language}"`
+      );
+    }
+  }
+
+  function validateProject(project, index, seenLinks, seenImages) {
     if (!project || typeof project !== "object") {
       throw new TypeError(`Project ${index + 1} must be an object.`);
     }
 
-    ["title", "description", "kind", "action", "link", "image", "imageAlt"].forEach((field) => {
-      if (!project[field]) {
-        throw new TypeError(`Project ${index + 1} is missing ${field}.`);
-      }
-    });
+    for (const fieldName of localizedProjectFields) {
+      validateLocalizedField(project, index, fieldName);
+    }
 
-    const url = new URL(project.link, window.location.href);
+    const projectLink = requireNonEmptyString(project.link, `Project ${index + 1} field "link"`);
+    const projectImage = requireNonEmptyString(project.image, `Project ${index + 1} field "image"`);
+    const url = new URL(projectLink, window.location.href);
     if (!["http:", "https:"].includes(url.protocol)) {
       throw new TypeError(`Project ${index + 1} has an unsupported link protocol.`);
     }
+    const normalizedLink = url.toString();
+    if (seenLinks.has(normalizedLink)) {
+      throw new TypeError(`Duplicate project link detected: ${normalizedLink}`);
+    }
+    seenLinks.add(normalizedLink);
 
-    const imageUrl = new URL(project.image, window.location.href);
+    const imageUrl = new URL(projectImage, window.location.href);
     if (imageUrl.origin !== window.location.origin) {
       throw new TypeError(`Project ${index + 1} preview must be a local asset.`);
     }
+    const normalizedImage = `${imageUrl.pathname}${imageUrl.search}${imageUrl.hash}`;
+    if (seenImages.has(normalizedImage)) {
+      throw new TypeError(`Duplicate project image detected: ${projectImage}`);
+    }
+    seenImages.add(normalizedImage);
 
-    if (project.stack && !Array.isArray(project.stack)) {
-      throw new TypeError(`Project ${index + 1} stack must be an array.`);
+    if (Object.hasOwn(project, "stack")) {
+      if (!Array.isArray(project.stack) || project.stack.length === 0) {
+        throw new TypeError(`Project ${index + 1} stack must be a non-empty array when present.`);
+      }
+      const normalizedStack = new Set();
+      project.stack.forEach((stackItem, stackIndex) => {
+        const stackValue = requireNonEmptyString(
+          stackItem,
+          `Project ${index + 1} stack item ${stackIndex + 1}`
+        );
+        const normalizedValue = stackValue.toLocaleLowerCase("en-US");
+        if (normalizedStack.has(normalizedValue)) {
+          throw new TypeError(`Project ${index + 1} has duplicate stack entry: ${stackValue}`);
+        }
+        normalizedStack.add(normalizedValue);
+      });
     }
   }
 
@@ -194,6 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const description = document.createElement("p");
       const link = document.createElement("a");
       const linkText = document.createElement("span");
+      const linkAnnouncement = document.createElement("span");
       const linkArrow = document.createElement("span");
 
       article.className = "project-row";
@@ -229,10 +275,12 @@ document.addEventListener("DOMContentLoaded", () => {
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       linkText.textContent = localizedValue(project.action);
+      linkAnnouncement.className = "sr-only";
+      linkAnnouncement.textContent = window.siteI18n.t("accessibility.opensInNewTab");
       linkArrow.className = "project-link-arrow";
       linkArrow.setAttribute("aria-hidden", "true");
       linkArrow.textContent = "\u2197";
-      link.append(linkText, linkArrow);
+      link.append(linkText, linkAnnouncement, linkArrow);
 
       content.append(headingGroup, details, link);
       article.append(media, content);
@@ -313,7 +361,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!Array.isArray(data) || data.length === 0) {
         throw new TypeError("projects.json must contain a non-empty array.");
       }
-      data.forEach(validateProject);
+      const seenLinks = new Set();
+      const seenImages = new Set();
+      data.forEach((project, index) => validateProject(project, index, seenLinks, seenImages));
       projects = data;
       renderProjects();
     } catch (error) {
@@ -363,8 +413,12 @@ document.addEventListener("DOMContentLoaded", () => {
   loadProjects();
 
   function loadAdSense() {
+    const hasAdSlot = document.querySelector(
+      'ins.adsbygoogle, [data-adsbygoogle-slot], [data-ad-client]'
+    );
     if (
       window.location.hostname !== "himiyosh.github.io" ||
+      !hasAdSlot ||
       document.querySelector('script[data-service="adsense"]')
     ) {
       return;

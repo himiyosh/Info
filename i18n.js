@@ -17,7 +17,8 @@
         shareImageAlt: "ポートフォリオの見出しと山岳写真を組み合わせた himiyosh のトップ画面"
       },
       accessibility: {
-        skip: "メインコンテンツへ移動"
+        skip: "メインコンテンツへ移動",
+        opensInNewTab: "（新しいタブで開きます）"
       },
       nav: {
         label: "主要ナビゲーション",
@@ -76,7 +77,8 @@
         shareImageAlt: "Portfolio hero pairing the himiyosh headline with a mountain photograph"
       },
       accessibility: {
-        skip: "Skip to main content"
+        skip: "Skip to main content",
+        opensInNewTab: "(opens in a new tab)"
       },
       nav: {
         label: "Primary navigation",

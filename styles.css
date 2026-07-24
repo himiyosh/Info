@@ -168,6 +168,10 @@ button {
   gap: 1rem;
 }
 
+.js-enabled .site-header {
+  flex-wrap: nowrap;
+}
+
 .wordmark {
   display: inline-flex;
   align-items: center;
@@ -195,7 +199,7 @@ button {
   width: 44px;
   height: 44px;
   padding: 0;
-  display: grid;
+  display: none;
   place-content: center;
   gap: 0.4rem;
   background: var(--color-surface);
@@ -203,6 +207,10 @@ button {
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-small);
   cursor: pointer;
+}
+
+.js-enabled .menu-toggle {
+  display: grid;
 }
 
 .menu-toggle-line {
@@ -223,15 +231,43 @@ button {
 }
 
 .nav-menu {
+  position: static;
+  inset: auto;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--color-transparent);
+  color: var(--color-ink);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+html:not(.js-enabled) .site-header {
+  flex-wrap: wrap;
+}
+
+html:not(.js-enabled) .nav-menu {
+  width: 100%;
+  margin-block-start: 0.5rem;
+  justify-content: flex-start;
+}
+
+html:not(.js-enabled) .language-toggle {
+  display: none;
+}
+
+.js-enabled .nav-menu {
   position: fixed;
   inset-block-start: 5rem;
   inset-inline: var(--page-gutter);
   padding: 0.75rem;
-  display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  align-items: stretch;
   background: var(--color-surface);
-  color: var(--color-ink);
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-medium);
   box-shadow: 0 1.25rem 3rem var(--color-shadow);
@@ -245,7 +281,7 @@ button {
     visibility 0s linear var(--duration-medium);
 }
 
-.nav-menu.active {
+.js-enabled .nav-menu.active {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -646,6 +682,17 @@ button {
   color: var(--color-dark-muted);
 }
 
+.projects-noscript-list {
+  margin: 0.9rem 0 0;
+  padding-inline-start: 1.1rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.projects-noscript-list a {
+  color: var(--color-dark-text);
+}
+
 .projects-noscript a {
   color: var(--color-dark-text);
 }
@@ -750,6 +797,18 @@ button {
   font-weight: 700;
   text-underline-offset: 0.25rem;
   white-space: nowrap;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .motion-ready .hero h1 span {
@@ -882,11 +941,11 @@ button {
     overflow: auto;
   }
 
-  .menu-toggle {
+  .js-enabled .menu-toggle {
     display: none;
   }
 
-  .nav-menu {
+  .js-enabled .nav-menu {
     position: static;
     inset: auto;
     padding: 0;
