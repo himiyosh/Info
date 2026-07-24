@@ -344,6 +344,29 @@ test("noscript project links provide direct access to every listed project", asy
   }
 });
 
+test("JoJo deck entries stay distinct and aligned with live deck routes", async () => {
+  const projects = JSON.parse(await readUtf8("projects.json"));
+  const jojoProjects = projects.filter((project) => /^JoJo-/.test(project.title?.en ?? ""));
+  assert.equal(jojoProjects.length, 2, "Expected exactly two separate JoJo project entries");
+
+  const titles = new Set(jojoProjects.map((project) => project.title.en));
+  assert.ok(titles.has("JoJo-AIAgent"), "Missing JoJo-AIAgent entry");
+  assert.ok(titles.has("JoJo-Git"), "Missing JoJo-Git entry");
+
+  const links = new Set(jojoProjects.map((project) => project.link));
+  assert.equal(links.size, 2, "JoJo project links must remain distinct");
+  assert.ok(links.has("https://himiyosh.github.io/JoJo-AIAgent/"), "JoJo-AIAgent link must match live deck URL");
+  assert.ok(links.has("https://himiyosh.github.io/JoJo-Git/"), "JoJo-Git link must match live deck URL");
+
+  for (const project of jojoProjects) {
+    assert.deepEqual(
+      project.stack,
+      ["Slidev", "Vue", "Playwright", "GitHub Pages"],
+      `${project.title.en} stack must stay aligned with the deck implementation`
+    );
+  }
+});
+
 test("mobile navigation enhancement is progressive and keeps no-JS links usable", async () => {
   const indexHtml = await readUtf8("index.html");
   const scriptSource = await readUtf8("script.js");
