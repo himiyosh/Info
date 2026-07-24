@@ -64,6 +64,14 @@
   <script>
     document.documentElement.classList.add("js-enabled");
   </script>
+  <link
+    rel="preload"
+    as="image"
+    href="assets/profile-480w.jpg"
+    imagesrcset="assets/profile-480w.jpg 480w, assets/profile.jpg 960w"
+    imagesizes="(min-width: 48rem) 45vw, 92vw"
+    fetchpriority="high"
+  />
   <link rel="stylesheet" href="styles.css" />
   <title>himiyosh | エンジニアのポートフォリオ</title>
   <script type="application/ld+json">

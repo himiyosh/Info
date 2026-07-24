@@ -645,3 +645,58 @@ test("scroll-progress feature is fully removed", async () => {
     "script.js must not contain scroll-progress functions or state"
   );
 });
+
+test("hero image preload in head matches srcset/sizes of the hero img element", async () => {
+  const indexHtml = await readUtf8("index.html");
+
+  // Extract preload link attributes
+  const preloadMatch = indexHtml.match(
+    /<link[^>]*rel="preload"[^>]*as="image"[^>]*>/
+  );
+  assert.ok(
+    preloadMatch,
+    "index.html must include a <link rel=\"preload\" as=\"image\"> for the hero image"
+  );
+  const preloadTag = preloadMatch[0];
+
+  const preloadSrcset = preloadTag.match(/imagesrcset="([^"]+)"/)?.[1];
+  const preloadSizes  = preloadTag.match(/imagesizes="([^"]+)"/)?.[1];
+  const preloadHref   = preloadTag.match(/href="([^"]+)"/)?.[1];
+  const preloadFP     = /fetchpriority="high"/.test(preloadTag);
+
+  assert.ok(preloadSrcset, "preload link must have imagesrcset attribute");
+  assert.ok(preloadSizes,  "preload link must have imagesizes attribute");
+  assert.ok(preloadHref,   "preload link must have href fallback");
+  assert.ok(preloadFP,     "preload link must have fetchpriority=high");
+
+  // Extract hero img attributes
+  const imgMatch = indexHtml.match(/<img[\s\S]*?srcset="([^"]+)"[\s\S]*?sizes="([^"]+)"/);
+  assert.ok(imgMatch, "Hero img must have srcset and sizes attributes");
+  const [, imgSrcset, imgSizes] = imgMatch;
+
+  assert.equal(
+    preloadSrcset,
+    imgSrcset,
+    "preload imagesrcset must exactly match hero img srcset"
+  );
+  assert.equal(
+    preloadSizes,
+    imgSizes,
+    "preload imagesizes must exactly match hero img sizes"
+  );
+
+  // Preload href must be a source listed in the srcset (no phantom fetch)
+  const srcsetSources = imgSrcset.split(",").map((e) => e.trim().split(/\s+/)[0]);
+  assert.ok(
+    srcsetSources.includes(preloadHref),
+    `preload href (${preloadHref}) must be one of the srcset sources to avoid a duplicate fetch`
+  );
+
+  // Preload must appear before the stylesheet in the source
+  const preloadPos    = indexHtml.indexOf(preloadTag[0]);
+  const stylesheetPos = indexHtml.indexOf('<link rel="stylesheet"');
+  assert.ok(
+    preloadPos < stylesheetPos,
+    "preload link must appear before the stylesheet link in <head>"
+  );
+});
