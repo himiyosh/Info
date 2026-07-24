@@ -945,7 +945,7 @@ html:not(.js-enabled) .language-toggle {
     display: none;
   }
 
-  .nav-menu {
+  .js-enabled .nav-menu {
     position: static;
     inset: auto;
     padding: 0;

@@ -15,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const projectsContainer = requireElement("projects-container");
   const heroVisual = document.querySelector(".hero-visual");
   const root = document.documentElement;
-  root.classList.add("js-enabled");
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
   const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");

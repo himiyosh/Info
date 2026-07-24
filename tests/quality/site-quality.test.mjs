@@ -346,12 +346,20 @@ test("noscript project links provide direct access to every listed project", asy
 
 test("JoJo deck entries stay distinct and aligned with live deck routes", async () => {
   const projects = JSON.parse(await readUtf8("projects.json"));
-  const jojoProjects = projects.filter((project) => /^JoJo-/.test(project.title?.en ?? ""));
+  const jojoProjects = projects.filter((project) =>
+    [
+      "https://himiyosh.github.io/JoJo-AIAgent/",
+      "https://himiyosh.github.io/JoJo-Git/"
+    ].includes(project.link)
+  );
   assert.equal(jojoProjects.length, 2, "Expected exactly two separate JoJo project entries");
 
   const titles = new Set(jojoProjects.map((project) => project.title.en));
-  assert.ok(titles.has("JoJo-AIAgent"), "Missing JoJo-AIAgent entry");
-  assert.ok(titles.has("JoJo-Git"), "Missing JoJo-Git entry");
+  assert.ok(
+    titles.has("AI Agents: What Is Happening Right Now?"),
+    "JoJo-AIAgent entry must use the truthful public deck title"
+  );
+  assert.ok(titles.has("Git, Not Scary"), "JoJo-Git entry must use the truthful public deck title");
 
   const links = new Set(jojoProjects.map((project) => project.link));
   assert.equal(links.size, 2, "JoJo project links must remain distinct");
@@ -372,10 +380,25 @@ test("mobile navigation enhancement is progressive and keeps no-JS links usable"
   const scriptSource = await readUtf8("script.js");
   const stylesSource = await readUtf8("styles.css");
 
+  const enhancementScriptPattern =
+    /<script>\s*document\.documentElement\.classList\.add\("js-enabled"\);\s*<\/script>/;
   assert.match(
+    indexHtml,
+    enhancementScriptPattern,
+    "index.html must set js-enabled synchronously in head to avoid no-JS flash"
+  );
+  const enhancementScriptIndex = indexHtml.search(enhancementScriptPattern);
+  const stylesheetIndex = indexHtml.indexOf('<link rel="stylesheet" href="styles.css" />');
+  assert.ok(enhancementScriptIndex !== -1, "Head enhancement script must exist");
+  assert.ok(stylesheetIndex !== -1, "Stylesheet link must exist");
+  assert.ok(
+    enhancementScriptIndex < stylesheetIndex,
+    "Head enhancement script must appear before styles.css"
+  );
+  assert.doesNotMatch(
     scriptSource,
-    /root\.classList\.add\("js-enabled"\)/,
-    "script.js must explicitly opt in to JavaScript-only navigation behavior"
+    /classList\.add\("js-enabled"\)/,
+    "script.js should not be responsible for late js-enabled class mutation"
   );
   assert.match(
     stylesSource,
@@ -384,8 +407,8 @@ test("mobile navigation enhancement is progressive and keeps no-JS links usable"
   );
   assert.match(
     stylesSource,
-    /\.js-enabled\s+\.nav-menu/,
-    "styles.css must scope mobile menu overlay behavior to JS-enabled mode"
+    /@media\s*\(min-width:\s*48rem\)[\s\S]*\.js-enabled\s+\.nav-menu/,
+    "styles.css must provide desktop reset with js-enabled selector specificity"
   );
   assert.ok(
     /<nav[\s\S]*id="nav-menu"[\s\S]*?<a href="#about"[\s\S]*?<a href="#projects"[\s\S]*?<a href="#contact"/i.test(

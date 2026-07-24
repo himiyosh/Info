@@ -51,8 +51,8 @@
   },
   {
     "title": {
-      "ja": "JoJo-AIAgent",
-      "en": "JoJo-AIAgent"
+      "ja": "AIエージェント、いま何が起きている?",
+      "en": "AI Agents: What Is Happening Right Now?"
     },
     "kind": {
       "ja": "公開スライドデッキ",
@@ -76,8 +76,8 @@
   },
   {
     "title": {
-      "ja": "JoJo-Git",
-      "en": "JoJo-Git"
+      "ja": "Git、こわくない",
+      "en": "Git, Not Scary"
     },
     "kind": {
       "ja": "公開スライドデッキ",
