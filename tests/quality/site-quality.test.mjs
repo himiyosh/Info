@@ -548,11 +548,34 @@ test("Pages workflow keeps least-privilege permissions and artifact-only deploym
   assert.ok(buildBlock, "Pages workflow must define a build job");
   assert.ok(deployBlock, "Pages workflow must define a deploy job");
 
-  assert.match(buildBlock[1], /permissions:\n\s+contents:\s+read\n\s+pages:\s+write/, "Build job must only request contents:read and pages:write");
+  assert.match(buildBlock[1], /permissions:\n\s+contents:\s+read/, "Build job must request contents:read");
+  assert.doesNotMatch(buildBlock[1], /pages:\s+write/, "Build job must not request pages:write");
   assert.doesNotMatch(buildBlock[1], /id-token:\s+write/, "Build job must not request id-token:write");
+  assert.match(
+    buildBlock[1],
+    /uses:\s*actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1[\s\S]*persist-credentials:\s*false/,
+    "Build checkout must set persist-credentials: false"
+  );
+  assert.match(buildBlock[1], /timeout-minutes:\s*5/, "Build job must set a short timeout");
 
   assert.match(deployBlock[1], /permissions:\n\s+pages:\s+write\n\s+id-token:\s+write/, "Deploy job must request pages:write and id-token:write");
   assert.doesNotMatch(deployBlock[1], /contents:\s+write/, "Deploy job must not request contents:write");
+  assert.match(deployBlock[1], /timeout-minutes:\s*5/, "Deploy job must set a short timeout");
+  assert.match(
+    deployBlock[1],
+    /uses:\s*actions\/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d[\s\S]*uses:\s*actions\/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128/,
+    "Configure Pages must run in deploy immediately before deploy-pages"
+  );
+  assert.doesNotMatch(
+    buildBlock[1],
+    /uses:\s*actions\/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d/,
+    "Build job must not run configure-pages"
+  );
+  assert.doesNotMatch(
+    buildBlock[1],
+    /uses:\s*actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020/,
+    "Build job must not run setup-node for shell-only artifact assembly"
+  );
 
   assert.match(
     pagesWorkflow,
