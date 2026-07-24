@@ -1,0 +1,10 @@
+index.html
+styles.css
+script.js
+i18n.js
+projects.json
+assets
+favicon.svg
+robots.txt
+sitemap.xml
+ads.txt
