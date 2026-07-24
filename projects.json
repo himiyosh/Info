@@ -51,6 +51,31 @@
   },
   {
     "title": {
+      "ja": "JoJo-AIAgent",
+      "en": "JoJo-AIAgent"
+    },
+    "kind": {
+      "ja": "公開スライドデッキ",
+      "en": "Public slide deck"
+    },
+    "description": {
+      "ja": "AIエージェントの全体像を Prompt→Context→Harness→Loop の流れで整理し、モバイル Reader でも追える入門向け公開スライドデッキです。",
+      "en": "A beginner-friendly public slide deck that explains AI agents through Prompt → Context → Harness → Loop, with a mobile reader mode."
+    },
+    "image": "assets/jojo-aiagent-preview.jpg",
+    "imageAlt": {
+      "ja": "Prompt→Context→Harness→Loop の章立てを表示する JoJo-AIAgent のスライド表紙",
+      "en": "JoJo-AIAgent cover slide showing the Prompt, Context, Harness, and Loop structure"
+    },
+    "stack": ["Slidev", "Vue", "Playwright", "GitHub Pages"],
+    "action": {
+      "ja": "デッキを開く",
+      "en": "Open the deck"
+    },
+    "link": "https://himiyosh.github.io/JoJo-AIAgent/"
+  },
+  {
+    "title": {
       "ja": "UCFitness",
       "en": "UCFitness"
     },

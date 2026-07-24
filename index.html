@@ -56,6 +56,9 @@
     data-i18n-content="meta.shareImageAlt"
   />
   <link rel="canonical" href="https://himiyosh.github.io/Info/" />
+  <link rel="alternate" hreflang="ja" href="https://himiyosh.github.io/Info/?lang=ja" />
+  <link rel="alternate" hreflang="en" href="https://himiyosh.github.io/Info/?lang=en" />
+  <link rel="alternate" hreflang="x-default" href="https://himiyosh.github.io/Info/" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="sitemap" type="application/xml" href="sitemap.xml" />
   <link rel="stylesheet" href="styles.css" />
@@ -182,11 +185,21 @@
           </p>
         </div>
         <noscript>
-          <p class="projects-noscript">
-            JavaScript を有効にするか、
-            <a href="https://github.com/himiyosh">GitHub の公開プロジェクト</a>
-            をご覧ください。
-          </p>
+          <div class="projects-noscript" role="note">
+            <p>
+              JavaScript なしでも公開プロジェクトへ直接アクセスできます / Direct links to public projects:
+            </p>
+            <ul class="projects-noscript-list">
+              <li><a href="https://github.com/himiyosh/Info">Portfolio</a></li>
+              <li><a href="https://techdb.studio344.net/">TechDB</a></li>
+              <li><a href="https://himiyosh.github.io/JoJo-AIAgent/">JoJo-AIAgent</a></li>
+              <li><a href="https://ucfitness.studio344.net/">UCFitness</a></li>
+              <li><a href="https://himiyosh.github.io/encode-decode-tool/">Encode / Decode Tool</a></li>
+              <li><a href="https://github.com/himiyosh/network-plus-extension">Network+</a></li>
+              <li><a href="https://himiyosh.github.io/URLDecoder/">URLDecoder</a></li>
+              <li><a href="https://himiyosh.github.io/ImageResizer/">ImageResizer</a></li>
+            </ul>
+          </div>
         </noscript>
       </div>
     </section>
@@ -207,6 +220,7 @@
           <a href="https://github.com/himiyosh" target="_blank" rel="me noopener noreferrer">
             <span>GitHub</span>
             <strong>@himiyosh</strong>
+            <span class="sr-only" data-i18n="accessibility.opensInNewTab">（新しいタブで開きます）</span>
           </a>
         </div>
       </div>

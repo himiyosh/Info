@@ -225,9 +225,17 @@ test("projects.json schema, localization, links, and preview assets are valid", 
 
     if (Object.hasOwn(project, "stack")) {
       assert.ok(Array.isArray(project.stack), `Project ${index + 1} stack must be an array when present`);
+      assert.ok(project.stack.length > 0, `Project ${index + 1} stack must not be empty when present`);
+      const seenStackValues = new Set();
       for (const stackValue of project.stack) {
         assert.equal(typeof stackValue, "string", `Project ${index + 1} stack entries must be strings`);
         assert.notEqual(stackValue.trim(), "", `Project ${index + 1} stack entries must not be empty`);
+        const normalizedStackValue = stackValue.trim().toLocaleLowerCase("en-US");
+        assert.ok(
+          !seenStackValues.has(normalizedStackValue),
+          `Project ${index + 1} stack entries must be unique: ${stackValue}`
+        );
+        seenStackValues.add(normalizedStackValue);
       }
     }
   }
@@ -297,6 +305,97 @@ test("required SEO and social metadata exist and are consistent", async () => {
   assert.ok(canonicalHref, "Canonical URL must be present");
   assert.ok(ogUrl, "og:url must be present");
   assert.equal(ogUrl, canonicalHref, "Canonical URL and og:url must match");
+
+  const alternateLinks = [...indexHtml.matchAll(
+    /<link[^>]*rel="alternate"[^>]*hreflang="([^"]+)"[^>]*href="([^"]+)"[^>]*>/gi
+  )];
+  assert.ok(alternateLinks.length >= 3, "Expected alternate language metadata links");
+  const alternateMap = new Map(alternateLinks.map(([, language, href]) => [language, href]));
+  assert.equal(
+    alternateMap.get("ja"),
+    "https://himiyosh.github.io/Info/?lang=ja",
+    'hreflang="ja" URL must match the Japanese query URL'
+  );
+  assert.equal(
+    alternateMap.get("en"),
+    "https://himiyosh.github.io/Info/?lang=en",
+    'hreflang="en" URL must match the English query URL'
+  );
+  assert.equal(
+    alternateMap.get("x-default"),
+    canonicalHref,
+    'hreflang="x-default" URL must match canonical URL'
+  );
+});
+
+test("noscript project links provide direct access to every listed project", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const projects = JSON.parse(await readUtf8("projects.json"));
+  const noscriptContent = indexHtml.match(/<noscript>([\s\S]*?)<\/noscript>/i)?.[1];
+  assert.ok(noscriptContent, "index.html must include a noscript fallback block");
+
+  const noscriptLinks = [...noscriptContent.matchAll(/\bhref="([^"]+)"/g)].map((match) => match[1]);
+  assert.ok(noscriptLinks.length > 0, "noscript fallback must include direct project links");
+  for (const project of projects) {
+    assert.ok(
+      noscriptLinks.includes(project.link),
+      `noscript fallback must include direct link for project: ${project.title.en}`
+    );
+  }
+});
+
+test("mobile navigation enhancement is progressive and keeps no-JS links usable", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const scriptSource = await readUtf8("script.js");
+  const stylesSource = await readUtf8("styles.css");
+
+  assert.match(
+    scriptSource,
+    /root\.classList\.add\("js-enabled"\)/,
+    "script.js must explicitly opt in to JavaScript-only navigation behavior"
+  );
+  assert.match(
+    stylesSource,
+    /html:not\(\.js-enabled\)\s+\.nav-menu/,
+    "styles.css must define no-JS nav menu behavior"
+  );
+  assert.match(
+    stylesSource,
+    /\.js-enabled\s+\.nav-menu/,
+    "styles.css must scope mobile menu overlay behavior to JS-enabled mode"
+  );
+  assert.ok(
+    /<nav[\s\S]*id="nav-menu"[\s\S]*?<a href="#about"[\s\S]*?<a href="#projects"[\s\S]*?<a href="#contact"/i.test(
+      indexHtml
+    ),
+    "Primary nav links must be present directly in markup"
+  );
+});
+
+test("new-tab links include bilingual accessibility announcement text", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const scriptSource = await readUtf8("script.js");
+
+  assert.match(
+    indexHtml,
+    /<a href="https:\/\/github\.com\/himiyosh" target="_blank"[\s\S]*data-i18n="accessibility\.opensInNewTab"/,
+    "GitHub contact link must announce new-tab behavior via i18n text"
+  );
+  assert.match(
+    scriptSource,
+    /window\.siteI18n\.t\("accessibility\.opensInNewTab"\)/,
+    "Generated project links must include localized new-tab announcement text"
+  );
+});
+
+test("AdSense loader only runs when a real ad slot is present", async () => {
+  const scriptSource = await readUtf8("script.js");
+  assert.match(
+    scriptSource,
+    /ins\.adsbygoogle,\s*\[data-adsbygoogle-slot\],\s*\[data-ad-client\]/,
+    "AdSense loader must detect explicit ad slots before loading third-party script"
+  );
+  assert.match(scriptSource, /!hasAdSlot/, "AdSense loader must short-circuit when no ad slot exists");
 });
 
 test("index.html IDs are unique and internal anchors are valid", async () => {
@@ -390,4 +489,21 @@ test("preview assets are not stale or orphaned", async () => {
     0,
     `All project images must exist under assets/: ${orphanProjectImages.join(", ")}`
   );
+});
+
+test("removed legacy particles file is not referenced", async () => {
+  await assert.rejects(
+    stat(path.join(repoRoot, "particles.json")),
+    /ENOENT/,
+    "particles.json should be removed from the repository root"
+  );
+
+  const sourcesToCheck = ["index.html", "script.js", "styles.css"];
+  for (const sourcePath of sourcesToCheck) {
+    const sourceText = await readUtf8(sourcePath);
+    assert.ok(
+      !/(particles\.json|particlesJS|particles\.js)/i.test(sourceText),
+      `${sourcePath} must not reference legacy particles assets`
+    );
+  }
 });
