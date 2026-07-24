@@ -1,6 +1,6 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
- * wave: personal field note · structure: photographic index
- * contrast: verified · mobile: 320 / 375 / 414 / 768
+/* Hallmark · macrostructure: Photographic · tone: technical and approachable · anchor hue: cobalt
+ * pre-emit critique: P5 H5 E5 S5 R5 V5
+ * wave: personal field note · contrast: pass · mobile: 320 / 375 / 414 / 768 / 1440
  */
 :root {
   --font-display: "Trebuchet MS", "Avenir Next", sans-serif;
@@ -82,8 +82,12 @@ html:lang(ja) .about-statement {
 }
 
 html:lang(ja) .hero h1 {
-  font-size: clamp(2.5rem, 10vw, 6rem);
+  font-size: clamp(2.5rem, 6.5vw, 5rem);
   word-break: keep-all;
+}
+
+html:lang(ja) .hero h1 span {
+  white-space: nowrap;
 }
 
 body.menu-open {

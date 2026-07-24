@@ -594,6 +594,20 @@ test("hero image has no entrance animation and decorative keyframes are removed"
   );
 });
 
+test("Japanese hero title keeps each supplied phrase on one line", async () => {
+  const stylesSource = await readUtf8("styles.css");
+  assert.match(
+    stylesSource,
+    /html:lang\(ja\)\s+\.hero h1\s*\{[^}]*font-size:\s*clamp\(2\.5rem,\s*6\.5vw,\s*5rem\)/s,
+    "Japanese hero sizing must fit both supplied phrases across supported viewports"
+  );
+  assert.match(
+    stylesSource,
+    /html:lang\(ja\)\s+\.hero h1 span\s*\{[^}]*white-space:\s*nowrap/s,
+    "Japanese hero spans must not orphan punctuation or split a supplied phrase"
+  );
+});
+
 test("pointer-tilt handler uses requestAnimationFrame to avoid forced reflow", async () => {
   const scriptSource = await readUtf8("script.js");
   assert.match(
