@@ -5,8 +5,22 @@ import vm from "node:vm";
 import { test } from "node:test";
 
 const repoRoot = process.cwd();
+const qualityWorkflowPath = ".github/workflows/quality-baseline.yml";
+const pagesWorkflowPath = ".github/workflows/pages.yml";
+const pagesWhitelistPath = ".github/pages-artifact-whitelist.txt";
 
 const readUtf8 = (relativePath) => readFile(path.join(repoRoot, relativePath), "utf8");
+
+function parseWhitelistEntries(sourceText) {
+  return sourceText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !line.startsWith("#"));
+}
+
+function topLevelPath(filePath) {
+  return filePath.split("/")[0];
+}
 
 function flattenStringLeafKeys(value, prefix = "") {
   if (typeof value === "string") {
@@ -484,6 +498,131 @@ test("all referenced local files exist", async () => {
   for (const localReference of localReferences) {
     const fileStats = await stat(path.join(repoRoot, localReference));
     assert.ok(fileStats.isFile(), `Missing referenced local file: ${localReference}`);
+  }
+});
+
+test("workflow actions are pinned to immutable Node.js-24-compatible SHAs", async () => {
+  const qualityWorkflow = await readUtf8(qualityWorkflowPath);
+  const pagesWorkflow = await readUtf8(pagesWorkflowPath);
+  const expectedPins = new Map([
+    ["actions/checkout", "3d3c42e5aac5ba805825da76410c181273ba90b1"],
+    ["actions/setup-node", "820762786026740c76f36085b0efc47a31fe5020"],
+    ["actions/upload-pages-artifact", "fc324d3547104276b827a68afc52ff2a11cc49c9"],
+    ["actions/configure-pages", "45bfe0192ca1faeb007ade9deae92b16b8254a0d"],
+    ["actions/deploy-pages", "cd2ce8fcbc39b97be8ca5fce6e763baed58fa128"]
+  ]);
+
+  const usesPattern = /^\s*uses:\s*([a-z0-9-]+\/[a-z0-9-]+)@([a-f0-9]{40})\s*$/gim;
+  const usesByAction = new Map();
+  for (const workflow of [qualityWorkflow, pagesWorkflow]) {
+    for (const match of workflow.matchAll(usesPattern)) {
+      usesByAction.set(match[1], match[2]);
+    }
+  }
+
+  for (const [actionName, expectedSha] of expectedPins) {
+    assert.equal(
+      usesByAction.get(actionName),
+      expectedSha,
+      `Expected immutable pin for ${actionName} to be ${expectedSha}`
+    );
+  }
+
+  assert.doesNotMatch(
+    `${qualityWorkflow}\n${pagesWorkflow}`,
+    /actions\/(?:checkout|setup-node|upload-pages-artifact|configure-pages|deploy-pages)@v\d+/i,
+    "Pinned actions must not use mutable version tags"
+  );
+});
+
+test("Pages workflow keeps least-privilege permissions and artifact-only deployment", async () => {
+  const pagesWorkflow = await readUtf8(pagesWorkflowPath);
+  const buildBlock = pagesWorkflow.match(/\n  build:\n([\s\S]*?)\n  deploy:\n/);
+  const deployBlock = pagesWorkflow.match(/\n  deploy:\n([\s\S]*)$/);
+
+  assert.match(
+    pagesWorkflow,
+    /permissions:\n\s+contents:\s+read/,
+    "Workflow-level permissions must default to contents: read"
+  );
+  assert.ok(buildBlock, "Pages workflow must define a build job");
+  assert.ok(deployBlock, "Pages workflow must define a deploy job");
+
+  assert.match(buildBlock[1], /permissions:\n\s+contents:\s+read\n\s+pages:\s+write/, "Build job must only request contents:read and pages:write");
+  assert.doesNotMatch(buildBlock[1], /id-token:\s+write/, "Build job must not request id-token:write");
+
+  assert.match(deployBlock[1], /permissions:\n\s+pages:\s+write\n\s+id-token:\s+write/, "Deploy job must request pages:write and id-token:write");
+  assert.doesNotMatch(deployBlock[1], /contents:\s+write/, "Deploy job must not request contents:write");
+
+  assert.match(
+    pagesWorkflow,
+    /done < \.github\/pages-artifact-whitelist\.txt/,
+    "Build step must source deployment paths from the whitelist file"
+  );
+  assert.match(
+    pagesWorkflow,
+    /uses:\s*actions\/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9[\s\S]*?path:\s*_site/,
+    "Pages artifact upload must publish only the _site directory"
+  );
+});
+
+test("Pages artifact whitelist is strict and covers all locally referenced production files", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const scriptSource = await readUtf8("script.js");
+  const projects = JSON.parse(await readUtf8("projects.json"));
+  const whitelistEntries = parseWhitelistEntries(await readUtf8(pagesWhitelistPath));
+  const whitelistSet = new Set(whitelistEntries);
+  const expectedWhitelist = new Set([
+    "index.html",
+    "styles.css",
+    "script.js",
+    "i18n.js",
+    "projects.json",
+    "assets",
+    "favicon.svg",
+    "robots.txt",
+    "sitemap.xml",
+    "ads.txt"
+  ]);
+
+  assert.deepEqual(
+    [...whitelistSet].sort(),
+    [...expectedWhitelist].sort(),
+    "Whitelist must contain only the approved production paths"
+  );
+
+  const localReferences = new Set();
+  for (const match of indexHtml.matchAll(/\b(?:src|href)="([^"]+)"/g)) {
+    const localPath = localPathFromReference(match[1]);
+    if (localPath) {
+      localReferences.add(localPath);
+    }
+  }
+  for (const match of scriptSource.matchAll(/fetch\(\s*"([^"]+)"/g)) {
+    const localPath = localPathFromReference(match[1]);
+    if (localPath) {
+      localReferences.add(localPath);
+    }
+  }
+  for (const project of projects) {
+    localReferences.add(project.image);
+  }
+  localReferences.add("ads.txt");
+
+  for (const localReference of localReferences) {
+    const rootPath = topLevelPath(localReference);
+    assert.ok(
+      whitelistSet.has(localReference) || whitelistSet.has(rootPath),
+      `Referenced production file must be included by whitelist: ${localReference}`
+    );
+  }
+
+  const forbiddenEntries = [".github", "tests", "README.md", "PRODUCT.md", "package.json"];
+  for (const forbiddenEntry of forbiddenEntries) {
+    assert.ok(
+      !whitelistSet.has(forbiddenEntry),
+      `Whitelist must not include non-production path: ${forbiddenEntry}`
+    );
   }
 });
 
