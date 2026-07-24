@@ -613,3 +613,35 @@ test("pointer-tilt handler uses requestAnimationFrame to avoid forced reflow", a
     "getBoundingClientRect must be guarded by a null-check (cached path)"
   );
 });
+
+test("scroll-progress feature is fully removed", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const stylesSource = await readUtf8("styles.css");
+  const scriptSource = await readUtf8("script.js");
+
+  assert.doesNotMatch(
+    indexHtml,
+    /class="scroll-progress"/,
+    "index.html must not contain scroll-progress markup"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /--scroll-progress/,
+    "styles.css must not reference --scroll-progress custom property"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /--z-progress/,
+    "styles.css must not reference --z-progress (used only by scroll-progress)"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /\.scroll-progress/,
+    "styles.css must not contain scroll-progress rules"
+  );
+  assert.doesNotMatch(
+    scriptSource,
+    /updateScrollProgress|progressFrame/,
+    "script.js must not contain scroll-progress functions or state"
+  );
+});

@@ -34,29 +34,12 @@ document.addEventListener("DOMContentLoaded", () => {
     root.classList.add("motion-ready");
   }
 
-  let progressFrame = null;
-  function updateScrollProgress() {
-    const scrollable = root.scrollHeight - window.innerHeight;
-    const progress = scrollable > 0 ? Math.min(1, window.scrollY / scrollable) : 0;
-    root.style.setProperty("--scroll-progress", progress.toFixed(4));
-    progressFrame = null;
-  }
-
-  function requestScrollProgressUpdate() {
-    if (progressFrame === null) {
-      progressFrame = window.requestAnimationFrame(updateScrollProgress);
-    }
-  }
-
   window.addEventListener("scroll", () => {
     tiltBounds = null;
-    requestScrollProgressUpdate();
   }, { passive: true });
   window.addEventListener("resize", () => {
     tiltBounds = null;
-    requestScrollProgressUpdate();
   }, { passive: true });
-  requestScrollProgressUpdate();
 
   let tiltBounds = null;
   let pendingTiltH = 0;
@@ -318,7 +301,6 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsContainer.replaceChildren(fragment);
     projectsContainer.setAttribute("aria-busy", "false");
     projectState = "ready";
-    requestScrollProgressUpdate();
     setupProjectMotion();
   }
 

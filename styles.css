@@ -41,9 +41,7 @@
   --duration-medium: 260ms;
   --duration-long: 720ms;
   --z-menu: 20;
-  --z-progress: 25;
   --z-skip: 30;
-  --scroll-progress: 0;
 }
 
 *,
@@ -119,24 +117,6 @@ button {
 :where(button:disabled, [aria-disabled="true"]) {
   cursor: not-allowed;
   opacity: 0.55;
-}
-
-.scroll-progress {
-  position: fixed;
-  inset-block-start: 0;
-  inset-inline: 0;
-  z-index: var(--z-progress);
-  height: 3px;
-  pointer-events: none;
-}
-
-.scroll-progress span {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: var(--color-coral);
-  transform: scaleX(var(--scroll-progress));
-  transform-origin: left center;
 }
 
 .skip-link {
