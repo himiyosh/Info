@@ -34,25 +34,36 @@ document.addEventListener("DOMContentLoaded", () => {
     root.classList.add("motion-ready");
   }
 
-  let progressFrame = null;
-  function updateScrollProgress() {
-    const scrollable = root.scrollHeight - window.innerHeight;
-    const progress = scrollable > 0 ? Math.min(1, window.scrollY / scrollable) : 0;
-    root.style.setProperty("--scroll-progress", progress.toFixed(4));
-    progressFrame = null;
-  }
+  window.addEventListener("scroll", () => {
+    tiltBounds = null;
+  }, { passive: true });
+  window.addEventListener("resize", () => {
+    tiltBounds = null;
+  }, { passive: true });
 
-  function requestScrollProgressUpdate() {
-    if (progressFrame === null) {
-      progressFrame = window.requestAnimationFrame(updateScrollProgress);
+  let tiltBounds = null;
+  let pendingTiltH = 0;
+  let pendingTiltV = 0;
+  let tiltFrame = null;
+
+  function flushTilt() {
+    tiltFrame = null;
+    if (!heroVisual || reducedMotion.matches || !finePointer.matches) {
+      return;
     }
+    heroVisual.classList.add("is-tilting");
+    heroVisual.style.setProperty("--tilt-x", `${(pendingTiltH * 5).toFixed(2)}deg`);
+    heroVisual.style.setProperty("--tilt-y", `${(-pendingTiltV * 5).toFixed(2)}deg`);
+    heroVisual.style.setProperty("--back-x", `${(-pendingTiltH * 8).toFixed(2)}px`);
+    heroVisual.style.setProperty("--back-y", `${(-pendingTiltV * 8).toFixed(2)}px`);
   }
-
-  window.addEventListener("scroll", requestScrollProgressUpdate, { passive: true });
-  window.addEventListener("resize", requestScrollProgressUpdate, { passive: true });
-  updateScrollProgress();
 
   function resetHeroTilt() {
+    if (tiltFrame !== null) {
+      window.cancelAnimationFrame(tiltFrame);
+      tiltFrame = null;
+    }
+    tiltBounds = null;
     if (!heroVisual) {
       return;
     }
@@ -67,14 +78,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!heroVisual || reducedMotion.matches || !finePointer.matches) {
       return;
     }
-    const bounds = heroVisual.getBoundingClientRect();
-    const horizontal = (event.clientX - bounds.left) / bounds.width - 0.5;
-    const vertical = (event.clientY - bounds.top) / bounds.height - 0.5;
-    heroVisual.classList.add("is-tilting");
-    heroVisual.style.setProperty("--tilt-x", `${(horizontal * 5).toFixed(2)}deg`);
-    heroVisual.style.setProperty("--tilt-y", `${(-vertical * 5).toFixed(2)}deg`);
-    heroVisual.style.setProperty("--back-x", `${(-horizontal * 8).toFixed(2)}px`);
-    heroVisual.style.setProperty("--back-y", `${(-vertical * 8).toFixed(2)}px`);
+    if (!tiltBounds) {
+      tiltBounds = heroVisual.getBoundingClientRect();
+    }
+    pendingTiltH = (event.clientX - tiltBounds.left) / tiltBounds.width - 0.5;
+    pendingTiltV = (event.clientY - tiltBounds.top) / tiltBounds.height - 0.5;
+    if (tiltFrame === null) {
+      tiltFrame = window.requestAnimationFrame(flushTilt);
+    }
   }
 
   heroVisual?.addEventListener("pointermove", updateHeroTilt);

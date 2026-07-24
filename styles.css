@@ -41,9 +41,7 @@
   --duration-medium: 260ms;
   --duration-long: 720ms;
   --z-menu: 20;
-  --z-progress: 25;
   --z-skip: 30;
-  --scroll-progress: 0;
 }
 
 *,
@@ -83,6 +81,11 @@ html:lang(ja) .about-statement {
   letter-spacing: -0.025em;
 }
 
+html:lang(ja) .hero h1 {
+  font-size: clamp(2.5rem, 10vw, 6rem);
+  word-break: keep-all;
+}
+
 body.menu-open {
   overflow: hidden;
 }
@@ -114,24 +117,6 @@ button {
 :where(button:disabled, [aria-disabled="true"]) {
   cursor: not-allowed;
   opacity: 0.55;
-}
-
-.scroll-progress {
-  position: fixed;
-  inset-block-start: 0;
-  inset-inline: 0;
-  z-index: var(--z-progress);
-  height: 3px;
-  pointer-events: none;
-}
-
-.scroll-progress span {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: var(--color-coral);
-  transform: scaleX(var(--scroll-progress));
-  transform-origin: left center;
 }
 
 .skip-link {
@@ -500,6 +485,8 @@ html:not(.js-enabled) .language-toggle {
   display: grid;
   gap: 2rem;
   border-block-start: 1px solid var(--color-rule);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 0 auto 28rem;
 }
 
 .section-heading h2,
@@ -711,6 +698,8 @@ html:not(.js-enabled) .language-toggle {
 
 .contact {
   padding-block: var(--section-space);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 0 auto 22rem;
 }
 
 .contact-panel {
@@ -832,14 +821,6 @@ html:not(.js-enabled) .language-toggle {
   animation-delay: 220ms;
 }
 
-.motion-ready .hero-visual img {
-  animation: photo-develop 820ms var(--ease-out) both;
-}
-
-.motion-ready .hero-visual::after {
-  animation: brand-marker 5s var(--ease-out) 900ms infinite alternate;
-}
-
 .motion-ready .project-row:not(.is-visible) .project-media {
   opacity: 0.78;
   transform: translateY(1rem) rotate(-0.6deg);
@@ -873,26 +854,6 @@ html:not(.js-enabled) .language-toggle {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes photo-develop {
-  from {
-    clip-path: inset(5% 6% 5% 6% round var(--radius-medium));
-    filter: saturate(0.45) contrast(1.08);
-  }
-  to {
-    clip-path: inset(0 round var(--radius-medium));
-    filter: saturate(0.92) contrast(1.04);
-  }
-}
-
-@keyframes brand-marker {
-  from {
-    transform: translate(0, 0) rotate(12deg);
-  }
-  to {
-    transform: translate(-0.35rem, 0.45rem) rotate(102deg);
   }
 }
 

@@ -553,3 +553,150 @@ test("removed legacy particles file is not referenced", async () => {
     );
   }
 });
+
+test("hero image has fetchpriority and responsive srcset sources exist", async () => {
+  const indexHtml = await readUtf8("index.html");
+  assert.match(
+    indexHtml,
+    /fetchpriority="high"/,
+    "Hero image must have fetchpriority=high for LCP prioritisation"
+  );
+
+  const srcsetMatch = indexHtml.match(/srcset="([^"]+)"/);
+  assert.ok(srcsetMatch, "Hero image must include a srcset attribute");
+  const srcsetEntries = srcsetMatch[1].split(",").map((entry) => entry.trim());
+  for (const entry of srcsetEntries) {
+    const srcPath = entry.split(/\s+/)[0];
+    const localPath = localPathFromReference(srcPath);
+    if (localPath) {
+      const fileStats = await stat(path.join(repoRoot, localPath));
+      assert.ok(fileStats.isFile(), `srcset source must exist as a file: ${localPath}`);
+    }
+  }
+});
+
+test("hero image has no entrance animation and decorative keyframes are removed", async () => {
+  const stylesSource = await readUtf8("styles.css");
+  assert.doesNotMatch(
+    stylesSource,
+    /\.motion-ready\s+\.hero-visual\s+img\s*\{[^}]*animation:/,
+    "Hero visual img must not have an entrance animation (delays LCP under throttling)"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /@keyframes\s+photo-/,
+    "No photo-* keyframe animation must exist for the hero image"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /@keyframes\s+brand-marker/,
+    "brand-marker keyframes must be removed (decorative GPU animation)"
+  );
+});
+
+test("pointer-tilt handler uses requestAnimationFrame to avoid forced reflow", async () => {
+  const scriptSource = await readUtf8("script.js");
+  assert.match(
+    scriptSource,
+    /requestAnimationFrame\(flushTilt\)/,
+    "Pointer-tilt must schedule style writes via requestAnimationFrame"
+  );
+  assert.doesNotMatch(
+    scriptSource,
+    /getBoundingClientRect\(\)[\s\S]{0,40}tiltBounds = null/,
+    "getBoundingClientRect should not be called on every pointermove; bounds must be cached"
+  );
+  const tiltBoundsAssign = scriptSource.match(/tiltBounds\s*=\s*heroVisual\.getBoundingClientRect\(\)/);
+  const boundsNullCheck = scriptSource.match(/if\s*\(!tiltBounds\)/);
+  assert.ok(
+    tiltBoundsAssign && boundsNullCheck,
+    "getBoundingClientRect must be guarded by a null-check (cached path)"
+  );
+});
+
+test("scroll-progress feature is fully removed", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const stylesSource = await readUtf8("styles.css");
+  const scriptSource = await readUtf8("script.js");
+
+  assert.doesNotMatch(
+    indexHtml,
+    /class="scroll-progress"/,
+    "index.html must not contain scroll-progress markup"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /--scroll-progress/,
+    "styles.css must not reference --scroll-progress custom property"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /--z-progress/,
+    "styles.css must not reference --z-progress (used only by scroll-progress)"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /\.scroll-progress/,
+    "styles.css must not contain scroll-progress rules"
+  );
+  assert.doesNotMatch(
+    scriptSource,
+    /updateScrollProgress|progressFrame/,
+    "script.js must not contain scroll-progress functions or state"
+  );
+});
+
+test("hero image preload in head matches srcset/sizes of the hero img element", async () => {
+  const indexHtml = await readUtf8("index.html");
+
+  // Extract preload link attributes
+  const preloadMatch = indexHtml.match(
+    /<link[^>]*rel="preload"[^>]*as="image"[^>]*>/
+  );
+  assert.ok(
+    preloadMatch,
+    "index.html must include a <link rel=\"preload\" as=\"image\"> for the hero image"
+  );
+  const preloadTag = preloadMatch[0];
+
+  const preloadSrcset = preloadTag.match(/imagesrcset="([^"]+)"/)?.[1];
+  const preloadSizes  = preloadTag.match(/imagesizes="([^"]+)"/)?.[1];
+  const preloadHref   = preloadTag.match(/href="([^"]+)"/)?.[1];
+  const preloadFP     = /fetchpriority="high"/.test(preloadTag);
+
+  assert.ok(preloadSrcset, "preload link must have imagesrcset attribute");
+  assert.ok(preloadSizes,  "preload link must have imagesizes attribute");
+  assert.ok(preloadHref,   "preload link must have href fallback");
+  assert.ok(preloadFP,     "preload link must have fetchpriority=high");
+
+  // Extract hero img attributes
+  const imgMatch = indexHtml.match(/<img[\s\S]*?srcset="([^"]+)"[\s\S]*?sizes="([^"]+)"/);
+  assert.ok(imgMatch, "Hero img must have srcset and sizes attributes");
+  const [, imgSrcset, imgSizes] = imgMatch;
+
+  assert.equal(
+    preloadSrcset,
+    imgSrcset,
+    "preload imagesrcset must exactly match hero img srcset"
+  );
+  assert.equal(
+    preloadSizes,
+    imgSizes,
+    "preload imagesizes must exactly match hero img sizes"
+  );
+
+  // Preload href must be a source listed in the srcset (no phantom fetch)
+  const srcsetSources = imgSrcset.split(",").map((e) => e.trim().split(/\s+/)[0]);
+  assert.ok(
+    srcsetSources.includes(preloadHref),
+    `preload href (${preloadHref}) must be one of the srcset sources to avoid a duplicate fetch`
+  );
+
+  // Preload must appear before the stylesheet in the source
+  const preloadPos    = indexHtml.indexOf(preloadTag[0]);
+  const stylesheetPos = indexHtml.indexOf('<link rel="stylesheet"');
+  assert.ok(
+    preloadPos < stylesheetPos,
+    "preload link must appear before the stylesheet link in <head>"
+  );
+});
