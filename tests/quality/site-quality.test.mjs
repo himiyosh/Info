@@ -553,3 +553,56 @@ test("removed legacy particles file is not referenced", async () => {
     );
   }
 });
+
+test("hero image has fetchpriority and responsive srcset sources exist", async () => {
+  const indexHtml = await readUtf8("index.html");
+  assert.match(
+    indexHtml,
+    /fetchpriority="high"/,
+    "Hero image must have fetchpriority=high for LCP prioritisation"
+  );
+
+  const srcsetMatch = indexHtml.match(/srcset="([^"]+)"/);
+  assert.ok(srcsetMatch, "Hero image must include a srcset attribute");
+  const srcsetEntries = srcsetMatch[1].split(",").map((entry) => entry.trim());
+  for (const entry of srcsetEntries) {
+    const srcPath = entry.split(/\s+/)[0];
+    const localPath = localPathFromReference(srcPath);
+    if (localPath) {
+      const fileStats = await stat(path.join(repoRoot, localPath));
+      assert.ok(fileStats.isFile(), `srcset source must exist as a file: ${localPath}`);
+    }
+  }
+});
+
+test("hero entrance animation does not use clip-path", async () => {
+  const stylesSource = await readUtf8("styles.css");
+  const keyframesBlocks = [...stylesSource.matchAll(/@keyframes\s+photo-[\w-]+\s*\{([\s\S]*?)\n\}/g)];
+  assert.ok(keyframesBlocks.length > 0, "A photo hero keyframe animation must exist");
+  for (const [, body] of keyframesBlocks) {
+    assert.ok(
+      !body.includes("clip-path"),
+      "Hero photo keyframe animation must not use clip-path (causes forced layout/composite)"
+    );
+  }
+});
+
+test("pointer-tilt handler uses requestAnimationFrame to avoid forced reflow", async () => {
+  const scriptSource = await readUtf8("script.js");
+  assert.match(
+    scriptSource,
+    /requestAnimationFrame\(flushTilt\)/,
+    "Pointer-tilt must schedule style writes via requestAnimationFrame"
+  );
+  assert.doesNotMatch(
+    scriptSource,
+    /getBoundingClientRect\(\)[\s\S]{0,40}tiltBounds = null/,
+    "getBoundingClientRect should not be called on every pointermove; bounds must be cached"
+  );
+  const tiltBoundsAssign = scriptSource.match(/tiltBounds\s*=\s*heroVisual\.getBoundingClientRect\(\)/);
+  const boundsNullCheck = scriptSource.match(/if\s*\(!tiltBounds\)/);
+  assert.ok(
+    tiltBoundsAssign && boundsNullCheck,
+    "getBoundingClientRect must be guarded by a null-check (cached path)"
+  );
+});

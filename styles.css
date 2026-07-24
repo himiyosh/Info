@@ -83,6 +83,11 @@ html:lang(ja) .about-statement {
   letter-spacing: -0.025em;
 }
 
+html:lang(ja) .hero h1 {
+  font-size: clamp(2rem, 10vw, 6rem);
+  word-break: keep-all;
+}
+
 body.menu-open {
   overflow: hidden;
 }
@@ -500,6 +505,8 @@ html:not(.js-enabled) .language-toggle {
   display: grid;
   gap: 2rem;
   border-block-start: 1px solid var(--color-rule);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 0 auto 28rem;
 }
 
 .section-heading h2,
@@ -711,6 +718,8 @@ html:not(.js-enabled) .language-toggle {
 
 .contact {
   padding-block: var(--section-space);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 0 auto 22rem;
 }
 
 .contact-panel {
@@ -833,11 +842,11 @@ html:not(.js-enabled) .language-toggle {
 }
 
 .motion-ready .hero-visual img {
-  animation: photo-develop 820ms var(--ease-out) both;
+  animation: photo-arrive 820ms var(--ease-out) both;
 }
 
 .motion-ready .hero-visual::after {
-  animation: brand-marker 5s var(--ease-out) 900ms infinite alternate;
+  animation: brand-marker var(--duration-long) var(--ease-out) 900ms both;
 }
 
 .motion-ready .project-row:not(.is-visible) .project-media {
@@ -876,14 +885,14 @@ html:not(.js-enabled) .language-toggle {
   }
 }
 
-@keyframes photo-develop {
+@keyframes photo-arrive {
   from {
-    clip-path: inset(5% 6% 5% 6% round var(--radius-medium));
-    filter: saturate(0.45) contrast(1.08);
+    opacity: 0.55;
+    transform: scale(1.012);
   }
   to {
-    clip-path: inset(0 round var(--radius-medium));
-    filter: saturate(0.92) contrast(1.04);
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
