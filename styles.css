@@ -90,6 +90,39 @@ html:lang(ja) .hero h1 span {
   white-space: nowrap;
 }
 
+html:lang(ja) :where(
+  .hero-lede,
+  .hero-visual figcaption,
+  .about-copy > p:not(.about-statement),
+  .projects-intro > p,
+  .project-description,
+  .projects-status,
+  .contact-panel > div > p,
+  .footer-disclaimer
+) {
+  line-break: strict;
+  word-break: normal;
+}
+
+html:lang(ja) .hero-lede {
+  text-wrap: balance;
+}
+
+@supports (word-break: auto-phrase) {
+  html:lang(ja) :where(
+    .hero-lede,
+    .hero-visual figcaption,
+    .about-copy > p:not(.about-statement),
+    .projects-intro > p,
+    .project-description,
+    .projects-status,
+    .contact-panel > div > p,
+    .footer-disclaimer
+  ) {
+    word-break: auto-phrase;
+  }
+}
+
 body.menu-open {
   overflow: hidden;
 }
