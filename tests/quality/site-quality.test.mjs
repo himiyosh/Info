@@ -8,6 +8,19 @@ const repoRoot = process.cwd();
 const qualityWorkflowPath = ".github/workflows/quality-baseline.yml";
 const pagesWorkflowPath = ".github/workflows/pages.yml";
 const pagesWhitelistPath = ".github/pages-artifact-whitelist.txt";
+const translatedStaticAttributes = [
+  ["data-i18n-content", "content"],
+  ["data-i18n-alt", "alt"],
+  ["data-i18n-aria-label", "aria-label"]
+];
+const namedHtmlEntities = new Map([
+  ["amp", "&"],
+  ["apos", "'"],
+  ["gt", ">"],
+  ["lt", "<"],
+  ["nbsp", "\u00a0"],
+  ["quot", "\""]
+]);
 
 const readUtf8 = (relativePath) => readFile(path.join(repoRoot, relativePath), "utf8");
 
@@ -164,6 +177,86 @@ function parseTranslations(sourceText) {
   });
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function readHtmlAttribute(tag, attribute) {
+  const attributePattern = new RegExp(
+    `\\s${escapeRegExp(attribute)}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`,
+    "i"
+  );
+  const match = tag.match(attributePattern);
+  return match ? match[1] ?? match[2] : undefined;
+}
+
+function decodeHtmlEntities(value) {
+  return value.replace(
+    /&(?:#(\d+)|#x([0-9a-f]+)|([a-z]+));/gi,
+    (entity, decimal, hexadecimal, named) => {
+      if (named) {
+        return namedHtmlEntities.get(named.toLowerCase()) ?? entity;
+      }
+
+      const codePoint = Number.parseInt(
+        decimal ?? hexadecimal,
+        decimal === undefined ? 16 : 10
+      );
+      return codePoint <= 0x10ffff &&
+        (codePoint < 0xd800 || codePoint > 0xdfff)
+        ? String.fromCodePoint(codePoint)
+        : entity;
+    }
+  );
+}
+
+function normalizeHtmlWhitespace(value) {
+  return value
+    .replace(/[\t\n\f\r ]+/g, " ")
+    .replace(/^[\t\n\f\r ]+|[\t\n\f\r ]+$/g, "");
+}
+
+function normalizeStaticFallback(value) {
+  return normalizeHtmlWhitespace(decodeHtmlEntities(value.replace(/<[^>]*>/g, "")));
+}
+
+function extractStaticI18nFallbacks(sourceText) {
+  const fallbacks = [];
+
+  for (const openingTagMatch of sourceText.matchAll(/<([a-z][\w:-]*)\b[^>]*>/gi)) {
+    const [openingTag, tagName] = openingTagMatch;
+    const textKey = readHtmlAttribute(openingTag, "data-i18n");
+    if (textKey !== undefined) {
+      const contentStart = openingTagMatch.index + openingTag.length;
+      const closingTagPattern = new RegExp(`</${escapeRegExp(tagName)}\\s*>`, "gi");
+      closingTagPattern.lastIndex = contentStart;
+      const closingTagMatch = closingTagPattern.exec(sourceText);
+      fallbacks.push({
+        marker: "data-i18n",
+        target: "text content",
+        key: textKey,
+        value: closingTagMatch
+          ? sourceText.slice(contentStart, closingTagMatch.index)
+          : undefined
+      });
+    }
+
+    for (const [marker, target] of translatedStaticAttributes) {
+      const key = readHtmlAttribute(openingTag, marker);
+      if (key !== undefined) {
+        fallbacks.push({
+          marker,
+          target,
+          key,
+          value: readHtmlAttribute(openingTag, target)
+        });
+      }
+    }
+  }
+
+  return fallbacks;
+}
+
 async function listFilesRecursively(rootDirectory) {
   const results = [];
   const entries = await readdir(rootDirectory, { withFileTypes: true });
@@ -262,7 +355,7 @@ test("projects.json schema, localization, links, and preview assets are valid", 
   }
 });
 
-test("i18n key parity and index.html data-i18n references are complete", async () => {
+test("i18n key parity, references, and Japanese static fallbacks are complete", async () => {
   const i18nSource = await readUtf8("i18n.js");
   const translations = parseTranslations(i18nSource);
 
@@ -293,6 +386,39 @@ test("i18n key parity and index.html data-i18n references are complete", async (
   for (const key of referencedKeys) {
     assert.equal(typeof getByPath(translations.ja, key), "string", `Missing ja translation for "${key}"`);
     assert.equal(typeof getByPath(translations.en, key), "string", `Missing en translation for "${key}"`);
+  }
+
+  const staticFallbacks = extractStaticI18nFallbacks(indexHtml);
+  const requiredMarkers = [
+    "data-i18n",
+    "data-i18n-content",
+    "data-i18n-alt",
+    "data-i18n-aria-label"
+  ];
+  for (const marker of requiredMarkers) {
+    assert.ok(
+      staticFallbacks.some((fallback) => fallback.marker === marker),
+      `index.html must contain a ${marker} fallback`
+    );
+  }
+
+  for (const { key, marker, target, value } of staticFallbacks) {
+    const japaneseTranslation = getByPath(translations.ja, key);
+    assert.equal(
+      typeof japaneseTranslation,
+      "string",
+      `Missing ja translation for static ${marker} key "${key}"`
+    );
+    assert.notEqual(
+      value,
+      undefined,
+      `Static ${target} fallback for "${key}" must be present`
+    );
+    assert.equal(
+      normalizeStaticFallback(value),
+      normalizeHtmlWhitespace(japaneseTranslation),
+      `Static ${target} fallback for "${key}" must match its Japanese translation`
+    );
   }
 });
 
