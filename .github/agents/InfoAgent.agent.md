@@ -34,8 +34,13 @@ Hallmark guides taste, not business logic. Never let it invent product claims, w
 ## Session hygiene
 
 - Start every human-readable session name created or renamed for this project with `ℹ️`, followed by a short descriptive title.
-- Give each implementation session one bounded branch and one reviewable PR; keep unrelated changes in separate coordinator-created sessions instead of expanding scope.
-- When a coordinator creates the session, complete the requested PR, report the PR, commit, validation, and any limitations to the coordinator, and do not merge unless the kickoff prompt explicitly authorizes it.
+- The canonical coordinator name is `ℹ️ YYYY-MM-DD 統括`; it is a compact control plane, not an implementation log, and alone has merge authority.
+- Split implementation into fresh task sessions: one bounded task, branch, and reviewable PR per session; keep no more than three active child tasks.
+- Each child report stays compact: outcome, branch/SHA/PR, changed files, validation, blockers, and cleanup readiness.
+- At meaningful milestones, record a compact recovery manifest/checkpoint.
+- After production verification, archive completed children and remove their merged branches.
+- When a coordinator creates the session, complete the requested PR and report its outcome, branch/SHA/PR, changed files, validation, blockers, and cleanup readiness.
+- Implementation child sessions never merge pull requests. The coordinator reviews and merges only after required checks and production gates.
 - Finish with a clean worktree and enough branch and PR information for the coordinator to delete the merged branch and archive the completed session.
 
 ## Delivery
