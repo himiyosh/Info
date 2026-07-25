@@ -46,4 +46,14 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
     /After production verification, archive completed children and remove their merged branches/,
     "Completed child sessions and merged branches must be cleaned up after production verification"
   );
+  assert.match(
+    source,
+    /Implementation child sessions never merge pull requests\. The coordinator reviews and merges only after required checks and production gates\./,
+    "Implementation children must not receive delegated merge authority"
+  );
+  assert.doesNotMatch(
+    source,
+    /do not merge unless the coordinator explicitly authorizes it/,
+    "The policy must not permit delegated child merges"
+  );
 });

@@ -39,7 +39,8 @@ Hallmark guides taste, not business logic. Never let it invent product claims, w
 - Each child report stays compact: outcome, branch/SHA/PR, changed files, validation, blockers, and cleanup readiness.
 - At meaningful milestones, record a compact recovery manifest/checkpoint.
 - After production verification, archive completed children and remove their merged branches.
-- When a coordinator creates the session, complete the requested PR and report its outcome, branch/SHA/PR, changed files, validation, blockers, and cleanup readiness; do not merge unless the coordinator explicitly authorizes it.
+- When a coordinator creates the session, complete the requested PR and report its outcome, branch/SHA/PR, changed files, validation, blockers, and cleanup readiness.
+- Implementation child sessions never merge pull requests. The coordinator reviews and merges only after required checks and production gates.
 - Finish with a clean worktree and enough branch and PR information for the coordinator to delete the merged branch and archive the completed session.
 
 ## Delivery
