@@ -157,6 +157,13 @@ function extractObjectLiteral(sourceText, declarationPrefix) {
   throw new Error(`Could not close object literal for declaration: ${declarationPrefix}`);
 }
 
+function parseTranslations(sourceText) {
+  const translationLiteral = extractObjectLiteral(sourceText, "const translations =");
+  return vm.runInNewContext(`(${translationLiteral})`, Object.create(null), {
+    timeout: 1000
+  });
+}
+
 async function listFilesRecursively(rootDirectory) {
   const results = [];
   const entries = await readdir(rootDirectory, { withFileTypes: true });
@@ -257,10 +264,7 @@ test("projects.json schema, localization, links, and preview assets are valid", 
 
 test("i18n key parity and index.html data-i18n references are complete", async () => {
   const i18nSource = await readUtf8("i18n.js");
-  const translationLiteral = extractObjectLiteral(i18nSource, "const translations =");
-  const translations = vm.runInNewContext(`(${translationLiteral})`, Object.create(null), {
-    timeout: 1000
-  });
+  const translations = parseTranslations(i18nSource);
 
   const jaKeys = new Set(flattenStringLeafKeys(translations.ja));
   const enKeys = new Set(flattenStringLeafKeys(translations.en));
@@ -289,6 +293,86 @@ test("i18n key parity and index.html data-i18n references are complete", async (
   for (const key of referencedKeys) {
     assert.equal(typeof getByPath(translations.ja, key), "string", `Missing ja translation for "${key}"`);
     assert.equal(typeof getByPath(translations.en, key), "string", `Missing en translation for "${key}"`);
+  }
+});
+
+test("Japanese running prose uses progressive phrase-aware line breaking", async () => {
+  const stylesSource = await readUtf8("styles.css");
+  const fallbackRule = stylesSource.match(
+    /html:lang\(ja\)\s+:where\(\s*\.hero-lede,[\s\S]*?\.footer-disclaimer\s*\)\s*\{([^}]*)\}/
+  );
+
+  assert.ok(fallbackRule, "Japanese running prose must have an explicit fallback rule");
+  assert.match(
+    fallbackRule[1],
+    /line-break:\s*strict/,
+    "Japanese running prose must use strict Japanese line-breaking rules"
+  );
+  assert.match(
+    fallbackRule[1],
+    /word-break:\s*normal/,
+    "Japanese running prose must retain a safe word-break fallback"
+  );
+  assert.match(
+    stylesSource,
+    /@supports\s*\(word-break:\s*auto-phrase\)\s*\{[\s\S]*?html:lang\(ja\)\s+:where\([\s\S]*?\.footer-disclaimer\s*\)\s*\{[^}]*word-break:\s*auto-phrase/,
+    "Japanese running prose must progressively enable auto-phrase where supported"
+  );
+  assert.doesNotMatch(
+    fallbackRule[0],
+    /(?:^|[\s,.])(a|button|h[1-6]|code|\.project-stack)(?:[\s,.)]|$)/,
+    "Phrase-aware wrapping must not target links, controls, headings, code, or stack text"
+  );
+});
+
+test("protected Japanese phrase boundaries match between static and translated copy", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const i18nSource = await readUtf8("i18n.js");
+  const translations = parseTranslations(i18nSource);
+  const expectedHero =
+    "課題を解き、学びを分かち合う。好奇心を実用へつなぐ、himiyosh\u00a0のポートフォリオです。";
+  const expectedAbout =
+    "某グローバルIT企業で、テクノロジー領域の課題解決に取り組\u2060んでいます。役に立つ知識や技術を見つけ、試し、分かりやすい形にすることが好きです。";
+
+  assert.match(
+    indexHtml,
+    /課題を解き、学びを分かち合う。好奇心を実用へつなぐ、himiyosh&nbsp;のポートフォリオです。/,
+    "Static hero copy must protect the himiyosh の boundary with an NBSP"
+  );
+  assert.match(
+    indexHtml,
+    /取り組&#8288;んでいます/,
+    "Static About copy must protect the observed Japanese phrase boundary with a word joiner"
+  );
+  assert.equal(
+    translations.ja.hero.lede,
+    expectedHero,
+    "Translated hero copy must match the rendered static copy"
+  );
+  assert.equal(
+    translations.ja.about.content,
+    expectedAbout,
+    "Translated About copy must match the rendered static copy"
+  );
+});
+
+test("rejected continuous curiosity field recovery remains absent", async () => {
+  const productionPaths = ["index.html", "i18n.js", "styles.css", "script.js"];
+  const rejectedPatterns = [
+    /curiosity-field/i,
+    /initializeCuriosityField/,
+    /requestAnimationFrame\s*\(\s*renderField\s*\)/
+  ];
+
+  for (const sourcePath of productionPaths) {
+    const sourceText = await readUtf8(sourcePath);
+    for (const rejectedPattern of rejectedPatterns) {
+      assert.doesNotMatch(
+        sourceText,
+        rejectedPattern,
+        `${sourcePath} must not restore the rejected continuous curiosity field`
+      );
+    }
   }
 });
 
