@@ -432,6 +432,41 @@ test("mobile navigation enhancement is progressive and keeps no-JS links usable"
   );
 });
 
+test("open mobile navigation wraps keyboard focus at its disclosure boundaries", async () => {
+  const scriptSource = await readUtf8("script.js");
+
+  assert.match(
+    scriptSource,
+    /function isMobileMenuActive\(\)\s*\{[\s\S]*mobileNavigation\.matches[\s\S]*navMenu\.classList\.contains\("active"\)[\s\S]*hamburgerMenu\.getAttribute\("aria-expanded"\)\s*===\s*"true"/,
+    "Focus containment must be limited to the active, expanded mobile navigation"
+  );
+  assert.match(
+    scriptSource,
+    /if\s*\(event\.key\s*!==\s*"Tab"\s*\|\|\s*!isMobileMenuActive\(\)\)\s*\{\s*return;/,
+    "Non-Tab keys and inactive or desktop navigation must bypass focus containment"
+  );
+  assert.match(
+    scriptSource,
+    /navMenu\.querySelectorAll\(menuFocusableSelector\)/,
+    "Focus containment must derive enabled menu controls in DOM order"
+  );
+  assert.match(
+    scriptSource,
+    /!element\.matches\(":disabled"\)[\s\S]*element\.getAttribute\("aria-disabled"\)\s*!==\s*"true"/,
+    "Native-disabled and aria-disabled menu controls must be excluded from the focus cycle"
+  );
+  assert.match(
+    scriptSource,
+    /event\.shiftKey\s*&&\s*document\.activeElement\s*===\s*hamburgerMenu[\s\S]*event\.preventDefault\(\);[\s\S]*lastMenuControl\.focus\(\);/,
+    "Shift+Tab from the disclosure toggle must wrap to the last menu control"
+  );
+  assert.match(
+    scriptSource,
+    /!event\.shiftKey\s*&&\s*document\.activeElement\s*===\s*lastMenuControl[\s\S]*event\.preventDefault\(\);[\s\S]*hamburgerMenu\.focus\(\);/,
+    "Tab from the last menu control must wrap to the disclosure toggle"
+  );
+});
+
 test("new-tab links include bilingual accessibility announcement text", async () => {
   const indexHtml = await readUtf8("index.html");
   const scriptSource = await readUtf8("script.js");

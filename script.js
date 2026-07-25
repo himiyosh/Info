@@ -18,6 +18,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
   const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const menuFocusableSelector = [
+    "a[href]",
+    "button:not([disabled])",
+    "input:not([disabled]):not([type='hidden'])",
+    "select:not([disabled])",
+    "textarea:not([disabled])",
+    "[tabindex]:not([tabindex='-1'])"
+  ].join(", ");
   let projects = null;
   let projectState = "loading";
   const localizedProjectFields = ["title", "description", "kind", "action", "imageAlt"];
@@ -128,6 +136,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function isMobileMenuActive() {
+    return (
+      mobileNavigation.matches &&
+      navMenu.classList.contains("active") &&
+      hamburgerMenu.getAttribute("aria-expanded") === "true"
+    );
+  }
+
+  function containMobileMenuFocus(event) {
+    if (event.key !== "Tab" || !isMobileMenuActive()) {
+      return;
+    }
+
+    const menuControls = [...navMenu.querySelectorAll(menuFocusableSelector)].filter(
+      (element) =>
+        !element.matches(":disabled") &&
+        !element.hasAttribute("hidden") &&
+        element.getAttribute("aria-hidden") !== "true" &&
+        element.getAttribute("aria-disabled") !== "true"
+    );
+    const lastMenuControl = menuControls.at(-1);
+
+    if (event.shiftKey && document.activeElement === hamburgerMenu && lastMenuControl) {
+      event.preventDefault();
+      lastMenuControl.focus();
+    } else if (!event.shiftKey && document.activeElement === lastMenuControl) {
+      event.preventDefault();
+      hamburgerMenu.focus();
+    }
+  }
+
   hamburgerMenu.addEventListener("click", () => {
     setMenuOpen(!navMenu.classList.contains("active"));
   });
@@ -149,6 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.addEventListener("keydown", (event) => {
+    containMobileMenuFocus(event);
     if (event.key === "Escape" && navMenu.classList.contains("active")) {
       setMenuOpen(false, { restoreFocus: true });
     }
