@@ -535,6 +535,20 @@ test("workflow actions are pinned to immutable Node.js-24-compatible SHAs", asyn
   );
 });
 
+test("workflow checkouts do not persist credentials", async () => {
+  for (const [workflowName, workflowPath] of [
+    ["Quality", qualityWorkflowPath],
+    ["Pages", pagesWorkflowPath]
+  ]) {
+    const workflow = await readUtf8(workflowPath);
+    assert.match(
+      workflow,
+      /uses:\s*actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\s*\n\s*with:\s*\n\s+persist-credentials:\s*false/,
+      `${workflowName} checkout must set persist-credentials: false`
+    );
+  }
+});
+
 test("Pages workflow keeps least-privilege permissions and artifact-only deployment", async () => {
   const pagesWorkflow = await readUtf8(pagesWorkflowPath);
   const buildBlock = pagesWorkflow.match(/\n  build:\n([\s\S]*?)\n  deploy:\n/);
@@ -551,11 +565,6 @@ test("Pages workflow keeps least-privilege permissions and artifact-only deploym
   assert.match(buildBlock[1], /permissions:\n\s+contents:\s+read/, "Build job must request contents:read");
   assert.doesNotMatch(buildBlock[1], /pages:\s+write/, "Build job must not request pages:write");
   assert.doesNotMatch(buildBlock[1], /id-token:\s+write/, "Build job must not request id-token:write");
-  assert.match(
-    buildBlock[1],
-    /uses:\s*actions\/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1[\s\S]*persist-credentials:\s*false/,
-    "Build checkout must set persist-credentials: false"
-  );
   assert.match(buildBlock[1], /timeout-minutes:\s*5/, "Build job must set a short timeout");
 
   assert.match(deployBlock[1], /permissions:\n\s+pages:\s+write\n\s+id-token:\s+write/, "Deploy job must request pages:write and id-token:write");
