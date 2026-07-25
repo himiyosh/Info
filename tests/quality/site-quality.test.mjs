@@ -756,6 +756,47 @@ test("hero image has no entrance animation and decorative keyframes are removed"
   );
 });
 
+test("contact link hover transitions do not animate layout properties", async () => {
+  const stylesSource = await readUtf8("styles.css");
+  const contactLinkRule = stylesSource.match(/\.contact-links a\s*\{([^}]*)\}/s)?.[1];
+  const contactHoverRule = stylesSource.match(/\.contact-links a:hover\s*\{([^}]*)\}/s)?.[1];
+  const layoutPropertyPattern = /\b(?:padding|margin|width|height|inset|top|right|bottom|left)(?:-[a-z]+)?\b/;
+
+  assert.ok(contactLinkRule, "Contact links must keep their base styling");
+  assert.ok(contactHoverRule, "Contact links must keep a pointer hover state");
+  assert.doesNotMatch(
+    contactLinkRule.match(/transition\s*:[^;]+;/s)?.[0] ?? "",
+    layoutPropertyPattern,
+    "Contact link transitions must not animate layout properties"
+  );
+  assert.doesNotMatch(
+    contactHoverRule,
+    layoutPropertyPattern,
+    "Contact link hover must not change layout properties"
+  );
+  assert.match(
+    contactHoverRule,
+    /\bbackground(?:-color)?\s*:/,
+    "Contact link hover must retain a restrained color signal"
+  );
+});
+
+test("project rows stay visible without per-item reveal machinery", async () => {
+  const stylesSource = await readUtf8("styles.css");
+  const scriptSource = await readUtf8("script.js");
+
+  assert.doesNotMatch(
+    scriptSource,
+    /\bprojectObserver\b|\bsetupProjectMotion\b|--project-index|classList\.add\("is-visible"\)/,
+    "script.js must not restore project-row reveal state or observer wiring"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /\.motion-ready\s+\.project-row|\.project-row(?:[^{]*?)\.is-visible|--project-index/,
+    "styles.css must not hide or stagger project rows behind reveal state"
+  );
+});
+
 test("Japanese hero title keeps each supplied phrase on one line", async () => {
   const stylesSource = await readUtf8("styles.css");
   assert.match(

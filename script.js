@@ -20,7 +20,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let projects = null;
   let projectState = "loading";
-  let projectObserver = null;
   const localizedProjectFields = ["title", "description", "kind", "action", "imageAlt"];
 
   function requireNonEmptyString(value, fieldName) {
@@ -238,7 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const fragment = document.createDocumentFragment();
-    projects.forEach((project, index) => {
+    projects.forEach((project) => {
       const article = document.createElement("article");
       const media = document.createElement("div");
       const image = document.createElement("img");
@@ -254,7 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const linkArrow = document.createElement("span");
 
       article.className = "project-row";
-      article.style.setProperty("--project-index", String(index));
       media.className = "project-media";
       image.src = project.image;
       image.alt = localizedValue(project.imageAlt);
@@ -301,33 +299,6 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsContainer.replaceChildren(fragment);
     projectsContainer.setAttribute("aria-busy", "false");
     projectState = "ready";
-    setupProjectMotion();
-  }
-
-  function setupProjectMotion() {
-    projectObserver?.disconnect();
-    const rows = [...projectsContainer.querySelectorAll(".project-row")];
-    if (
-      reducedMotion.matches ||
-      !root.classList.contains("motion-ready") ||
-      !("IntersectionObserver" in window)
-    ) {
-      rows.forEach((row) => row.classList.add("is-visible"));
-      return;
-    }
-
-    projectObserver = new IntersectionObserver(
-      (entries, observer) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.18 }
-    );
-    rows.forEach((row) => projectObserver.observe(row));
   }
 
   function renderProjectLoading() {
