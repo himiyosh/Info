@@ -581,11 +581,6 @@ html:not(.js-enabled) .language-toggle {
   background: var(--color-dark-surface);
   border: 1px solid var(--color-rule-dark);
   border-radius: var(--radius-small);
-  opacity: 1;
-  transform: none;
-  transition:
-    opacity var(--duration-long) var(--ease-out),
-    transform var(--duration-long) var(--ease-out);
 }
 
 .project-media img {
@@ -741,9 +736,7 @@ html:not(.js-enabled) .language-toggle {
   color: var(--color-ink);
   border-block-end: 1px solid var(--color-body);
   text-decoration: none;
-  transition:
-    background-color var(--duration-fast) var(--ease-out),
-    padding-inline var(--duration-medium) var(--ease-out);
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .contact-links span {
@@ -825,15 +818,6 @@ html:not(.js-enabled) .language-toggle {
   animation-delay: 220ms;
 }
 
-.motion-ready .project-row:not(.is-visible) .project-media {
-  opacity: 0.78;
-  transform: translateY(1rem) rotate(-0.6deg);
-}
-
-.motion-ready .project-row.is-visible .project-media {
-  transition-delay: calc(var(--project-index, 0) * 60ms);
-}
-
 .hero-visual.is-tilting,
 .hero-visual.is-tilting::before {
   transition-duration: 90ms;
@@ -892,7 +876,6 @@ html:not(.js-enabled) .language-toggle {
   }
 
   .contact-links a:hover {
-    padding-inline: 0.75rem;
     background: var(--color-coral-strong);
   }
 
@@ -990,11 +973,6 @@ html:not(.js-enabled) .language-toggle {
 
   .hero-visual,
   .hero-visual figcaption {
-    transform: none;
-  }
-
-  .motion-ready .project-row:not(.is-visible) .project-media {
-    opacity: 1;
     transform: none;
   }
 }
