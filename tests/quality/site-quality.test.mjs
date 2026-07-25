@@ -356,19 +356,24 @@ test("protected Japanese phrase boundaries match between static and translated c
   );
 });
 
-test("rejected curiosity canvas recovery remains absent", async () => {
-  const sources = await Promise.all(
-    ["index.html", "i18n.js", "styles.css", "script.js"].map(readUtf8)
-  );
+test("rejected continuous curiosity field recovery remains absent", async () => {
+  const productionPaths = ["index.html", "i18n.js", "styles.css", "script.js"];
+  const rejectedPatterns = [
+    /curiosity-field/i,
+    /initializeCuriosityField/,
+    /requestAnimationFrame\s*\(\s*renderField\s*\)/
+  ];
 
-  for (const sourceText of sources) {
-    assert.doesNotMatch(
-      sourceText,
-      /curiosity-field/i,
-      "Production sources must not restore the rejected curiosity-field canvas"
-    );
+  for (const sourcePath of productionPaths) {
+    const sourceText = await readUtf8(sourcePath);
+    for (const rejectedPattern of rejectedPatterns) {
+      assert.doesNotMatch(
+        sourceText,
+        rejectedPattern,
+        `${sourcePath} must not restore the rejected continuous curiosity field`
+      );
+    }
   }
-  assert.doesNotMatch(sources[0], /<canvas\b/i, "index.html must not add a canvas");
 });
 
 test("required SEO and social metadata exist and are consistent", async () => {
