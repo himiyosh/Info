@@ -634,6 +634,25 @@ test("mobile navigation enhancement is progressive and keeps no-JS links usable"
     /@media\s*\(min-width:\s*48rem\)[\s\S]*\.js-enabled\s+\.nav-menu/,
     "styles.css must provide desktop reset with js-enabled selector specificity"
   );
+  assert.match(
+    stylesSource,
+    /\.js-enabled\s+\.nav-menu\s*\{[\s\S]*?visibility:\s*hidden[\s\S]*?visibility\s+0s\s+linear\s+var\(--dur-short\)/,
+    "Closed enhanced navigation must become hidden after its exit animation"
+  );
+  assert.match(
+    stylesSource,
+    /\.js-enabled\s+\.nav-menu\.active\s*\{[\s\S]*?visibility:\s*visible[\s\S]*?transition-delay:\s*0s/,
+    "Opened enhanced navigation must become immediately visible before it receives focus"
+  );
+  const desktopNavOverride = stylesSource.match(
+    /@media\s*\(min-width:\s*48rem\)\s*\{[\s\S]*?\.js-enabled\s+\.nav-menu,\s*\.nav-menu\s*\{([^}]*)\}/
+  )?.[1];
+  assert.ok(desktopNavOverride, "Desktop navigation override must exist");
+  assert.match(
+    desktopNavOverride,
+    /visibility:\s*visible/,
+    "Desktop navigation override must reset mobile disclosure visibility"
+  );
   assert.ok(
     /<nav[\s\S]*id="nav-menu"[\s\S]*?<a href="#about"[\s\S]*?<a href="#projects"[\s\S]*?<a href="#contact"/i.test(
       indexHtml
@@ -851,6 +870,7 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
   const whitelistSet = new Set(whitelistEntries);
   const expectedWhitelist = new Set([
     "index.html",
+    "tokens.css",
     "styles.css",
     "script.js",
     "i18n.js",
@@ -1065,24 +1085,30 @@ test("Japanese hero title keeps each supplied phrase on one line", async () => {
   );
 });
 
-test("pointer-tilt handler uses requestAnimationFrame to avoid forced reflow", async () => {
+test("static redesign defers hero tilt runtime work to PR 2", async () => {
   const scriptSource = await readUtf8("script.js");
-  assert.match(
-    scriptSource,
-    /requestAnimationFrame\(flushTilt\)/,
-    "Pointer-tilt must schedule style writes via requestAnimationFrame"
-  );
-  assert.doesNotMatch(
-    scriptSource,
-    /getBoundingClientRect\(\)[\s\S]{0,40}tiltBounds = null/,
-    "getBoundingClientRect should not be called on every pointermove; bounds must be cached"
-  );
-  const tiltBoundsAssign = scriptSource.match(/tiltBounds\s*=\s*heroVisual\.getBoundingClientRect\(\)/);
-  const boundsNullCheck = scriptSource.match(/if\s*\(!tiltBounds\)/);
-  assert.ok(
-    tiltBoundsAssign && boundsNullCheck,
-    "getBoundingClientRect must be guarded by a null-check (cached path)"
-  );
+  const stylesSource = await readUtf8("styles.css");
+
+  for (const deferredTiltPattern of [
+    /flushTilt/,
+    /resetHeroTilt/,
+    /updateHeroTilt/,
+    /--tilt-[xy]/,
+    /--back-[xy]/,
+    /\bis-tilting\b/,
+    /pointermove/
+  ]) {
+    assert.doesNotMatch(
+      scriptSource,
+      deferredTiltPattern,
+      `PR 1 must not retain deferred hero tilt runtime work: ${deferredTiltPattern}`
+    );
+    assert.doesNotMatch(
+      stylesSource,
+      deferredTiltPattern,
+      `PR 1 styles must not retain deferred hero tilt hooks: ${deferredTiltPattern}`
+    );
+  }
 });
 
 test("scroll-progress feature is fully removed", async () => {
@@ -1170,4 +1196,45 @@ test("hero image preload in head matches srcset/sizes of the hero img element", 
     preloadPos < stylesheetPos,
     "preload link must appear before the stylesheet link in <head>"
   );
+});
+
+test("rich redesign foundation uses local tokens and keeps the marquee static", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const tokensSource = await readUtf8("tokens.css");
+  const stylesSource = await readUtf8("styles.css");
+
+  assert.match(
+    indexHtml,
+    /<link rel="stylesheet" href="tokens\.css" \/>\s*<link rel="stylesheet" href="styles\.css" \/>/,
+    "Token stylesheet must load before the page stylesheet"
+  );
+  assert.doesNotMatch(
+    indexHtml,
+    /https?:\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com)\//,
+    "The design must not load a runtime third-party font"
+  );
+  assert.match(
+    tokensSource,
+    /@font-face[\s\S]*Big Shoulders Display[\s\S]*assets\/fonts\/BigShouldersDisplay-latin-variable\.woff2/,
+    "The Latin display font must be served from the local artifact"
+  );
+  assert.match(
+    tokensSource,
+    /--color-accent:\s*oklch\(/,
+    "Canonical design colors must be defined in tokens.css"
+  );
+  assert.match(
+    stylesSource,
+    /Hallmark · macrostructure: Marquee Hero[\s\S]*Carnival \/ Studio Night/,
+    "Foundation CSS must record the selected marquee and theme system"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /@keyframes\s+(?:foot-marquee|scroll-progress)|animation:\s*[^;]*(?:foot-marquee|scroll-progress)/,
+    "Continuous marquee and scroll-progress motion remain reserved for PR 2"
+  );
+  await Promise.all([
+    stat(path.join(repoRoot, "assets/fonts/BigShouldersDisplay-latin-variable.woff2")),
+    stat(path.join(repoRoot, "assets/fonts/OFL.txt"))
+  ]);
 });

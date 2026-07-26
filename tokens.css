@@ -1,0 +1,65 @@
+@font-face {
+  font-family: "Big Shoulders Display";
+  src: url("assets/fonts/BigShouldersDisplay-latin-variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --color-paper: oklch(88% 0.05 25);
+  --color-paper-2: oklch(84% 0.055 22);
+  --color-paper-3: oklch(78% 0.06 20);
+  --color-ink: oklch(20% 0.05 270);
+  --color-ink-2: oklch(32% 0.045 265);
+  --color-muted: oklch(48% 0.04 260);
+  --color-rule: oklch(24% 0.18 320);
+  --color-accent: oklch(78% 0.18 220);
+  --color-accent-2: oklch(24% 0.18 320);
+  --color-accent-ink: oklch(20% 0.05 270);
+  --color-on-dark: oklch(94% 0.025 25);
+  --color-focus: oklch(24% 0.18 320);
+  --color-transparent: transparent;
+  --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --font-display-ja: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+  --font-body: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body-ja: "Hiragino Sans", "Yu Gothic Medium", "Yu Gothic", "Meiryo", sans-serif;
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs: 0.75rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4.5rem;
+  --space-3xl: 7rem;
+  --space-4xl: 9rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.5625rem;
+  --text-xl: 1.9531rem;
+  --text-2xl: 2.4414rem;
+  --text-3xl: 3.0518rem;
+  --text-display: clamp(2.75rem, 7vw + 1rem, 6rem);
+  --page-gutter: max(clamp(1rem, 4vw, 4rem), env(safe-area-inset-left));
+  --content-width: 80rem;
+  --copy-width: 65ch;
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --radius-none: 0;
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+  --shadow-hard: 4px 4px 0 var(--color-ink);
+}

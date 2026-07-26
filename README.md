@@ -4,6 +4,7 @@
 ## Development
 - Run `python3 -m http.server 8000` from the repository root, then open http://localhost:8000/.
 - Portfolio entries and their local preview assets are declared in `projects.json`; Japanese and English interface copy lives in `i18n.js`.
+- `tokens.css` is the design-token source of truth. The Latin display font is bundled under `assets/fonts/` with its `OFL.txt` license, so no runtime font provider is required.
 - `robots.txt` and `sitemap.xml` expose the public page to search crawlers.
 - The site uses local HTML, CSS, JavaScript, and imagery for its initial render. AdSense is deferred to production so core content remains fast and resilient.
 

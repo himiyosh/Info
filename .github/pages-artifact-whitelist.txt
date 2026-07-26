@@ -1,4 +1,5 @@
 index.html
+tokens.css
 styles.css
 script.js
 i18n.js
