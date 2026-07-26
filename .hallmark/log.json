@@ -1,5 +1,18 @@
 [
   {
+    "date": "2026-07-27",
+    "scope": "app",
+    "macrostructure": "Feature Stack",
+    "theme": "Graphite Blue",
+    "drop": "quiet-modern-luxury",
+    "enrichment": "existing local mountain profile photograph",
+    "brief": "Modern-luxury reconstruction of the bilingual portfolio with a layered viewport stage, quiet floating navigation, sticky desktop hero, pinned About pacing, viewport-height project chapters, one shared rAF scene lifecycle, and a static Ft5 statement footer",
+    "slopTest": {
+      "result": "58/58",
+      "note": "The approved, tightly bounded +/-5px project-media depth treatment is retained as part of the locked motion system, stays within one shared rAF lifecycle, and is fully removed for reduced motion."
+    }
+  },
+  {
     "date": "2026-07-26",
     "macrostructure": "Marquee Hero",
     "theme": "Graphite Blue",
