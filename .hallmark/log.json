@@ -1,0 +1,14 @@
+[
+  {
+    "date": "2026-07-26",
+    "macrostructure": "Marquee Hero",
+    "theme": "Carnival",
+    "drop": "studio-night",
+    "enrichment": "existing local mountain profile photograph",
+    "brief": "Static foundation for himiyosh's bilingual personal portfolio",
+    "slopTest": {
+      "result": "57/58",
+      "exception": "Gate 23: approved cyan and plum scene surfaces intentionally exceed the default accent-area limit."
+    }
+  }
+]

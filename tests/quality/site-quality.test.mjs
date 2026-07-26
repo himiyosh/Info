@@ -851,6 +851,7 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
   const whitelistSet = new Set(whitelistEntries);
   const expectedWhitelist = new Set([
     "index.html",
+    "tokens.css",
     "styles.css",
     "script.js",
     "i18n.js",
@@ -1170,4 +1171,45 @@ test("hero image preload in head matches srcset/sizes of the hero img element", 
     preloadPos < stylesheetPos,
     "preload link must appear before the stylesheet link in <head>"
   );
+});
+
+test("rich redesign foundation uses local tokens and keeps the marquee static", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const tokensSource = await readUtf8("tokens.css");
+  const stylesSource = await readUtf8("styles.css");
+
+  assert.match(
+    indexHtml,
+    /<link rel="stylesheet" href="tokens\.css" \/>\s*<link rel="stylesheet" href="styles\.css" \/>/,
+    "Token stylesheet must load before the page stylesheet"
+  );
+  assert.doesNotMatch(
+    indexHtml,
+    /https?:\/\/(?:fonts\.googleapis\.com|fonts\.gstatic\.com)\//,
+    "The design must not load a runtime third-party font"
+  );
+  assert.match(
+    tokensSource,
+    /@font-face[\s\S]*Big Shoulders Display[\s\S]*assets\/fonts\/BigShouldersDisplay-latin-variable\.woff2/,
+    "The Latin display font must be served from the local artifact"
+  );
+  assert.match(
+    tokensSource,
+    /--color-accent:\s*oklch\(/,
+    "Canonical design colors must be defined in tokens.css"
+  );
+  assert.match(
+    stylesSource,
+    /Hallmark · macrostructure: Marquee Hero[\s\S]*Carnival \/ Studio Night/,
+    "Foundation CSS must record the selected marquee and theme system"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /@keyframes\s+(?:foot-marquee|scroll-progress)|animation:\s*[^;]*(?:foot-marquee|scroll-progress)/,
+    "Continuous marquee and scroll-progress motion remain reserved for PR 2"
+  );
+  await Promise.all([
+    stat(path.join(repoRoot, "assets/fonts/BigShouldersDisplay-latin-variable.woff2")),
+    stat(path.join(repoRoot, "assets/fonts/OFL.txt"))
+  ]);
 });
