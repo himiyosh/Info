@@ -13,11 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const navMenu = requireElement("nav-menu");
   const langToggle = requireElement("lang-toggle");
   const projectsContainer = requireElement("projects-container");
-  const heroVisual = document.querySelector(".hero-visual");
-  const root = document.documentElement;
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
-  const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const menuFocusableSelector = [
     "a[href]",
     "button:not([disabled])",
@@ -36,73 +32,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return value.trim();
   }
-
-  if (!reducedMotion.matches) {
-    root.classList.add("motion-ready");
-  }
-
-  window.addEventListener("scroll", () => {
-    tiltBounds = null;
-  }, { passive: true });
-  window.addEventListener("resize", () => {
-    tiltBounds = null;
-  }, { passive: true });
-
-  let tiltBounds = null;
-  let pendingTiltH = 0;
-  let pendingTiltV = 0;
-  let tiltFrame = null;
-
-  function flushTilt() {
-    tiltFrame = null;
-    if (!heroVisual || reducedMotion.matches || !finePointer.matches) {
-      return;
-    }
-    heroVisual.classList.add("is-tilting");
-    heroVisual.style.setProperty("--tilt-x", `${(pendingTiltH * 5).toFixed(2)}deg`);
-    heroVisual.style.setProperty("--tilt-y", `${(-pendingTiltV * 5).toFixed(2)}deg`);
-    heroVisual.style.setProperty("--back-x", `${(-pendingTiltH * 8).toFixed(2)}px`);
-    heroVisual.style.setProperty("--back-y", `${(-pendingTiltV * 8).toFixed(2)}px`);
-  }
-
-  function resetHeroTilt() {
-    if (tiltFrame !== null) {
-      window.cancelAnimationFrame(tiltFrame);
-      tiltFrame = null;
-    }
-    tiltBounds = null;
-    if (!heroVisual) {
-      return;
-    }
-    heroVisual.classList.remove("is-tilting");
-    heroVisual.style.setProperty("--tilt-x", "0deg");
-    heroVisual.style.setProperty("--tilt-y", "0deg");
-    heroVisual.style.setProperty("--back-x", "0px");
-    heroVisual.style.setProperty("--back-y", "0px");
-  }
-
-  function updateHeroTilt(event) {
-    if (!heroVisual || reducedMotion.matches || !finePointer.matches) {
-      return;
-    }
-    if (!tiltBounds) {
-      tiltBounds = heroVisual.getBoundingClientRect();
-    }
-    pendingTiltH = (event.clientX - tiltBounds.left) / tiltBounds.width - 0.5;
-    pendingTiltV = (event.clientY - tiltBounds.top) / tiltBounds.height - 0.5;
-    if (tiltFrame === null) {
-      tiltFrame = window.requestAnimationFrame(flushTilt);
-    }
-  }
-
-  heroVisual?.addEventListener("pointermove", updateHeroTilt);
-  heroVisual?.addEventListener("pointerleave", resetHeroTilt);
-  reducedMotion.addEventListener("change", (event) => {
-    root.classList.toggle("motion-ready", !event.matches);
-    if (event.matches) {
-      resetHeroTilt();
-    }
-  });
 
   function updateNavigationLabel() {
     const labelKey =

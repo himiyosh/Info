@@ -200,15 +200,19 @@ html:not(.js-enabled) .language-toggle {
   opacity: 0;
   pointer-events: none;
   transform: translateY(calc(var(--space-xs) * -1));
+  visibility: hidden;
   transition:
     opacity var(--dur-micro) var(--ease-out),
-    transform var(--dur-short) var(--ease-out);
+    transform var(--dur-short) var(--ease-out),
+    visibility 0s linear var(--dur-short);
 }
 
 .js-enabled .nav-menu.active {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+  visibility: visible;
+  transition-delay: 0s;
 }
 
 .nav-menu a,
