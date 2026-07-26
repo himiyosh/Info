@@ -696,6 +696,49 @@ test("open mobile navigation wraps keyboard focus at its disclosure boundaries",
   );
 });
 
+test("modern mobile navigation stays scroll-contained in short safe-area viewports", async () => {
+  const modernSource = await readUtf8("modern.css");
+  const mobileRule = modernSource.match(/\.js-enabled \.nav-menu\s*\{([^}]*)\}/s)?.[1];
+  const desktopBlock = modernSource.match(
+    /@media \(min-width: 48rem\) \{([\s\S]*)\}\s*html:not\(\.js-enabled\) \.hero/
+  )?.[1];
+
+  assert.ok(mobileRule, "modern.css must define the enhanced mobile navigation");
+  assert.match(
+    mobileRule,
+    /inset-inline:\s*max\(var\(--space-sm\),\s*env\(safe-area-inset-left\)\)\s*max\(var\(--space-sm\),\s*env\(safe-area-inset-right\)\)/,
+    "The disclosure must keep both landscape safe areas clear"
+  );
+  assert.match(
+    mobileRule,
+    /max-block-size:\s*max\([\s\S]*?100dvh[\s\S]*?env\(safe-area-inset-bottom\)[\s\S]*?\);/,
+    "The disclosure must be bounded by the dynamic viewport and bottom safe area"
+  );
+  assert.match(mobileRule, /overflow-y:\s*auto;/, "Short disclosures must scroll internally");
+  assert.match(
+    mobileRule,
+    /overscroll-behavior:\s*contain;/,
+    "Menu scrolling must not chain into the page"
+  );
+  assert.match(
+    mobileRule,
+    /scroll-padding-block:\s*var\(--space-xs\);/,
+    "Keyboard focus scrolling must reserve room for the offset ring"
+  );
+  assert.match(
+    modernSource,
+    /\.js-enabled \.nav-menu :where\(a, button\)\s*\{\s*scroll-margin-block:\s*var\(--space-xs\);/,
+    "Each menu control must request focus-ring clearance when scrolled"
+  );
+
+  assert.ok(desktopBlock, "modern.css must define the desktop navigation reset");
+  assert.match(
+    desktopBlock,
+    /\.js-enabled \.nav-menu,\s*\.nav-menu\s*\{[^}]*max-block-size:\s*none;[^}]*overflow-y:\s*visible;[^}]*overscroll-behavior:\s*auto;/s,
+    "Desktop navigation must reset mobile containment"
+  );
+});
+
 test("new-tab links include bilingual accessibility announcement text", async () => {
   const indexHtml = await readUtf8("index.html");
   const scriptSource = await readUtf8("script.js");
@@ -1134,7 +1177,7 @@ test("project rows stay visible by default and reveal machinery is bounded and s
   );
 });
 
-test("Japanese hero title keeps each supplied phrase on one line", async () => {
+test("Japanese hero keeps each supplied phrase intact before the narrow emergency override", async () => {
   const stylesSource = await readUtf8("styles.css");
   assert.match(
     stylesSource,
@@ -1144,7 +1187,7 @@ test("Japanese hero title keeps each supplied phrase on one line", async () => {
   assert.match(
     stylesSource,
     /html:lang\(ja\)\s+\.hero h1 span\s*\{[^}]*white-space:\s*nowrap/s,
-    "Japanese hero spans must not orphan punctuation or split a supplied phrase"
+    "The default Japanese hero must preserve each intentionally supplied phrase"
   );
 });
 
@@ -1777,49 +1820,18 @@ function oklchContrastRatio(tokenA, tokenB) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-test("focus-ring outline-color is scoped to controls whose own accent fill sits under the offset ring", async () => {
+test("final modern focus-ring overrides match the actual project and contact surfaces", async () => {
   const stylesSource = await readUtf8("styles.css");
+  const modernSource = await readUtf8("modern.css");
 
-  // The accent-ink override must apply ONLY to the two contexts where the
-  // 3px outline-offset ring lands within the parent's own accent-filled
-  // padding (project-row odd rows, contact panel) — not to controls whose
-  // offset ring is painted over dark paper/paper-3 (menu-toggle,
-  // language-toggle, button-primary, retry-button), where accent-ink would
-  // be near-invisible against the backdrop.
-  const accentInkRuleMatch = stylesSource.match(
-    /([^{}]+)\{\s*outline-color:\s*var\(--color-accent-ink\);\s*\}/
+  const finalFocusRule = modernSource.match(
+    /\.projects-list \.project-row :where\(a, button\):focus-visible,\s*\.contact-panel :where\(a, button\):focus-visible\s*\{\s*outline-color:\s*var\(--color-focus\);\s*\}/
   );
-  assert.ok(accentInkRuleMatch, "Expected an outline-color: var(--color-accent-ink) rule in styles.css");
-  const accentInkSelectorList = accentInkRuleMatch[1];
+  assert.ok(
+    finalFocusRule,
+    "modern.css must override both project and contact focus rings with --color-focus"
+  );
 
-  const mustInclude = [
-    ".project-row:nth-child(odd) :where(a, button):focus-visible",
-    ".contact-panel :where(a, button):focus-visible"
-  ];
-  for (const selector of mustInclude) {
-    assert.ok(
-      accentInkSelectorList.includes(selector),
-      `accent-ink outline-color rule must still cover "${selector}" (ring lands on its own accent padding)`
-    );
-  }
-
-  const mustExclude = [
-    ".menu-toggle:focus-visible",
-    ".language-toggle:focus-visible",
-    ".button-primary:focus-visible",
-    ".retry-button:focus-visible"
-  ];
-  for (const selector of mustExclude) {
-    assert.ok(
-      !accentInkSelectorList.includes(selector),
-      `accent-ink outline-color rule must NOT cover "${selector}" — its offset ring is painted over dark paper/paper-3, not its own accent fill`
-    );
-  }
-
-  // The .language-toggle exclusion on the on-dark override must remain so
-  // that .language-toggle falls through to the default --color-focus ring
-  // from :where(a, button):focus-visible instead of inheriting on-dark via
-  // the broader .js-enabled .nav-menu :focus-visible selector.
   assert.match(
     stylesSource,
     /\.js-enabled \.nav-menu :focus-visible:not\(\.language-toggle\)/,
@@ -1836,7 +1848,13 @@ test("focus-ring / backdrop token pairings meet WCAG 1.4.11 non-text contrast (>
     "--color-accent-ink",
     "--color-on-dark",
     "--color-paper",
+    "--color-paper-2",
     "--color-paper-3",
+    "--color-surface",
+    "--color-scene-hero",
+    "--color-scene-projects",
+    "--color-project-a",
+    "--color-project-b",
     "--color-accent",
     "--color-accent-2"
   ];
@@ -1844,30 +1862,21 @@ test("focus-ring / backdrop token pairings meet WCAG 1.4.11 non-text contrast (>
     assert.ok(tokens.has(name), `Expected ${name} to be defined as oklch(...) in tokens.css`);
   }
 
-  // Real ring/backdrop pairings for every focus-visible selector in
-  // styles.css, derived from each control's actual DOM ancestor background
-  // (not the control's own fill), so a future palette edit that shifts
-  // these tokens will fail loudly instead of silently regressing contrast.
+  // Final ring/backdrop pairings after modern.css overrides the legacy
+  // surface system. These use the ancestor under the 3px offset ring, not
+  // the control's own fill.
   const pairings = [
-    // .menu-toggle sits directly in .site-header (background: paper), zero
-    // own padding, default focus ring (base :where(a,button) rule).
-    { label: ".menu-toggle ring vs .site-header (paper)", ring: "--color-focus", backdrop: "--color-paper" },
-    // .button-primary sits in .hero, which has no bg override -> body bg (paper).
-    { label: ".button-primary ring vs body (paper)", ring: "--color-focus", backdrop: "--color-paper" },
-    // .retry-button sits in .projects-status/.projects-noscript, which
-    // inherit .projects background (paper-3).
-    { label: ".retry-button ring vs .projects (paper-3)", ring: "--color-focus", backdrop: "--color-paper-3" },
-    // .language-toggle's immediate parent is .nav-menu: paper-3 in the
-    // mobile open-dropdown state, transparent-over-paper (site-header) at
-    // desktop. Both must pass with the default focus ring.
-    { label: ".language-toggle ring vs .nav-menu mobile (paper-3)", ring: "--color-focus", backdrop: "--color-paper-3" },
-    { label: ".language-toggle ring vs .site-header desktop (paper)", ring: "--color-focus", backdrop: "--color-paper" },
-    // .project-row:nth-child(odd) and .contact-panel fill their own
-    // generous padding with accent, so the offset ring lands on accent.
-    { label: ".project-row odd ring vs own accent fill", ring: "--color-accent-ink", backdrop: "--color-accent" },
-    { label: ".contact-panel ring vs own accent fill", ring: "--color-accent-ink", backdrop: "--color-accent" },
-    // .project-row:nth-child(even) uses on-dark against its own accent-2 fill.
-    { label: ".project-row even ring vs own accent-2 fill", ring: "--color-on-dark", backdrop: "--color-accent-2" }
+    { label: ".menu-toggle ring vs resting header", ring: "--color-focus", backdrop: "--color-paper-2" },
+    { label: ".menu-toggle ring vs compact header", ring: "--color-focus", backdrop: "--color-surface" },
+    { label: ".button-primary ring vs hero scene", ring: "--color-focus", backdrop: "--color-scene-hero" },
+    { label: ".retry-button ring vs projects scene", ring: "--color-focus", backdrop: "--color-scene-projects" },
+    { label: ".language-toggle ring vs mobile nav", ring: "--color-focus", backdrop: "--color-paper-2" },
+    { label: ".language-toggle ring vs compact desktop header", ring: "--color-focus", backdrop: "--color-surface" },
+    { label: ".nav link ring vs mobile nav", ring: "--color-on-dark", backdrop: "--color-paper-2" },
+    { label: ".nav link ring vs compact desktop header", ring: "--color-on-dark", backdrop: "--color-surface" },
+    { label: ".project-row odd ring vs final project-a", ring: "--color-focus", backdrop: "--color-project-a" },
+    { label: ".project-row even ring vs final project-b", ring: "--color-focus", backdrop: "--color-project-b" },
+    { label: ".contact-panel ring vs final surface", ring: "--color-focus", backdrop: "--color-surface" }
   ];
 
   for (const { label, ring, backdrop } of pairings) {
@@ -2029,8 +2038,23 @@ test("modern typography preserves natural language wrapping and stable no-JS/red
   assert.match(modernSource, /html,\s*body\s*\{\s*overflow-x:\s*clip;/);
   assert.match(
     modernSource,
-    /@media \(max-width: 20rem\)[\s\S]*?overflow-wrap:\s*anywhere;/,
-    "The 320px floor must have an anywhere emergency wrap while primary heading rules stay language-aware"
+    /@media \(max-width: 30rem\)[\s\S]*?overflow-wrap:\s*anywhere;/,
+    "Narrow and enlarged-text layouts must retain an anywhere emergency wrap"
+  );
+  assert.match(
+    modernSource,
+    /@media \(max-width: 30rem\)[\s\S]*?html:lang\(ja\) \.hero h1 span\s*\{\s*white-space:\s*normal;\s*line-break:\s*strict;\s*word-break:\s*normal;/,
+    "The final narrow cascade must release inherited nowrap and restore strict Japanese breaking"
+  );
+  assert.match(
+    modernSource,
+    /@media \(max-width: 30rem\)[\s\S]*?html:lang\(ja\) \.hero h1\s*\{\s*font-size:\s*min\(2\.5rem,\s*18vw\);/,
+    "The Japanese display size must cap against the viewport when rem-based text is enlarged"
+  );
+  assert.match(
+    modernSource,
+    /@supports \(word-break: auto-phrase\)[\s\S]*?html:lang\(ja\) \.hero h1 span\s*\{\s*word-break:\s*auto-phrase;/,
+    "Phrase-aware Japanese breaking must remain the progressive narrow-layout enhancement"
   );
   assert.match(
     modernSource,

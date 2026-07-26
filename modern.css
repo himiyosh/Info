@@ -131,13 +131,28 @@ body[data-scene^="project-"] .viewport-stage-frame {
 
 .js-enabled .nav-menu {
   inset-block-start: calc(var(--header-height) + var(--space-lg));
-  inset-inline: var(--space-sm);
+  inset-inline: max(var(--space-sm), env(safe-area-inset-left))
+    max(var(--space-sm), env(safe-area-inset-right));
+  max-block-size: max(
+    0px,
+    calc(
+      100dvh - var(--header-height) - var(--space-lg) - var(--space-sm) -
+        env(safe-area-inset-bottom)
+    )
+  );
   padding: var(--space-xs);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: var(--space-xs);
   background: var(--color-paper-2);
   color: var(--color-ink);
   border: var(--rule-hair) solid var(--color-rule);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-float);
+}
+
+.js-enabled .nav-menu :where(a, button) {
+  scroll-margin-block: var(--space-xs);
 }
 
 .nav-menu a,
@@ -485,6 +500,11 @@ html:lang(ja) .project-link {
   border-block-end: var(--rule-hair) solid var(--color-rule);
 }
 
+.projects-list .project-row :where(a, button):focus-visible,
+.contact-panel :where(a, button):focus-visible {
+  outline-color: var(--color-focus);
+}
+
 .site-footer {
   background: var(--color-paper);
   border-block-start: var(--rule-hair) solid var(--color-rule);
@@ -570,7 +590,7 @@ html:lang(ja) .footer-meta a {
   }
 }
 
-@media (max-width: 20rem) {
+@media (max-width: 30rem) {
   :where(
     .hero h1,
     .section-heading h2,
@@ -582,6 +602,22 @@ html:lang(ja) .footer-meta a {
     min-width: 0;
     overflow-wrap: anywhere;
   }
+
+  html:lang(ja) .hero h1 span {
+    white-space: normal;
+    line-break: strict;
+    word-break: normal;
+  }
+
+  html:lang(ja) .hero h1 {
+    font-size: min(2.5rem, 18vw);
+  }
+
+  @supports (word-break: auto-phrase) {
+    html:lang(ja) .hero h1 span {
+      word-break: auto-phrase;
+    }
+  }
 }
 
 @media (min-width: 48rem) {
@@ -592,7 +628,10 @@ html:lang(ja) .footer-meta a {
 
   .js-enabled .nav-menu,
   .nav-menu {
+    max-block-size: none;
     padding: 0;
+    overflow-y: visible;
+    overscroll-behavior: auto;
     background: var(--color-transparent);
     color: var(--color-ink);
     border: 0;
