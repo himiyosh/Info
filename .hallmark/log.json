@@ -3,6 +3,18 @@
     "date": "2026-07-26",
     "macrostructure": "Marquee Hero",
     "theme": "Graphite Blue",
+    "drop": "strong-motion",
+    "enrichment": "existing local mountain profile photograph",
+    "brief": "Approved strong-but-lightweight motion system (transform-based scroll progress, orchestrated hero entrance, N7 nav compact morph, bounded project-row reveal, ±5px micro-parallax, footer-view-gated Ft8 marquee) plus intentional heading wrap fixes and image-left project-row layout, per user-approved study of an external usability article (concepts only, no copied content/code/dependencies)",
+    "slopTest": {
+      "result": "57/58",
+      "exception": "Gate 23: approved accent-filled scene surfaces (hero-visual, project rows, contact panel) intentionally exceed the default accent-area limit; carried over unchanged from the prior palette. Motion.md's general parallax ban is deliberately narrowed rather than waived: micro-parallax is capped at +/-5px, applied only to .project-media (never the LCP image), CSS-first with a bounded single-listener JS fallback, and fully disabled under reduced motion — an explicit, user-approved, tightly-bounded exception, not the banned generic scroll-jank parallax."
+    }
+  },
+  {
+    "date": "2026-07-26",
+    "macrostructure": "Marquee Hero",
+    "theme": "Graphite Blue",
     "drop": "graphite-blue",
     "enrichment": "existing local mountain profile photograph",
     "brief": "Palette-only refinement of himiyosh's bilingual personal portfolio: replaced the bright cyan/plum Carnival palette with a restrained, near-monochrome dark-paper + single low-saturation blue accent system per user-selected coordinator preview",

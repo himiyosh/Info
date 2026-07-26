@@ -85,6 +85,46 @@ button {
   transform: translateY(0);
 }
 
+/* Root scroll progress: a fixed, non-interactive, aria-hidden indicator.
+   The fill's width never changes (no layout/reflow); only its transform
+   scale does. script.js drives --scroll-progress via a single passive
+   rAF-batched scroll handler; @supports below layers a compositor-driven
+   CSS scroll-timeline on top where supported (still transform-only). */
+.scroll-progress {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: var(--z-sticky);
+  height: 3px;
+  background: var(--color-transparent);
+  pointer-events: none;
+}
+
+.scroll-progress-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(var(--scroll-progress, 0));
+  transform-origin: left;
+  background: var(--color-accent);
+}
+
+@supports (animation-timeline: scroll()) {
+  .scroll-progress-fill {
+    animation: scroll-progress-fill linear;
+    animation-timeline: scroll(root);
+  }
+
+  @keyframes scroll-progress-fill {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+}
+
 .site-header {
   position: sticky;
   inset-block-start: 0;
@@ -99,6 +139,20 @@ button {
   background: var(--color-paper);
   color: var(--color-ink);
   border-block-end: 2px solid var(--color-ink);
+  transition: background-color var(--dur-short) var(--ease-out);
+}
+
+/* Scroll-reactive compact morph: paint-only properties (background-color,
+   box-shadow, and a transform: scale() on the decorative wordmark-mark
+   square, never on the wordmark link itself). min-height/padding never
+   change, so this never shifts layout or shrinks the 44px touch target. */
+.site-header.is-compact {
+  background-color: var(--color-paper-2);
+  box-shadow: var(--shadow-hard);
+}
+
+.site-header.is-compact .wordmark-mark {
+  transform: rotate(12deg) scale(0.8);
 }
 
 .wordmark {
@@ -125,6 +179,7 @@ button {
   border: 2px solid var(--color-ink);
   box-shadow: 3px 3px 0 var(--color-ink);
   transform: rotate(12deg);
+  transition: transform var(--dur-short) var(--ease-out);
 }
 
 .menu-toggle {
@@ -295,7 +350,7 @@ html:not(.js-enabled) .language-toggle {
   font-variation-settings: "wght" 800;
   letter-spacing: -0.02em;
   line-height: 1;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   text-transform: uppercase;
   text-wrap: balance;
 }
@@ -322,6 +377,40 @@ html:lang(ja) .hero h1 {
 
 html:lang(ja) .hero h1 span {
   white-space: nowrap;
+}
+
+/* Hero entrance (~500-800ms total): opacity/transform only, driven purely
+   by the .js-enabled class the inline head script sets synchronously
+   before paint — no dependency on script.js executing. hero-visual/img
+   are never part of this animation so LCP timing stays untouched. */
+.js-enabled .hero h1 span,
+.js-enabled .hero-support > * {
+  opacity: 0;
+  transform: translateY(var(--reveal-offset));
+  animation: hero-reveal var(--dur-long) var(--ease-out) forwards;
+}
+
+.js-enabled .hero h1 span:last-child {
+  animation-delay: 90ms;
+}
+
+.js-enabled .hero-support > *:nth-child(1) {
+  animation-delay: 160ms;
+}
+
+.js-enabled .hero-support > *:nth-child(2) {
+  animation-delay: 220ms;
+}
+
+.js-enabled .hero-support > *:nth-child(3) {
+  animation-delay: 280ms;
+}
+
+@keyframes hero-reveal {
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .hero-visual {
@@ -449,7 +538,7 @@ html:lang(ja) .hero h1 span {
   font-variation-settings: "wght" 800;
   letter-spacing: -0.01em;
   line-height: 1;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   text-transform: uppercase;
   text-wrap: balance;
 }
@@ -516,6 +605,30 @@ html:lang(ja) .hero h1 span {
   gap: var(--space-lg);
   border: 2px solid var(--color-ink);
   box-shadow: var(--shadow-hard);
+  opacity: 1;
+  transform: none;
+}
+
+/* Project-row reveal: fully visible by default with zero JS dependency.
+   Only under .js-enabled + no motion preference does script.js add
+   is-priming (transition: none, so the hidden state is instant, before
+   paint) to rows it is about to observe; removing is-priming after the
+   IntersectionObserver reports the row entering view triggers this
+   transition, staggered by --row-index (set inline per row, capped). */
+@media (prefers-reduced-motion: no-preference) {
+  .js-enabled .project-row {
+    transition:
+      opacity var(--dur-long) var(--ease-out)
+        calc(min(var(--row-index, 0), 9) * var(--reveal-stagger-step)),
+      transform var(--dur-long) var(--ease-out)
+        calc(min(var(--row-index, 0), 9) * var(--reveal-stagger-step));
+  }
+
+  .js-enabled .project-row.is-priming {
+    opacity: 0;
+    transform: translateY(var(--reveal-offset));
+    transition: none;
+  }
 }
 
 .project-row:nth-child(odd) {
@@ -532,6 +645,34 @@ html:lang(ja) .hero h1 span {
   min-width: 0;
   background: var(--color-paper-3);
   border: 2px solid var(--color-ink);
+}
+
+/* Micro-parallax, capped at +/-5px, applied to the frame (never the img,
+   which already has its own hover scale transition and must stay untouched
+   for LCP safety on the hero's sibling rows). JS drives --parallax-y as a
+   single shared rAF/passive-scroll fallback; @supports below layers a
+   compositor-driven scroll-timeline enhancement on top where available. */
+@media (prefers-reduced-motion: no-preference) {
+  .project-media {
+    transform: translateY(var(--parallax-y, 0px));
+  }
+
+  @supports (animation-timeline: view()) {
+    .project-media {
+      animation: project-parallax linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+
+    @keyframes project-parallax {
+      0% {
+        transform: translateY(calc(var(--parallax-distance) * -1));
+      }
+      100% {
+        transform: translateY(var(--parallax-distance));
+      }
+    }
+  }
 }
 
 .project-media img {
@@ -564,7 +705,7 @@ html:lang(ja) .hero h1 span {
   font-variation-settings: "wght" 800;
   letter-spacing: -0.01em;
   line-height: 1.02;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   text-transform: uppercase;
   text-wrap: balance;
 }
@@ -718,9 +859,21 @@ html:lang(ja) .hero h1 span {
 }
 
 .footer-marquee-track {
-  min-width: max-content;
   margin: 0;
-  padding: var(--space-sm) var(--page-gutter);
+  padding: var(--space-sm) 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Ft8 marquee: two identical aria-hidden sets placed side by side. Each
+   set translates -100% of its own width, so when the first set scrolls
+   fully out of view the second has moved exactly into its start
+   position: a seamless loop with no visible seam or gap. Paused by
+   default; running only while the footer is in view (script.js), and
+   fully removed under reduced motion. */
+.footer-marquee-set {
+  min-width: max-content;
+  padding-inline-end: var(--page-gutter);
   display: flex;
   gap: var(--space-md);
   align-items: center;
@@ -731,6 +884,25 @@ html:lang(ja) .hero h1 span {
   letter-spacing: 0.04em;
   line-height: 1;
   text-transform: uppercase;
+  animation: footer-marquee var(--dur-marquee) linear infinite;
+  animation-play-state: paused;
+}
+
+.footer-marquee-set:first-child {
+  padding-inline-start: var(--page-gutter);
+}
+
+.footer-marquee.is-active .footer-marquee-set {
+  animation-play-state: running;
+}
+
+@keyframes footer-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
 }
 
 .footer-meta {
@@ -812,6 +984,22 @@ html:lang(ja) .hero-lede {
   ) {
     word-break: auto-phrase;
   }
+}
+
+/* Display headings (project titles, section titles) get their own
+   language-aware wrapping, separate from the running-prose phrase rule
+   above: headings are short, balanced strings, not flowing paragraphs.
+   overflow-wrap: break-word / hyphens: auto are safety nets only, kept
+   behind normal word/line breaking rather than used as the primary
+   wrapping behavior (overflow-wrap: anywhere would break mid-word even
+   when unnecessary and fights text-wrap: balance). */
+:where(.project-heading h3, .section-heading h2, .projects-intro h2, .contact h2) {
+  hyphens: auto;
+}
+
+html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h2, .contact h2) {
+  word-break: keep-all;
+  line-break: strict;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -938,20 +1126,13 @@ html:lang(ja) .hero-lede {
     align-self: end;
   }
 
+  /* Image stays left / text stays right for every row, in DOM order, on
+     desktop. The odd/even accent-color alternation below is a color-scene
+     variation only; it must never re-introduce a column swap. */
   .project-row {
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
     align-items: center;
     gap: clamp(2rem, 5vw, 5rem);
-  }
-
-  .project-row:nth-child(even) .project-media {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .project-row:nth-child(even) .project-content {
-    grid-column: 1;
-    grid-row: 1;
   }
 
   .contact-panel {
@@ -978,6 +1159,28 @@ html:lang(ja) .hero-lede {
     animation-duration: 150ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 150ms !important;
+  }
+
+  /* Complete reduced-motion: every new spatial transform from the PR 2
+     motion system is nulled outright (not just shortened), leaving at
+     most a short opacity fade already covered by the override above.
+     Continuous/non-essential motion (progress bar, marquee, parallax) is
+     removed entirely rather than merely slowed down. */
+  .hero h1 span,
+  .hero-support > *,
+  .project-row,
+  .project-media,
+  .site-header.is-compact .wordmark-mark {
+    transform: none !important;
+  }
+
+  .scroll-progress {
+    display: none;
+  }
+
+  .footer-marquee-set {
+    animation: none !important;
+    transform: none !important;
   }
 }
 

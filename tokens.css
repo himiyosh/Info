@@ -62,4 +62,9 @@
   --z-toast: 500;
   --z-tooltip: 600;
   --shadow-hard: 4px 4px 0 var(--color-ink);
+  --dur-marquee: 32s;
+  --parallax-distance: 5px;
+  --reveal-offset: 14px;
+  --reveal-stagger-step: 50ms;
+  --reveal-stagger-cap: 450ms;
 }

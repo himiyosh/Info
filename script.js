@@ -14,6 +14,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const langToggle = requireElement("lang-toggle");
   const projectsContainer = requireElement("projects-container");
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const supportsScrollDrivenAnimations =
+    typeof CSS !== "undefined" &&
+    typeof CSS.supports === "function" &&
+    CSS.supports("animation-timeline", "scroll()") &&
+    CSS.supports("animation-timeline", "view()");
+  const supportsIntersectionObserver = "IntersectionObserver" in window;
   const menuFocusableSelector = [
     "a[href]",
     "button:not([disabled])",
@@ -127,6 +134,98 @@ document.addEventListener("DOMContentLoaded", () => {
   langToggle.addEventListener("click", () => window.siteI18n.toggle());
   syncNavigationMode();
 
+  // --- Motion: root scroll progress + micro-parallax -----------------
+  // A single passive/rAF-batched scroll handler is the universal path;
+  // CSS layers a compositor-driven animation-timeline enhancement on top
+  // where supported, which always overrides these inline custom
+  // properties, so this handler is skipped entirely when that native
+  // support is present (never per-element scroll listeners either way).
+  function setupScrollMotion() {
+    if (prefersReducedMotion || supportsScrollDrivenAnimations) {
+      return;
+    }
+
+    const progressFill = document.querySelector(".scroll-progress-fill");
+    const parallaxDistance = 5;
+    let ticking = false;
+
+    function updateScrollMotion() {
+      ticking = false;
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const scrollRange = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = scrollRange > 0 ? Math.min(1, Math.max(0, scrollTop / scrollRange)) : 0;
+      progressFill?.style.setProperty("--scroll-progress", progress.toFixed(4));
+
+      const viewportCenter = window.innerHeight / 2;
+      document.querySelectorAll(".project-media").forEach((mediaFrame) => {
+        const rect = mediaFrame.getBoundingClientRect();
+        const elementCenter = rect.top + rect.height / 2;
+        const offsetRatio = Math.min(
+          1,
+          Math.max(-1, (elementCenter - viewportCenter) / viewportCenter)
+        );
+        mediaFrame.style.setProperty(
+          "--parallax-y",
+          `${(offsetRatio * parallaxDistance * -1).toFixed(2)}px`
+        );
+      });
+    }
+
+    function requestScrollMotionUpdate() {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(updateScrollMotion);
+      }
+    }
+
+    window.addEventListener("scroll", requestScrollMotionUpdate, { passive: true });
+    window.addEventListener("resize", requestScrollMotionUpdate, { passive: true });
+    requestScrollMotionUpdate();
+  }
+
+  setupScrollMotion();
+
+  // --- Motion: nav compact morph after leaving the hero ---------------
+  // Paint-only (background-color / box-shadow / decorative transform):
+  // header min-height and padding never change, so this never shifts
+  // layout. Runs regardless of reduced motion since it is a state
+  // signal, not spatial motion; the reduced-motion stylesheet block nulls
+  // the one transform this touches (.wordmark-mark).
+  const heroSection = document.getElementById("top");
+  const siteHeader = document.getElementById("header");
+  if (supportsIntersectionObserver && heroSection && siteHeader) {
+    const heroObserver = new IntersectionObserver(
+      ([entry]) => {
+        siteHeader.classList.toggle("is-compact", !entry.isIntersecting);
+      },
+      { threshold: 0 }
+    );
+    heroObserver.observe(heroSection);
+  }
+
+  // --- Motion: footer marquee runs only while the footer is in view ---
+  const footerMarquee = document.querySelector(".footer-marquee");
+  if (!prefersReducedMotion && supportsIntersectionObserver && footerMarquee) {
+    let footerIntersecting = false;
+
+    function syncFooterMarqueeActive() {
+      footerMarquee.classList.toggle(
+        "is-active",
+        footerIntersecting && document.visibilityState === "visible"
+      );
+    }
+
+    const footerMarqueeObserver = new IntersectionObserver(
+      ([entry]) => {
+        footerIntersecting = entry.isIntersecting;
+        syncFooterMarqueeActive();
+      },
+      { threshold: 0 }
+    );
+    footerMarqueeObserver.observe(footerMarquee);
+    document.addEventListener("visibilitychange", syncFooterMarqueeActive);
+  }
+
   function localizedValue(value) {
     if (typeof value === "string") {
       return value;
@@ -200,13 +299,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // --- Motion: bounded, one-time project-row reveal -------------------
+  // Rows are fully visible in the base stylesheet with zero JS
+  // dependency; is-priming (added below, only under these guards) is the
+  // only thing that ever hides a row, and it always carries a hard
+  // timeout fallback so nothing can stay hidden indefinitely.
+  const shouldAnimateProjectReveal = !prefersReducedMotion && supportsIntersectionObserver;
+  const projectRevealObserver = shouldAnimateProjectReveal
+    ? new IntersectionObserver(
+        (entries, observer) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.remove("is-priming");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { rootMargin: "0px 0px -10% 0px", threshold: 0.1 }
+      )
+    : null;
+
   function renderProjects() {
     if (!projects) {
       return;
     }
 
+    projectRevealObserver?.disconnect();
+
     const fragment = document.createDocumentFragment();
-    projects.forEach((project) => {
+    projects.forEach((project, index) => {
       const article = document.createElement("article");
       const media = document.createElement("div");
       const image = document.createElement("img");
@@ -222,6 +343,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const linkArrow = document.createElement("span");
 
       article.className = "project-row";
+      article.style.setProperty("--row-index", String(index));
+      if (shouldAnimateProjectReveal) {
+        article.classList.add("is-priming");
+      }
       media.className = "project-media";
       image.src = project.image;
       image.alt = localizedValue(project.imageAlt);
@@ -268,6 +393,21 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsContainer.replaceChildren(fragment);
     projectsContainer.setAttribute("aria-busy", "false");
     projectState = "ready";
+
+    if (shouldAnimateProjectReveal) {
+      const rows = [...projectsContainer.querySelectorAll(".project-row")];
+      rows.forEach((row) => projectRevealObserver.observe(row));
+      // Safety net: if the observer never fires for any reason, no row
+      // stays hidden longer than this.
+      window.setTimeout(() => {
+        rows.forEach((row) => {
+          if (row.classList.contains("is-priming")) {
+            row.classList.remove("is-priming");
+            projectRevealObserver.unobserve(row);
+          }
+        });
+      }, 2500);
+    }
   }
 
   function renderProjectLoading() {
