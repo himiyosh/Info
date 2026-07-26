@@ -8,18 +8,18 @@
 }
 
 :root {
-  --color-paper: oklch(88% 0.05 25);
-  --color-paper-2: oklch(84% 0.055 22);
-  --color-paper-3: oklch(78% 0.06 20);
-  --color-ink: oklch(20% 0.05 270);
-  --color-ink-2: oklch(32% 0.045 265);
-  --color-muted: oklch(48% 0.04 260);
-  --color-rule: oklch(24% 0.18 320);
-  --color-accent: oklch(78% 0.18 220);
-  --color-accent-2: oklch(24% 0.18 320);
-  --color-accent-ink: oklch(20% 0.05 270);
-  --color-on-dark: oklch(94% 0.025 25);
-  --color-focus: oklch(24% 0.18 320);
+  --color-paper: oklch(17% 0.01 250);
+  --color-paper-2: oklch(22% 0.015 250);
+  --color-paper-3: oklch(27% 0.02 250);
+  --color-ink: oklch(93% 0.012 245);
+  --color-ink-2: oklch(80% 0.018 245);
+  --color-muted: oklch(70% 0.02 245);
+  --color-rule: oklch(55% 0.04 240);
+  --color-accent: oklch(66% 0.07 233);
+  --color-accent-2: oklch(50% 0.07 235);
+  --color-accent-ink: oklch(13% 0.012 250);
+  --color-on-dark: oklch(95% 0.01 245);
+  --color-focus: oklch(90% 0.05 230);
   --color-transparent: transparent;
   --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --font-display-ja: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;

@@ -6,8 +6,8 @@ Locked design system for the rich redesign program. Future page changes read thi
 
 - Genre · editorial brand register with playful, technical, confident art direction
 - Marketing macrostructure · Marquee Hero
-- Theme · Carnival / Studio Night
-- Axes · light dusk paper / display-heavy / cool cyan and plum
+- Theme · Graphite Blue
+- Axes · dark graphite paper / display-heavy / restrained cool blue
 - Navigation · N7 solid slab with the existing accessible disclosure behavior
 - Footer · Ft8 marquee composition; continuous animation is reserved for PR 2
 
@@ -17,7 +17,7 @@ Locked design system for the rich redesign program. Future page changes read thi
 
 - Display · local Big Shoulders Display variable font for Latin, then robust Japanese/system fallbacks
 - Body · robust system Japanese and UI sans-serif fallbacks
-- Accent use · one accent per colored scene; cyan and plum never blend inside the same block
+- Accent use · a single low-saturation blue accent for text and colored-scene fills; a darker navy shade of the same hue (`--color-accent-2`) exists only as an on-dark fill role, never as a competing hue
 - Spacing · named 4-point scale from `--space-3xs` through `--space-4xl`
 - Shape · square, 2px rules and hard-offset shadows; no soft shadow or glass layer
 
