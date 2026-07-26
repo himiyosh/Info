@@ -1238,3 +1238,156 @@ test("rich redesign foundation uses local tokens and keeps the marquee static", 
     stat(path.join(repoRoot, "assets/fonts/OFL.txt"))
   ]);
 });
+
+// OKLCH -> linear sRGB -> WCAG relative luminance, used to compute real
+// contrast ratios for token pairs below (not string-only checks).
+function parseOklchTokens(tokensSource) {
+  const tokens = new Map();
+  const tokenPattern = /(--color-[a-z0-9-]+):\s*oklch\((\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\)/g;
+  for (const match of tokensSource.matchAll(tokenPattern)) {
+    const [, name, l, c, h] = match;
+    tokens.set(name, [Number(l) / 100, Number(c), Number(h)]);
+  }
+  return tokens;
+}
+
+function relativeLuminanceFromOklch([L, C, Hdeg]) {
+  const hRad = (Hdeg * Math.PI) / 180;
+  const a = C * Math.cos(hRad);
+  const b = C * Math.sin(hRad);
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.291485548 * b;
+  const l = l_ ** 3;
+  const m = m_ ** 3;
+  const s = s_ ** 3;
+  const r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+  const g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+  const bl = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s;
+  const clamp = (v) => Math.max(0, Math.min(1, v));
+  return 0.2126 * clamp(r) + 0.7152 * clamp(g) + 0.0722 * clamp(bl);
+}
+
+function oklchContrastRatio(tokenA, tokenB) {
+  const la = relativeLuminanceFromOklch(tokenA);
+  const lb = relativeLuminanceFromOklch(tokenB);
+  const [hi, lo] = la >= lb ? [la, lb] : [lb, la];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+test("focus-ring outline-color is scoped to controls whose own accent fill sits under the offset ring", async () => {
+  const stylesSource = await readUtf8("styles.css");
+
+  // The accent-ink override must apply ONLY to the two contexts where the
+  // 3px outline-offset ring lands within the parent's own accent-filled
+  // padding (project-row odd rows, contact panel) — not to controls whose
+  // offset ring is painted over dark paper/paper-3 (menu-toggle,
+  // language-toggle, button-primary, retry-button), where accent-ink would
+  // be near-invisible against the backdrop.
+  const accentInkRuleMatch = stylesSource.match(
+    /([^{}]+)\{\s*outline-color:\s*var\(--color-accent-ink\);\s*\}/
+  );
+  assert.ok(accentInkRuleMatch, "Expected an outline-color: var(--color-accent-ink) rule in styles.css");
+  const accentInkSelectorList = accentInkRuleMatch[1];
+
+  const mustInclude = [
+    ".project-row:nth-child(odd) :where(a, button):focus-visible",
+    ".contact-panel :where(a, button):focus-visible"
+  ];
+  for (const selector of mustInclude) {
+    assert.ok(
+      accentInkSelectorList.includes(selector),
+      `accent-ink outline-color rule must still cover "${selector}" (ring lands on its own accent padding)`
+    );
+  }
+
+  const mustExclude = [
+    ".menu-toggle:focus-visible",
+    ".language-toggle:focus-visible",
+    ".button-primary:focus-visible",
+    ".retry-button:focus-visible"
+  ];
+  for (const selector of mustExclude) {
+    assert.ok(
+      !accentInkSelectorList.includes(selector),
+      `accent-ink outline-color rule must NOT cover "${selector}" — its offset ring is painted over dark paper/paper-3, not its own accent fill`
+    );
+  }
+
+  // The .language-toggle exclusion on the on-dark override must remain so
+  // that .language-toggle falls through to the default --color-focus ring
+  // from :where(a, button):focus-visible instead of inheriting on-dark via
+  // the broader .js-enabled .nav-menu :focus-visible selector.
+  assert.match(
+    stylesSource,
+    /\.js-enabled \.nav-menu :focus-visible:not\(\.language-toggle\)/,
+    "on-dark override must keep excluding .language-toggle so it falls through to the default focus ring"
+  );
+});
+
+test("focus-ring / backdrop token pairings meet WCAG 1.4.11 non-text contrast (>= 3:1)", async () => {
+  const tokensSource = await readUtf8("tokens.css");
+  const tokens = parseOklchTokens(tokensSource);
+
+  const required = [
+    "--color-focus",
+    "--color-accent-ink",
+    "--color-on-dark",
+    "--color-paper",
+    "--color-paper-3",
+    "--color-accent",
+    "--color-accent-2"
+  ];
+  for (const name of required) {
+    assert.ok(tokens.has(name), `Expected ${name} to be defined as oklch(...) in tokens.css`);
+  }
+
+  // Real ring/backdrop pairings for every focus-visible selector in
+  // styles.css, derived from each control's actual DOM ancestor background
+  // (not the control's own fill), so a future palette edit that shifts
+  // these tokens will fail loudly instead of silently regressing contrast.
+  const pairings = [
+    // .menu-toggle sits directly in .site-header (background: paper), zero
+    // own padding, default focus ring (base :where(a,button) rule).
+    { label: ".menu-toggle ring vs .site-header (paper)", ring: "--color-focus", backdrop: "--color-paper" },
+    // .button-primary sits in .hero, which has no bg override -> body bg (paper).
+    { label: ".button-primary ring vs body (paper)", ring: "--color-focus", backdrop: "--color-paper" },
+    // .retry-button sits in .projects-status/.projects-noscript, which
+    // inherit .projects background (paper-3).
+    { label: ".retry-button ring vs .projects (paper-3)", ring: "--color-focus", backdrop: "--color-paper-3" },
+    // .language-toggle's immediate parent is .nav-menu: paper-3 in the
+    // mobile open-dropdown state, transparent-over-paper (site-header) at
+    // desktop. Both must pass with the default focus ring.
+    { label: ".language-toggle ring vs .nav-menu mobile (paper-3)", ring: "--color-focus", backdrop: "--color-paper-3" },
+    { label: ".language-toggle ring vs .site-header desktop (paper)", ring: "--color-focus", backdrop: "--color-paper" },
+    // .project-row:nth-child(odd) and .contact-panel fill their own
+    // generous padding with accent, so the offset ring lands on accent.
+    { label: ".project-row odd ring vs own accent fill", ring: "--color-accent-ink", backdrop: "--color-accent" },
+    { label: ".contact-panel ring vs own accent fill", ring: "--color-accent-ink", backdrop: "--color-accent" },
+    // .project-row:nth-child(even) uses on-dark against its own accent-2 fill.
+    { label: ".project-row even ring vs own accent-2 fill", ring: "--color-on-dark", backdrop: "--color-accent-2" }
+  ];
+
+  for (const { label, ring, backdrop } of pairings) {
+    const ratio = oklchContrastRatio(tokens.get(ring), tokens.get(backdrop));
+    assert.ok(
+      ratio >= 3,
+      `${label} must meet >= 3:1 non-text contrast, got ${ratio.toFixed(2)}:1`
+    );
+  }
+});
+
+test("color-scheme metadata matches the shipped dark-only theme", async () => {
+  const indexHtml = await readUtf8("index.html");
+
+  assert.match(
+    indexHtml,
+    /<meta name="color-scheme" content="dark" \/>/,
+    'color-scheme metadata must declare "dark" to match the single dark Graphite Blue theme'
+  );
+  assert.doesNotMatch(
+    indexHtml,
+    /<meta name="color-scheme" content="(?:light|dark light|light dark)" \/>/,
+    "color-scheme must not claim a light variant while none is shipped"
+  );
+});

@@ -258,10 +258,14 @@ html:not(.js-enabled) .language-toggle {
   outline-color: var(--color-on-dark);
 }
 
-.menu-toggle:focus-visible,
-.language-toggle:focus-visible,
-.button-primary:focus-visible,
-.retry-button:focus-visible,
+/* accent-ink only where the 3px outline-offset ring still lands on the
+   element's own accent-filled padding (project-row / contact-panel have
+   >= 24px of same-color padding around focusable children). Controls
+   whose accent fill hugs the border box (menu-toggle, language-toggle,
+   button-primary, retry-button) keep the default --color-focus ring from
+   :where(a, button):focus-visible above, since their offset ring is
+   painted over the surrounding paper/paper-3 backdrop, not their own
+   fill, where accent-ink would be near-invisible. */
 .project-row:nth-child(odd) :where(a, button):focus-visible,
 .contact-panel :where(a, button):focus-visible {
   outline-color: var(--color-accent-ink);
