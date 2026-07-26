@@ -86,15 +86,19 @@ button {
 }
 
 /* Root scroll progress: a fixed, non-interactive, aria-hidden indicator.
-   The fill's width never changes (no layout/reflow); only its transform
-   scale does. script.js drives --scroll-progress via a single passive
-   rAF-batched scroll handler; @supports below layers a compositor-driven
-   CSS scroll-timeline on top where supported (still transform-only). */
+   Uses its own semantic z-index layer (--z-progress) above --z-sticky so
+   it always paints over the sticky header regardless of DOM/source order
+   (equal z-index values would otherwise let the header, later in the
+   DOM, win paint order and fully occlude the bar). The fill's width
+   never changes (no layout/reflow); only its transform scale does.
+   script.js drives --scroll-progress via a single passive rAF-batched
+   scroll handler; @supports below layers a compositor-driven CSS
+   scroll-timeline on top where supported (still transform-only). */
 .scroll-progress {
   position: fixed;
   inset-block-start: 0;
   inset-inline: 0;
-  z-index: var(--z-sticky);
+  z-index: var(--z-progress);
   height: 3px;
   background: var(--color-transparent);
   pointer-events: none;
@@ -1169,9 +1173,20 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
   .hero h1 span,
   .hero-support > *,
   .project-row,
-  .project-media,
-  .site-header.is-compact .wordmark-mark {
+  .project-media {
     transform: none !important;
+  }
+
+  /* The wordmark-mark's static rotate(12deg) predates PR 2 and must
+     survive reduced motion unchanged in BOTH the resting and .is-compact
+     states — nulling it to "none" here would itself be a visible,
+     scroll-triggered rotation change every time is-compact toggles.
+     transition: none also removes the (otherwise 150ms-capped) animated
+     property entirely, so nothing about this element animates. */
+  .wordmark-mark,
+  .site-header.is-compact .wordmark-mark {
+    transform: rotate(12deg) !important;
+    transition: none !important;
   }
 
   .scroll-progress {

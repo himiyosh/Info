@@ -1092,12 +1092,19 @@ test("project rows stay visible by default and reveal machinery is bounded and s
   );
 
   // script.js: only ever primes a row when JS + IntersectionObserver +
-  // no motion preference are all present, always with a one-time
-  // observer (unobserve on reveal) and a hard timeout safety net.
+  // no motion preference are all present (re-evaluated on every render
+  // via a function, not captured once, so a runtime preference change
+  // takes effect for the next render), always with a one-time observer
+  // (unobserve on reveal) and a hard timeout safety net.
   assert.match(
     scriptSource,
-    /shouldAnimateProjectReveal\s*=\s*!prefersReducedMotion\s*&&\s*supportsIntersectionObserver/,
-    "Reveal priming must be gated on both reduced-motion and IntersectionObserver support"
+    /function shouldAnimateProjectReveal\(\)\s*\{\s*return\s*!prefersReducedMotion\s*&&\s*supportsIntersectionObserver;/,
+    "Reveal priming must be gated on both reduced-motion and IntersectionObserver support, re-evaluated per render"
+  );
+  assert.match(
+    scriptSource,
+    /const animateReveal = shouldAnimateProjectReveal\(\);/,
+    "renderProjects must re-read the live reveal gate on every call, not a value captured once at load"
   );
   assert.match(
     scriptSource,
@@ -1113,6 +1120,11 @@ test("project rows stay visible by default and reveal machinery is bounded and s
     scriptSource,
     /setTimeout\(\s*\(\)\s*=>\s*\{[\s\S]*?classList\.remove\("is-priming"\)/,
     "script.js must include a timeout safety net that clears any stuck priming class"
+  );
+  assert.match(
+    scriptSource,
+    /function disarmProjectReveal\(\)\s*\{[\s\S]*?projectRevealObserver\?\.disconnect\(\);[\s\S]*?classList\.remove\("is-priming"\)/,
+    "A runtime switch to reduced motion must disconnect the observer and clear any stale priming class"
   );
   assert.doesNotMatch(
     scriptSource,
@@ -1161,15 +1173,56 @@ test("static redesign defers hero tilt runtime work to PR 2", async () => {
   }
 });
 
-test("scroll-progress is transform-based, progressive, and non-essential", async () => {
+test("scroll-progress is transform-based, progressive, non-essential, and stacks above the sticky header", async () => {
   const indexHtml = await readUtf8("index.html");
   const stylesSource = await readUtf8("styles.css");
   const scriptSource = await readUtf8("script.js");
+  const tokensSource = await readUtf8("tokens.css");
 
   assert.match(
     indexHtml,
     /<div class="scroll-progress" aria-hidden="true">/,
     "index.html must contain the aria-hidden scroll-progress markup"
+  );
+
+  // Dedicated semantic z-index layer above --z-sticky (not borrowed
+  // modal/toast semantics), so the progress bar reliably paints above
+  // the sticky header regardless of DOM/source order — two elements
+  // with an EQUAL z-index stack by DOM order, and the header (later in
+  // the DOM than .scroll-progress) would otherwise always win and fully
+  // occlude the bar.
+  const zIndexOrder = ["--z-base", "--z-raised", "--z-dropdown", "--z-sticky", "--z-progress", "--z-modal"];
+  const zIndexValues = new Map();
+  for (const match of tokensSource.matchAll(/(--z-[a-z]+):\s*(\d+);/g)) {
+    zIndexValues.set(match[1], Number(match[2]));
+  }
+  for (const tokenName of zIndexOrder) {
+    assert.ok(zIndexValues.has(tokenName), `tokens.css must define ${tokenName}`);
+  }
+  assert.ok(
+    zIndexValues.get("--z-progress") > zIndexValues.get("--z-sticky"),
+    "--z-progress must be greater than --z-sticky so the progress bar paints above the sticky header"
+  );
+  assert.notEqual(
+    zIndexValues.get("--z-progress"),
+    zIndexValues.get("--z-modal"),
+    "--z-progress must be its own dedicated token, not an alias for --z-modal semantics"
+  );
+
+  const scrollProgressRule = stylesSource.match(/\.scroll-progress\s*\{([^}]*)\}/)?.[1];
+  assert.ok(scrollProgressRule, "styles.css must define .scroll-progress");
+  assert.match(
+    scrollProgressRule,
+    /z-index:\s*var\(--z-progress\)/,
+    ".scroll-progress must use the dedicated --z-progress token, not --z-sticky"
+  );
+
+  const siteHeaderRule = stylesSource.match(/\.site-header\s*\{([^}]*)\}/)?.[1];
+  assert.ok(siteHeaderRule, "styles.css must define .site-header");
+  assert.match(
+    siteHeaderRule,
+    /z-index:\s*var\(--z-sticky\)/,
+    ".site-header must keep using --z-sticky (lower than --z-progress)"
   );
 
   const fillRule = stylesSource.match(/\.scroll-progress-fill\s*\{([^}]*)\}/s)?.[1];
@@ -1198,8 +1251,13 @@ test("scroll-progress is transform-based, progressive, and non-essential", async
 
   assert.match(
     scriptSource,
-    /prefersReducedMotion\s*\|\|\s*supportsScrollDrivenAnimations/,
-    "The JS scroll-progress fallback must be skipped when reduced motion or native scroll-timelines apply"
+    /function armScrollMotion\(\)\s*\{\s*if\s*\(scrollMotionArmed\s*\|\|\s*supportsScrollDrivenAnimations\)\s*\{\s*return;/,
+    "Arming the JS scroll-progress fallback must be skipped/idempotent when native scroll-timelines apply or it is already armed"
+  );
+  assert.match(
+    scriptSource,
+    /if\s*\(!prefersReducedMotion\)\s*\{\s*armScrollMotion\(\);/,
+    "Scroll motion must only be armed at load when the user has no reduced-motion preference"
   );
   assert.match(
     scriptSource,
@@ -1349,8 +1407,18 @@ test("footer marquee loops seamlessly, stays accessible, and pauses off-view", a
 
   assert.match(
     scriptSource,
-    /!prefersReducedMotion\s*&&\s*supportsIntersectionObserver\s*&&\s*footerMarquee/,
-    "Marquee activation must be gated on reduced motion and IntersectionObserver support"
+    /function armFooterMarquee\(\)\s*\{\s*if\s*\(!footerMarquee\s*\|\|\s*!supportsIntersectionObserver\s*\|\|\s*footerMarqueeObserver\)\s*\{\s*return;/,
+    "Marquee activation must be gated on IntersectionObserver support and must be idempotent (no duplicate observers on repeated arms)"
+  );
+  assert.match(
+    scriptSource,
+    /if\s*\(!prefersReducedMotion\)\s*\{\s*armScrollMotion\(\);\s*armFooterMarquee\(\);\s*\}/,
+    "The marquee must only be armed at load when the user has no reduced-motion preference"
+  );
+  assert.match(
+    scriptSource,
+    /function disarmFooterMarquee\(\)\s*\{\s*footerMarqueeObserver\?\.disconnect\(\);\s*footerMarqueeObserver = null;/,
+    "A runtime switch to reduced motion must disconnect the marquee observer and reset it to null (safe to re-arm later)"
   );
   assert.match(
     scriptSource,
@@ -1560,7 +1628,7 @@ test("micro-parallax is capped at +/-5px, applied to the frame not the img, and 
   );
 });
 
-test("reduced motion nulls every new spatial transform and disables non-essential motion", async () => {
+test("reduced motion nulls every new spatial transform, disables non-essential motion, and keeps the wordmark-mark rotation invariant", async () => {
   const stylesSource = await readUtf8("styles.css");
 
   const reducedBlock = stylesSource.match(
@@ -1570,9 +1638,39 @@ test("reduced motion nulls every new spatial transform and disables non-essentia
 
   assert.match(
     reducedBlock,
-    /\.hero h1 span,\s*\n\s*\.hero-support > \*,\s*\n\s*\.project-row,\s*\n\s*\.project-media,\s*\n\s*\.site-header\.is-compact \.wordmark-mark\s*\{\s*transform:\s*none\s*!important;/,
-    "Reduced motion must null transform on every new PR 2 motion surface"
+    /\.hero h1 span,\s*\n\s*\.hero-support > \*,\s*\n\s*\.project-row,\s*\n\s*\.project-media\s*\{\s*transform:\s*none\s*!important;/,
+    "Reduced motion must null transform on every new PR 2 spatial motion surface"
   );
+
+  // Regression: the wordmark-mark's static rotate(12deg) predates PR 2.
+  // Nulling it to "none" only in the .is-compact state (while the
+  // resting state keeps rotate(12deg)) creates a visible, scroll-
+  // triggered rotation under reduced motion every time is-compact
+  // toggles. Both states must keep the identical static rotation, and
+  // the transition itself must be removed (not just capped to 150ms).
+  assert.doesNotMatch(
+    reducedBlock,
+    /\.site-header\.is-compact \.wordmark-mark\s*\{\s*transform:\s*none/,
+    "Reduced motion must not null the wordmark-mark's static rotation in the compact state alone"
+  );
+  const wordmarkRule = reducedBlock.match(
+    /\.wordmark-mark,\s*\n\s*\.site-header\.is-compact \.wordmark-mark\s*\{([^}]*)\}/
+  )?.[1];
+  assert.ok(
+    wordmarkRule,
+    "Reduced motion must define one combined rule for .wordmark-mark and .site-header.is-compact .wordmark-mark"
+  );
+  assert.match(
+    wordmarkRule,
+    /transform:\s*rotate\(12deg\)\s*!important;/,
+    "Both the resting and compact wordmark-mark states must keep the identical static rotate(12deg) under reduced motion"
+  );
+  assert.match(
+    wordmarkRule,
+    /transition:\s*none\s*!important;/,
+    "The wordmark-mark transition must be fully removed under reduced motion, not merely shortened"
+  );
+
   assert.match(
     reducedBlock,
     /\.scroll-progress\s*\{\s*display:\s*none;\s*\}/,
@@ -1582,6 +1680,65 @@ test("reduced motion nulls every new spatial transform and disables non-essentia
     reducedBlock,
     /\.footer-marquee-set\s*\{\s*animation:\s*none\s*!important;/,
     "The marquee animation must be fully disabled under reduced motion"
+  );
+});
+
+test("reduced motion preference is live: a runtime change arms/disarms motion without duplicate observers", async () => {
+  const scriptSource = await readUtf8("script.js");
+
+  assert.match(
+    scriptSource,
+    /const motionQuery = window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\);/,
+    "script.js must keep a live MediaQueryList for prefers-reduced-motion, not just read .matches once"
+  );
+  assert.match(
+    scriptSource,
+    /let prefersReducedMotion = motionQuery\.matches;/,
+    "prefersReducedMotion must be reassignable (let), updated by the change listener"
+  );
+
+  const changeHandler = scriptSource.match(
+    /function handleMotionPreferenceChange\(event\)\s*\{([\s\S]*?)\n\s*\}/
+  )?.[1];
+  assert.ok(changeHandler, "Expected a handleMotionPreferenceChange function");
+  assert.match(
+    changeHandler,
+    /prefersReducedMotion = event\.matches;/,
+    "The change handler must update the live prefersReducedMotion flag from the event"
+  );
+  assert.match(
+    changeHandler,
+    /disarmScrollMotion\(\);[\s\S]*disarmFooterMarquee\(\);[\s\S]*disarmProjectReveal\(\);/,
+    "Switching to reduced motion must immediately disarm scroll motion, the marquee, and any priming project rows"
+  );
+  assert.match(
+    changeHandler,
+    /armScrollMotion\(\);[\s\S]*armFooterMarquee\(\);/,
+    "Switching back to no-preference must re-arm scroll motion and the marquee"
+  );
+
+  assert.match(
+    scriptSource,
+    /motionQuery\.addEventListener\("change",\s*handleMotionPreferenceChange\)/,
+    "script.js must subscribe to live prefers-reduced-motion changes"
+  );
+
+  // Idempotency: repeated arm calls must not attach duplicate listeners
+  // or create duplicate observers.
+  assert.match(
+    scriptSource,
+    /function armScrollMotion\(\)\s*\{\s*if\s*\(scrollMotionArmed \|\| supportsScrollDrivenAnimations\)\s*\{\s*return;/,
+    "armScrollMotion must guard against being armed twice"
+  );
+  assert.match(
+    scriptSource,
+    /function armFooterMarquee\(\)\s*\{\s*if\s*\(!footerMarquee \|\| !supportsIntersectionObserver \|\| footerMarqueeObserver\)\s*\{\s*return;/,
+    "armFooterMarquee must guard against creating a second observer while one is already active"
+  );
+  assert.match(
+    scriptSource,
+    /function disarmScrollMotion\(\)\s*\{\s*if\s*\(!scrollMotionArmed\)\s*\{\s*return;/,
+    "disarmScrollMotion must be a no-op when not currently armed"
   );
 });
 
