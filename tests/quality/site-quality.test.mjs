@@ -644,6 +644,15 @@ test("mobile navigation enhancement is progressive and keeps no-JS links usable"
     /\.js-enabled\s+\.nav-menu\.active\s*\{[\s\S]*?visibility:\s*visible[\s\S]*?transition-delay:\s*0s/,
     "Opened enhanced navigation must become immediately visible before it receives focus"
   );
+  const desktopNavOverride = stylesSource.match(
+    /@media\s*\(min-width:\s*48rem\)\s*\{[\s\S]*?\.js-enabled\s+\.nav-menu,\s*\.nav-menu\s*\{([^}]*)\}/
+  )?.[1];
+  assert.ok(desktopNavOverride, "Desktop navigation override must exist");
+  assert.match(
+    desktopNavOverride,
+    /visibility:\s*visible/,
+    "Desktop navigation override must reset mobile disclosure visibility"
+  );
   assert.ok(
     /<nav[\s\S]*id="nav-menu"[\s\S]*?<a href="#about"[\s\S]*?<a href="#projects"[\s\S]*?<a href="#contact"/i.test(
       indexHtml

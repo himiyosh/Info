@@ -865,6 +865,7 @@ html:lang(ja) .hero-lede {
     opacity: 1;
     pointer-events: auto;
     transform: none;
+    visibility: visible;
     transition: none;
   }
 
