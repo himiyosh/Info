@@ -1225,7 +1225,7 @@ test("rich redesign foundation uses local tokens and keeps the marquee static", 
   );
   assert.match(
     stylesSource,
-    /Hallmark · macrostructure: Marquee Hero[\s\S]*Carnival \/ Studio Night/,
+    /Hallmark · macrostructure: Marquee Hero[\s\S]*theme: Graphite Blue/,
     "Foundation CSS must record the selected marquee and theme system"
   );
   assert.doesNotMatch(

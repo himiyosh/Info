@@ -1,7 +1,7 @@
-/* Hallmark · macrostructure: Marquee Hero · tone: playful, technical, confident · anchor hue: cyan and plum
- * theme: Carnival / Studio Night · nav: N7 Brutal slab · footer: Ft8 static marquee
+/* Hallmark · macrostructure: Marquee Hero · tone: playful, technical, confident · anchor hue: graphite blue
+ * theme: Graphite Blue · nav: N7 Brutal slab · footer: Ft8 static marquee
  * pre-emit critique: P5 H5 E5 S5 R4 V5 · contrast: pass (40–41) · nav: N7 · footer: Ft8
- * slop: 57/58 · gate 23 is an intentional exception for the approved cyan/plum scene surfaces
+ * slop: 57/58 · gate 23 is an intentional exception for the approved accent-filled scene surfaces
  */
 
 *,
@@ -72,7 +72,7 @@ button {
   inset-inline-start: var(--space-sm);
   z-index: var(--z-toast);
   padding: var(--space-xs) var(--space-sm);
-  background: var(--color-ink);
+  background: var(--color-paper-3);
   color: var(--color-on-dark);
   border: 2px solid var(--color-on-dark);
   font-weight: 700;
@@ -193,7 +193,7 @@ html:not(.js-enabled) .language-toggle {
   width: auto;
   padding: var(--space-xs);
   display: grid;
-  background: var(--color-ink);
+  background: var(--color-paper-3);
   color: var(--color-on-dark);
   border: 2px solid var(--color-ink);
   box-shadow: var(--shadow-hard);
@@ -250,11 +250,21 @@ html:not(.js-enabled) .language-toggle {
 .nav-menu a[aria-current="location"] {
   background: var(--color-accent-2);
   color: var(--color-on-dark);
+  border-color: var(--color-ink);
 }
 
-.js-enabled .nav-menu :focus-visible,
+.js-enabled .nav-menu :focus-visible:not(.language-toggle),
 .project-row:nth-child(even) :where(a, button):focus-visible {
   outline-color: var(--color-on-dark);
+}
+
+.menu-toggle:focus-visible,
+.language-toggle:focus-visible,
+.button-primary:focus-visible,
+.retry-button:focus-visible,
+.project-row:nth-child(odd) :where(a, button):focus-visible,
+.contact-panel :where(a, button):focus-visible {
+  outline-color: var(--color-accent-ink);
 }
 
 .hero {
@@ -292,7 +302,7 @@ html:not(.js-enabled) .language-toggle {
 }
 
 .hero-title-accent {
-  color: var(--color-accent-2);
+  color: var(--color-accent);
 }
 
 html:lang(ja) .hero h1 {
@@ -344,7 +354,7 @@ html:lang(ja) .hero h1 span {
 
 .hero-role {
   margin: 0;
-  color: var(--color-accent-2);
+  color: var(--color-accent);
   font-family: var(--font-display);
   font-size: var(--text-md);
   font-weight: 800;
@@ -460,7 +470,7 @@ html:lang(ja) .hero h1 span {
 .about-copy .about-statement {
   margin-block-start: var(--space-xl);
   padding-block-start: var(--space-md);
-  color: var(--color-accent-2);
+  color: var(--color-accent);
   border-block-start: 2px solid var(--color-ink);
   font-family: var(--font-display);
   font-size: clamp(2rem, 6vw, 4rem);
@@ -472,7 +482,7 @@ html:lang(ja) .hero h1 span {
 }
 
 .projects {
-  background: var(--color-ink);
+  background: var(--color-paper-3);
   color: var(--color-on-dark);
   border-block: 2px solid var(--color-ink);
 }
@@ -516,7 +526,7 @@ html:lang(ja) .hero h1 span {
 
 .project-media {
   min-width: 0;
-  background: var(--color-ink);
+  background: var(--color-paper-3);
   border: 2px solid var(--color-ink);
 }
 
@@ -813,7 +823,7 @@ html:lang(ja) .hero-lede {
   }
 
   .text-link:hover {
-    background: var(--color-ink);
+    background: var(--color-paper-3);
     color: var(--color-on-dark);
   }
 
