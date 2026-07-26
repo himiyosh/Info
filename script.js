@@ -14,6 +14,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const langToggle = requireElement("lang-toggle");
   const projectsContainer = requireElement("projects-container");
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
+  const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let prefersReducedMotion = motionQuery.matches;
+  const supportsScrollDrivenAnimations =
+    typeof CSS !== "undefined" &&
+    typeof CSS.supports === "function" &&
+    CSS.supports("animation-timeline", "scroll()") &&
+    CSS.supports("animation-timeline", "view()");
+  const supportsIntersectionObserver = "IntersectionObserver" in window;
   const menuFocusableSelector = [
     "a[href]",
     "button:not([disabled])",
@@ -127,6 +135,130 @@ document.addEventListener("DOMContentLoaded", () => {
   langToggle.addEventListener("click", () => window.siteI18n.toggle());
   syncNavigationMode();
 
+  // --- Motion: root scroll progress + micro-parallax -----------------
+  // A single passive/rAF-batched scroll handler is the universal path;
+  // CSS layers a compositor-driven animation-timeline enhancement on top
+  // where supported, which always overrides these inline custom
+  // properties, so this handler is skipped entirely when that native
+  // support is present (never per-element scroll listeners either way).
+  // Armed/disarmed reactively so a runtime prefers-reduced-motion change
+  // (not just the value captured at load) immediately stops or restarts
+  // this work — see handleMotionPreferenceChange below.
+  const progressFill = document.querySelector(".scroll-progress-fill");
+  const parallaxDistance = 5;
+  let scrollMotionTicking = false;
+  let scrollMotionArmed = false;
+
+  function updateScrollMotion() {
+    scrollMotionTicking = false;
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const scrollRange = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = scrollRange > 0 ? Math.min(1, Math.max(0, scrollTop / scrollRange)) : 0;
+    progressFill?.style.setProperty("--scroll-progress", progress.toFixed(4));
+
+    const viewportCenter = window.innerHeight / 2;
+    document.querySelectorAll(".project-media").forEach((mediaFrame) => {
+      const rect = mediaFrame.getBoundingClientRect();
+      const elementCenter = rect.top + rect.height / 2;
+      const offsetRatio = Math.min(
+        1,
+        Math.max(-1, (elementCenter - viewportCenter) / viewportCenter)
+      );
+      mediaFrame.style.setProperty(
+        "--parallax-y",
+        `${(offsetRatio * parallaxDistance * -1).toFixed(2)}px`
+      );
+    });
+  }
+
+  function requestScrollMotionUpdate() {
+    if (!scrollMotionTicking) {
+      scrollMotionTicking = true;
+      window.requestAnimationFrame(updateScrollMotion);
+    }
+  }
+
+  function armScrollMotion() {
+    if (scrollMotionArmed || supportsScrollDrivenAnimations) {
+      return;
+    }
+    scrollMotionArmed = true;
+    window.addEventListener("scroll", requestScrollMotionUpdate, { passive: true });
+    window.addEventListener("resize", requestScrollMotionUpdate, { passive: true });
+    requestScrollMotionUpdate();
+  }
+
+  function disarmScrollMotion() {
+    if (!scrollMotionArmed) {
+      return;
+    }
+    scrollMotionArmed = false;
+    scrollMotionTicking = false;
+    window.removeEventListener("scroll", requestScrollMotionUpdate);
+    window.removeEventListener("resize", requestScrollMotionUpdate);
+    // Clear stale values: CSS already ignores these under reduced motion,
+    // but nothing should linger if the property is ever read again.
+    progressFill?.style.removeProperty("--scroll-progress");
+    document
+      .querySelectorAll(".project-media")
+      .forEach((mediaFrame) => mediaFrame.style.removeProperty("--parallax-y"));
+  }
+
+  // --- Motion: nav compact morph after leaving the hero ---------------
+  // Paint-only (background-color / box-shadow / decorative transform):
+  // header min-height and padding never change, so this never shifts
+  // layout. Runs regardless of reduced motion since it is a state
+  // signal, not spatial motion; the reduced-motion stylesheet keeps the
+  // wordmark-mark's rotate(12deg) static and transition-free in both
+  // states, so toggling is-compact never produces a visible rotation.
+  const heroSection = document.getElementById("top");
+  const siteHeader = document.getElementById("header");
+  if (supportsIntersectionObserver && heroSection && siteHeader) {
+    const heroObserver = new IntersectionObserver(
+      ([entry]) => {
+        siteHeader.classList.toggle("is-compact", !entry.isIntersecting);
+      },
+      { threshold: 0 }
+    );
+    heroObserver.observe(heroSection);
+  }
+
+  // --- Motion: footer marquee runs only while the footer is in view ---
+  // Armed/disarmed reactively, same as scroll motion above.
+  const footerMarquee = document.querySelector(".footer-marquee");
+  let footerMarqueeObserver = null;
+  let footerIntersecting = false;
+
+  function syncFooterMarqueeActive() {
+    footerMarquee?.classList.toggle(
+      "is-active",
+      footerIntersecting && document.visibilityState === "visible"
+    );
+  }
+
+  function armFooterMarquee() {
+    if (!footerMarquee || !supportsIntersectionObserver || footerMarqueeObserver) {
+      return;
+    }
+    footerMarqueeObserver = new IntersectionObserver(
+      ([entry]) => {
+        footerIntersecting = entry.isIntersecting;
+        syncFooterMarqueeActive();
+      },
+      { threshold: 0 }
+    );
+    footerMarqueeObserver.observe(footerMarquee);
+    document.addEventListener("visibilitychange", syncFooterMarqueeActive);
+  }
+
+  function disarmFooterMarquee() {
+    footerMarqueeObserver?.disconnect();
+    footerMarqueeObserver = null;
+    footerIntersecting = false;
+    footerMarquee?.classList.remove("is-active");
+    document.removeEventListener("visibilitychange", syncFooterMarqueeActive);
+  }
+
   function localizedValue(value) {
     if (typeof value === "string") {
       return value;
@@ -200,13 +332,49 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // --- Motion: bounded, one-time project-row reveal -------------------
+  // Rows are fully visible in the base stylesheet with zero JS
+  // dependency; is-priming (added below, only under these guards) is the
+  // only thing that ever hides a row, and it always carries a hard
+  // timeout fallback so nothing can stay hidden indefinitely. The gate is
+  // re-evaluated on every render (not captured once), so a runtime
+  // prefers-reduced-motion change takes effect for the next render (e.g.
+  // a language toggle) without retroactively hiding already-visible rows.
+  function shouldAnimateProjectReveal() {
+    return !prefersReducedMotion && supportsIntersectionObserver;
+  }
+
+  const projectRevealObserver = supportsIntersectionObserver
+    ? new IntersectionObserver(
+        (entries, observer) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.remove("is-priming");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { rootMargin: "0px 0px -10% 0px", threshold: 0.1 }
+      )
+    : null;
+
+  function disarmProjectReveal() {
+    projectRevealObserver?.disconnect();
+    document
+      .querySelectorAll(".project-row.is-priming")
+      .forEach((row) => row.classList.remove("is-priming"));
+  }
+
   function renderProjects() {
     if (!projects) {
       return;
     }
 
+    projectRevealObserver?.disconnect();
+    const animateReveal = shouldAnimateProjectReveal();
+
     const fragment = document.createDocumentFragment();
-    projects.forEach((project) => {
+    projects.forEach((project, index) => {
       const article = document.createElement("article");
       const media = document.createElement("div");
       const image = document.createElement("img");
@@ -222,6 +390,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const linkArrow = document.createElement("span");
 
       article.className = "project-row";
+      article.style.setProperty("--row-index", String(index));
+      if (animateReveal) {
+        article.classList.add("is-priming");
+      }
       media.className = "project-media";
       image.src = project.image;
       image.alt = localizedValue(project.imageAlt);
@@ -268,6 +440,21 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsContainer.replaceChildren(fragment);
     projectsContainer.setAttribute("aria-busy", "false");
     projectState = "ready";
+
+    if (animateReveal) {
+      const rows = [...projectsContainer.querySelectorAll(".project-row")];
+      rows.forEach((row) => projectRevealObserver.observe(row));
+      // Safety net: if the observer never fires for any reason, no row
+      // stays hidden longer than this.
+      window.setTimeout(() => {
+        rows.forEach((row) => {
+          if (row.classList.contains("is-priming")) {
+            row.classList.remove("is-priming");
+            projectRevealObserver.unobserve(row);
+          }
+        });
+      }, 2500);
+    }
   }
 
   function renderProjectLoading() {
@@ -358,6 +545,36 @@ document.addEventListener("DOMContentLoaded", () => {
       { rootMargin: "-20% 0px -55% 0px", threshold: [0, 0.25, 0.5, 0.75] }
     );
     observedSections.forEach((section) => sectionObserver.observe(section));
+  }
+
+  // --- Motion: live prefers-reduced-motion lifecycle -------------------
+  // The preference is re-checked on every render/arm call above (not
+  // just captured once at load), so a runtime OS/browser-level toggle
+  // arms or disarms scroll motion and the footer marquee immediately,
+  // without creating duplicate observers/listeners on repeated toggles
+  // (each arm/disarm function guards itself and is idempotent).
+  function handleMotionPreferenceChange(event) {
+    prefersReducedMotion = event.matches;
+    if (prefersReducedMotion) {
+      disarmScrollMotion();
+      disarmFooterMarquee();
+      disarmProjectReveal();
+    } else {
+      armScrollMotion();
+      armFooterMarquee();
+    }
+  }
+
+  if (typeof motionQuery.addEventListener === "function") {
+    motionQuery.addEventListener("change", handleMotionPreferenceChange);
+  } else if (typeof motionQuery.addListener === "function") {
+    // Safari < 14 fallback.
+    motionQuery.addListener(handleMotionPreferenceChange);
+  }
+
+  if (!prefersReducedMotion) {
+    armScrollMotion();
+    armFooterMarquee();
   }
 
   requireElement("current-year").textContent = String(new Date().getFullYear());

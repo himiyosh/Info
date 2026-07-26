@@ -1055,19 +1055,81 @@ test("contact link hover transitions do not animate layout properties", async ()
   );
 });
 
-test("project rows stay visible without per-item reveal machinery", async () => {
+test("project rows stay visible by default and reveal machinery is bounded and safe", async () => {
   const stylesSource = await readUtf8("styles.css");
   const scriptSource = await readUtf8("script.js");
 
-  assert.doesNotMatch(
+  // Base state: every row is visible with zero JS dependency. No rule
+  // outside a .js-enabled + no-preference guard may set opacity/transform
+  // on .project-row.
+  assert.match(
+    stylesSource,
+    /\.project-row\s*\{[^}]*opacity:\s*1;[^}]*transform:\s*none;/s,
+    ".project-row base rule must default to fully visible with no transform"
+  );
+
+  const primingRule = stylesSource.match(
+    /@media\s*\(prefers-reduced-motion:\s*no-preference\)\s*\{\s*\.js-enabled\s+\.project-row\s*\{([^}]*)\}\s*\.js-enabled\s+\.project-row\.is-priming\s*\{([^}]*)\}/s
+  );
+  assert.ok(
+    primingRule,
+    "The priming/reveal transition must be scoped to .js-enabled AND prefers-reduced-motion: no-preference"
+  );
+  assert.match(
+    primingRule[1],
+    /--row-index/,
+    "The reveal transition delay must derive from a per-row --row-index custom property"
+  );
+  assert.match(
+    primingRule[1],
+    /min\(var\(--row-index,\s*0\),\s*9\)/,
+    "The stagger must be capped (min() clamp) rather than growing unbounded with row count"
+  );
+  assert.match(
+    primingRule[2],
+    /transition:\s*none/,
+    "Entering the primed (hidden) state must be instant, never itself an animated hide"
+  );
+
+  // script.js: only ever primes a row when JS + IntersectionObserver +
+  // no motion preference are all present (re-evaluated on every render
+  // via a function, not captured once, so a runtime preference change
+  // takes effect for the next render), always with a one-time observer
+  // (unobserve on reveal) and a hard timeout safety net.
+  assert.match(
     scriptSource,
-    /\bprojectObserver\b|\bsetupProjectMotion\b|--project-index|classList\.add\("is-visible"\)/,
-    "script.js must not restore project-row reveal state or observer wiring"
+    /function shouldAnimateProjectReveal\(\)\s*\{\s*return\s*!prefersReducedMotion\s*&&\s*supportsIntersectionObserver;/,
+    "Reveal priming must be gated on both reduced-motion and IntersectionObserver support, re-evaluated per render"
+  );
+  assert.match(
+    scriptSource,
+    /const animateReveal = shouldAnimateProjectReveal\(\);/,
+    "renderProjects must re-read the live reveal gate on every call, not a value captured once at load"
+  );
+  assert.match(
+    scriptSource,
+    /classList\.add\("is-priming"\)/,
+    "script.js must prime rows for the bounded reveal"
+  );
+  assert.match(
+    scriptSource,
+    /observer\.unobserve\(entry\.target\)/,
+    "Each row's reveal must be one-time (unobserve after it fires)"
+  );
+  assert.match(
+    scriptSource,
+    /setTimeout\(\s*\(\)\s*=>\s*\{[\s\S]*?classList\.remove\("is-priming"\)/,
+    "script.js must include a timeout safety net that clears any stuck priming class"
+  );
+  assert.match(
+    scriptSource,
+    /function disarmProjectReveal\(\)\s*\{[\s\S]*?projectRevealObserver\?\.disconnect\(\);[\s\S]*?classList\.remove\("is-priming"\)/,
+    "A runtime switch to reduced motion must disconnect the observer and clear any stale priming class"
   );
   assert.doesNotMatch(
-    stylesSource,
-    /\.motion-ready\s+\.project-row|\.project-row(?:[^{]*?)\.is-visible|--project-index/,
-    "styles.css must not hide or stagger project rows behind reveal state"
+    scriptSource,
+    /\bprojectObserver\b|\bsetupProjectMotion\b|--project-index/,
+    "script.js must not restore the old rejected reveal symbol names"
   );
 });
 
@@ -1111,35 +1173,101 @@ test("static redesign defers hero tilt runtime work to PR 2", async () => {
   }
 });
 
-test("scroll-progress feature is fully removed", async () => {
+test("scroll-progress is transform-based, progressive, non-essential, and stacks above the sticky header", async () => {
   const indexHtml = await readUtf8("index.html");
   const stylesSource = await readUtf8("styles.css");
   const scriptSource = await readUtf8("script.js");
+  const tokensSource = await readUtf8("tokens.css");
 
-  assert.doesNotMatch(
+  assert.match(
     indexHtml,
-    /class="scroll-progress"/,
-    "index.html must not contain scroll-progress markup"
+    /<div class="scroll-progress" aria-hidden="true">/,
+    "index.html must contain the aria-hidden scroll-progress markup"
+  );
+
+  // Dedicated semantic z-index layer above --z-sticky (not borrowed
+  // modal/toast semantics), so the progress bar reliably paints above
+  // the sticky header regardless of DOM/source order — two elements
+  // with an EQUAL z-index stack by DOM order, and the header (later in
+  // the DOM than .scroll-progress) would otherwise always win and fully
+  // occlude the bar.
+  const zIndexOrder = ["--z-base", "--z-raised", "--z-dropdown", "--z-sticky", "--z-progress", "--z-modal"];
+  const zIndexValues = new Map();
+  for (const match of tokensSource.matchAll(/(--z-[a-z]+):\s*(\d+);/g)) {
+    zIndexValues.set(match[1], Number(match[2]));
+  }
+  for (const tokenName of zIndexOrder) {
+    assert.ok(zIndexValues.has(tokenName), `tokens.css must define ${tokenName}`);
+  }
+  assert.ok(
+    zIndexValues.get("--z-progress") > zIndexValues.get("--z-sticky"),
+    "--z-progress must be greater than --z-sticky so the progress bar paints above the sticky header"
+  );
+  assert.notEqual(
+    zIndexValues.get("--z-progress"),
+    zIndexValues.get("--z-modal"),
+    "--z-progress must be its own dedicated token, not an alias for --z-modal semantics"
+  );
+
+  const scrollProgressRule = stylesSource.match(/\.scroll-progress\s*\{([^}]*)\}/)?.[1];
+  assert.ok(scrollProgressRule, "styles.css must define .scroll-progress");
+  assert.match(
+    scrollProgressRule,
+    /z-index:\s*var\(--z-progress\)/,
+    ".scroll-progress must use the dedicated --z-progress token, not --z-sticky"
+  );
+
+  const siteHeaderRule = stylesSource.match(/\.site-header\s*\{([^}]*)\}/)?.[1];
+  assert.ok(siteHeaderRule, "styles.css must define .site-header");
+  assert.match(
+    siteHeaderRule,
+    /z-index:\s*var\(--z-sticky\)/,
+    ".site-header must keep using --z-sticky (lower than --z-progress)"
+  );
+
+  const fillRule = stylesSource.match(/\.scroll-progress-fill\s*\{([^}]*)\}/s)?.[1];
+  assert.ok(fillRule, "styles.css must define .scroll-progress-fill");
+  assert.match(
+    fillRule,
+    /transform:\s*scaleX\(var\(--scroll-progress,\s*0\)\)/,
+    "Scroll progress must be communicated via transform: scaleX, never width"
   );
   assert.doesNotMatch(
+    fillRule,
+    /\bwidth\s*:\s*var\(--scroll-progress/,
+    "Scroll progress must never animate width (layout-triggering)"
+  );
+
+  assert.match(
     stylesSource,
-    /--scroll-progress/,
-    "styles.css must not reference --scroll-progress custom property"
+    /@supports\s*\(animation-timeline:\s*scroll\(\)\)\s*\{[\s\S]*?animation-timeline:\s*scroll\(root\)/,
+    "A CSS scroll-timeline enhancement must be layered on top of the JS fallback"
   );
-  assert.doesNotMatch(
+  assert.match(
     stylesSource,
-    /--z-progress/,
-    "styles.css must not reference --z-progress (used only by scroll-progress)"
+    /\.scroll-progress\s*\{\s*display:\s*none;\s*\}/,
+    "The progress bar must be treated as non-essential and hidden under reduced motion"
   );
-  assert.doesNotMatch(
-    stylesSource,
-    /\.scroll-progress/,
-    "styles.css must not contain scroll-progress rules"
-  );
-  assert.doesNotMatch(
+
+  assert.match(
     scriptSource,
-    /updateScrollProgress|progressFrame/,
-    "script.js must not contain scroll-progress functions or state"
+    /function armScrollMotion\(\)\s*\{\s*if\s*\(scrollMotionArmed\s*\|\|\s*supportsScrollDrivenAnimations\)\s*\{\s*return;/,
+    "Arming the JS scroll-progress fallback must be skipped/idempotent when native scroll-timelines apply or it is already armed"
+  );
+  assert.match(
+    scriptSource,
+    /if\s*\(!prefersReducedMotion\)\s*\{\s*armScrollMotion\(\);/,
+    "Scroll motion must only be armed at load when the user has no reduced-motion preference"
+  );
+  assert.match(
+    scriptSource,
+    /requestAnimationFrame\(updateScrollMotion\)/,
+    "Progress updates must be batched through requestAnimationFrame, not run directly on the scroll event"
+  );
+  assert.match(
+    scriptSource,
+    /addEventListener\("scroll",\s*requestScrollMotionUpdate,\s*\{\s*passive:\s*true\s*\}\)/,
+    "The scroll listener must be passive"
   );
 });
 
@@ -1198,7 +1326,7 @@ test("hero image preload in head matches srcset/sizes of the hero img element", 
   );
 });
 
-test("rich redesign foundation uses local tokens and keeps the marquee static", async () => {
+test("rich redesign foundation uses local tokens and the marquee is footer-view-gated", async () => {
   const indexHtml = await readUtf8("index.html");
   const tokensSource = await readUtf8("tokens.css");
   const stylesSource = await readUtf8("styles.css");
@@ -1228,15 +1356,390 @@ test("rich redesign foundation uses local tokens and keeps the marquee static", 
     /Hallmark · macrostructure: Marquee Hero[\s\S]*theme: Graphite Blue/,
     "Foundation CSS must record the selected marquee and theme system"
   );
-  assert.doesNotMatch(
+  assert.match(
     stylesSource,
-    /@keyframes\s+(?:foot-marquee|scroll-progress)|animation:\s*[^;]*(?:foot-marquee|scroll-progress)/,
-    "Continuous marquee and scroll-progress motion remain reserved for PR 2"
+    /@keyframes\s+footer-marquee/,
+    "The Ft8 marquee keyframe must exist now that PR 2's gated motion has landed"
+  );
+  assert.match(
+    stylesSource,
+    /\.footer-marquee-set\s*\{[^}]*animation-play-state:\s*paused;/s,
+    "The marquee must default to paused, only running while the footer is in view"
   );
   await Promise.all([
     stat(path.join(repoRoot, "assets/fonts/BigShouldersDisplay-latin-variable.woff2")),
     stat(path.join(repoRoot, "assets/fonts/OFL.txt"))
   ]);
+});
+
+test("footer marquee loops seamlessly, stays accessible, and pauses off-view", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const stylesSource = await readUtf8("styles.css");
+  const scriptSource = await readUtf8("script.js");
+
+  const marqueeSets = [...indexHtml.matchAll(/<span class="footer-marquee-set"[^>]*>/g)];
+  assert.equal(
+    marqueeSets.length,
+    2,
+    "The marquee track must contain exactly two duplicate sets for a seamless -100% loop"
+  );
+  assert.match(
+    indexHtml,
+    /<p class="sr-only" data-i18n="about\.statement">/,
+    "A single static sr-only equivalent must remain outside the aria-hidden track"
+  );
+  assert.match(
+    indexHtml,
+    /<div class="footer-marquee-track" aria-hidden="true">/,
+    "The duplicated track must stay aria-hidden from assistive technology"
+  );
+
+  assert.match(
+    stylesSource,
+    /@keyframes footer-marquee\s*\{\s*from\s*\{\s*transform:\s*translateX\(0\);\s*\}\s*to\s*\{\s*transform:\s*translateX\(-100%\);\s*\}\s*\}/,
+    "The marquee must translate by -100% of its own set width for a seamless loop"
+  );
+  assert.match(
+    stylesSource,
+    /\.footer-marquee\.is-active\s+\.footer-marquee-set\s*\{\s*animation-play-state:\s*running;\s*\}/,
+    "The marquee must only run while .footer-marquee carries the is-active class"
+  );
+
+  assert.match(
+    scriptSource,
+    /function armFooterMarquee\(\)\s*\{\s*if\s*\(!footerMarquee\s*\|\|\s*!supportsIntersectionObserver\s*\|\|\s*footerMarqueeObserver\)\s*\{\s*return;/,
+    "Marquee activation must be gated on IntersectionObserver support and must be idempotent (no duplicate observers on repeated arms)"
+  );
+  assert.match(
+    scriptSource,
+    /if\s*\(!prefersReducedMotion\)\s*\{\s*armScrollMotion\(\);\s*armFooterMarquee\(\);\s*\}/,
+    "The marquee must only be armed at load when the user has no reduced-motion preference"
+  );
+  assert.match(
+    scriptSource,
+    /function disarmFooterMarquee\(\)\s*\{\s*footerMarqueeObserver\?\.disconnect\(\);\s*footerMarqueeObserver = null;/,
+    "A runtime switch to reduced motion must disconnect the marquee observer and reset it to null (safe to re-arm later)"
+  );
+  assert.match(
+    scriptSource,
+    /footerIntersecting\s*&&\s*document\.visibilityState\s*===\s*"visible"/,
+    "The marquee must only be active while both in view and the tab is visible"
+  );
+  assert.match(
+    scriptSource,
+    /addEventListener\("visibilitychange",\s*syncFooterMarqueeActive\)/,
+    "The marquee must re-evaluate on visibilitychange to pause in background tabs"
+  );
+});
+
+test("every desktop project row keeps the image on the left, in DOM order", async () => {
+  const stylesSource = await readUtf8("styles.css");
+  const projects = JSON.parse(await readUtf8("projects.json"));
+
+  const desktopBlock = stylesSource.match(
+    /@media\s*\(min-width:\s*48rem\)\s*\{([\s\S]*)\}\s*@media\s*\(prefers-reduced-motion:\s*reduce\)/
+  )?.[1];
+  assert.ok(desktopBlock, "Expected a min-width: 48rem media query block");
+
+  assert.doesNotMatch(
+    desktopBlock,
+    /\.project-row:nth-child\((?:even|odd)\)\s+\.project-media/,
+    "No nth-child rule may move .project-media to a different grid column/row on desktop"
+  );
+  assert.doesNotMatch(
+    desktopBlock,
+    /\.project-row:nth-child\((?:even|odd)\)\s+\.project-content/,
+    "No nth-child rule may move .project-content to a different grid column/row on desktop"
+  );
+  assert.match(
+    desktopBlock,
+    /\.project-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*0\.9fr\)\s*minmax\(0,\s*1\.1fr\);/s,
+    "Desktop rows must use a fixed two-column grid: media first (left), content second (right)"
+  );
+
+  // The odd/even accent-color scene variation must still be present and
+  // untouched — only the column swap is removed.
+  assert.match(
+    stylesSource,
+    /\.project-row:nth-child\(odd\)\s*\{\s*background:\s*var\(--color-accent\);/,
+    "Odd-row accent color variation must still exist"
+  );
+  assert.match(
+    stylesSource,
+    /\.project-row:nth-child\(even\)\s*\{\s*background:\s*var\(--color-accent-2\);/,
+    "Even-row accent-2 color variation must still exist"
+  );
+
+  assert.ok(projects.length >= 2, "Expected at least two projects to validate row order against");
+});
+
+test("headings wrap intentionally: safety-net overflow-wrap, language-aware breaking, balance retained", async () => {
+  const stylesSource = await readUtf8("styles.css");
+
+  const headingSelectors = [
+    /\.hero h1\s*\{([^}]*)\}/s,
+    /\.section-heading h2,\s*\n\.projects-intro h2,\s*\n\.contact h2\s*\{([^}]*)\}/s,
+    /\.project-heading h3\s*\{([^}]*)\}/s
+  ];
+
+  for (const selectorPattern of headingSelectors) {
+    const ruleBody = stylesSource.match(selectorPattern)?.[1];
+    assert.ok(ruleBody, `Expected to find heading rule for pattern: ${selectorPattern}`);
+    assert.doesNotMatch(
+      ruleBody,
+      /overflow-wrap:\s*anywhere/,
+      "overflow-wrap: anywhere must not be the primary wrapping behavior on display headings"
+    );
+    assert.match(
+      ruleBody,
+      /overflow-wrap:\s*break-word/,
+      "Headings must keep overflow-wrap: break-word as a true-overflow safety net"
+    );
+    assert.match(
+      ruleBody,
+      /text-wrap:\s*balance/,
+      "Headings must keep text-wrap: balance for even line lengths"
+    );
+  }
+
+  assert.match(
+    stylesSource,
+    /html:lang\(ja\)\s+:where\(\.project-heading h3,\s*\.section-heading h2,\s*\.projects-intro h2,\s*\.contact h2\)\s*\{\s*word-break:\s*keep-all;/,
+    "Non-hero Japanese display headings must use word-break: keep-all so words don't split mid-character-group"
+  );
+  assert.match(
+    stylesSource,
+    /:where\(\.project-heading h3,\s*\.section-heading h2,\s*\.projects-intro h2,\s*\.contact h2\)\s*\{\s*hyphens:\s*auto;/,
+    "Non-hero headings must have a hyphens: auto safety net for long Latin words"
+  );
+});
+
+test("hero entrance runs from .js-enabled alone with no script.js dependency, and LCP image stays untouched", async () => {
+  const stylesSource = await readUtf8("styles.css");
+  const tokensSource = await readUtf8("tokens.css");
+
+  const entranceRule = stylesSource.match(
+    /\.js-enabled \.hero h1 span,\s*\n\.js-enabled \.hero-support > \*\s*\{([^}]*)\}/
+  )?.[1];
+  assert.ok(entranceRule, "Expected a combined .js-enabled hero entrance rule");
+  assert.match(entranceRule, /opacity:\s*0;/, "Hero entrance must start from opacity: 0");
+  assert.match(
+    entranceRule,
+    /transform:\s*translateY\(var\(--reveal-offset\)\)/,
+    "Hero entrance must use a transform, not a layout property, for its offset"
+  );
+  assert.match(
+    entranceRule,
+    /animation:\s*hero-reveal\s+var\(--dur-long\)\s+var\(--ease-out\)\s+forwards/,
+    "Hero entrance must be driven by a forwards-filling CSS animation"
+  );
+
+  // Total choreography must land in the 500-800ms window: last delay
+  // (280ms) + duration (--dur-long, 420ms) = 700ms.
+  assert.match(tokensSource, /--dur-long:\s*420ms/, "dur-long token must still be 420ms");
+  assert.match(
+    stylesSource,
+    /\.js-enabled \.hero-support > \*:nth-child\(3\)\s*\{\s*animation-delay:\s*280ms;\s*\}/,
+    "The last staggered hero element must land within the 500-800ms budget"
+  );
+
+  assert.doesNotMatch(
+    stylesSource,
+    /\.hero-visual(?:\s+img)?\s*\{[^}]*animation:/,
+    "The hero visual frame/img must never carry an entrance animation (protects LCP)"
+  );
+});
+
+test("nav compact morph is paint-only and never shifts header layout or touch targets", async () => {
+  const stylesSource = await readUtf8("styles.css");
+  const scriptSource = await readUtf8("script.js");
+
+  const compactRule = stylesSource.match(/\.site-header\.is-compact\s*\{([^}]*)\}/)?.[1];
+  assert.ok(compactRule, "Expected a .site-header.is-compact rule");
+  assert.doesNotMatch(
+    compactRule,
+    /\b(?:min-height|height|padding|margin|border-width)\s*:/,
+    "Compact nav state must not touch box-model properties that would shift layout"
+  );
+  assert.match(compactRule, /background-color:/, "Compact state must be signalled via background-color");
+
+  const wordmarkCompactRule = stylesSource.match(
+    /\.site-header\.is-compact \.wordmark-mark\s*\{([^}]*)\}/
+  )?.[1];
+  assert.ok(wordmarkCompactRule, "Expected a compact wordmark-mark transform rule");
+  assert.match(wordmarkCompactRule, /transform:/, "Compact wordmark-mark treatment must use transform only");
+
+  // The clickable wordmark link itself must never be scaled (44px target).
+  assert.doesNotMatch(
+    stylesSource,
+    /\.site-header\.is-compact \.wordmark\s*\{[^}]*transform:/,
+    "The wordmark link (the 44px touch target) must never be transformed by the compact state"
+  );
+
+  assert.match(
+    scriptSource,
+    /heroObserver\.observe\(heroSection\)/,
+    "script.js must observe the hero section to drive the compact morph"
+  );
+  assert.match(
+    scriptSource,
+    /siteHeader\.classList\.toggle\("is-compact",\s*!entry\.isIntersecting\)/,
+    "The compact class must toggle based on the hero's intersection state"
+  );
+});
+
+test("micro-parallax is capped at +/-5px, applied to the frame not the img, and disabled under reduced motion", async () => {
+  const stylesSource = await readUtf8("styles.css");
+  const scriptSource = await readUtf8("script.js");
+  const tokensSource = await readUtf8("tokens.css");
+
+  assert.match(
+    tokensSource,
+    /--parallax-distance:\s*5px;/,
+    "tokens.css must cap parallax distance at 5px"
+  );
+
+  const noPreferenceBlock = stylesSource.match(
+    /@media \(prefers-reduced-motion: no-preference\) \{\s*\.project-media\s*\{\s*transform:\s*translateY\(var\(--parallax-y,\s*0px\)\);/
+  );
+  assert.ok(noPreferenceBlock, "Parallax transform fallback must be scoped to prefers-reduced-motion: no-preference");
+
+  assert.doesNotMatch(
+    stylesSource,
+    /\.project-media img\s*\{[^}]*--parallax-y/,
+    "Parallax must never apply to .project-media img (would collide with its own hover scale)"
+  );
+
+  assert.match(
+    stylesSource,
+    /@supports \(animation-timeline: view\(\)\)\s*\{[\s\S]*?animation-timeline:\s*view\(\);/,
+    "A compositor-driven view-timeline enhancement must be layered on top of the JS fallback"
+  );
+
+  assert.match(
+    scriptSource,
+    /--parallax-y/,
+    "The shared rAF fallback must drive --parallax-y"
+  );
+  assert.doesNotMatch(
+    scriptSource,
+    /querySelectorAll\(["']\.project-media["']\)[\s\S]{0,80}addEventListener\(\s*["']scroll["']/,
+    "Parallax must not attach a per-element scroll listener"
+  );
+});
+
+test("reduced motion nulls every new spatial transform, disables non-essential motion, and keeps the wordmark-mark rotation invariant", async () => {
+  const stylesSource = await readUtf8("styles.css");
+
+  const reducedBlock = stylesSource.match(
+    /@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\}\s*@media \(forced-colors: active\)/
+  )?.[1];
+  assert.ok(reducedBlock, "Expected a prefers-reduced-motion: reduce block before the forced-colors block");
+
+  assert.match(
+    reducedBlock,
+    /\.hero h1 span,\s*\n\s*\.hero-support > \*,\s*\n\s*\.project-row,\s*\n\s*\.project-media\s*\{\s*transform:\s*none\s*!important;/,
+    "Reduced motion must null transform on every new PR 2 spatial motion surface"
+  );
+
+  // Regression: the wordmark-mark's static rotate(12deg) predates PR 2.
+  // Nulling it to "none" only in the .is-compact state (while the
+  // resting state keeps rotate(12deg)) creates a visible, scroll-
+  // triggered rotation under reduced motion every time is-compact
+  // toggles. Both states must keep the identical static rotation, and
+  // the transition itself must be removed (not just capped to 150ms).
+  assert.doesNotMatch(
+    reducedBlock,
+    /\.site-header\.is-compact \.wordmark-mark\s*\{\s*transform:\s*none/,
+    "Reduced motion must not null the wordmark-mark's static rotation in the compact state alone"
+  );
+  const wordmarkRule = reducedBlock.match(
+    /\.wordmark-mark,\s*\n\s*\.site-header\.is-compact \.wordmark-mark\s*\{([^}]*)\}/
+  )?.[1];
+  assert.ok(
+    wordmarkRule,
+    "Reduced motion must define one combined rule for .wordmark-mark and .site-header.is-compact .wordmark-mark"
+  );
+  assert.match(
+    wordmarkRule,
+    /transform:\s*rotate\(12deg\)\s*!important;/,
+    "Both the resting and compact wordmark-mark states must keep the identical static rotate(12deg) under reduced motion"
+  );
+  assert.match(
+    wordmarkRule,
+    /transition:\s*none\s*!important;/,
+    "The wordmark-mark transition must be fully removed under reduced motion, not merely shortened"
+  );
+
+  assert.match(
+    reducedBlock,
+    /\.scroll-progress\s*\{\s*display:\s*none;\s*\}/,
+    "The scroll progress bar must be hidden outright under reduced motion"
+  );
+  assert.match(
+    reducedBlock,
+    /\.footer-marquee-set\s*\{\s*animation:\s*none\s*!important;/,
+    "The marquee animation must be fully disabled under reduced motion"
+  );
+});
+
+test("reduced motion preference is live: a runtime change arms/disarms motion without duplicate observers", async () => {
+  const scriptSource = await readUtf8("script.js");
+
+  assert.match(
+    scriptSource,
+    /const motionQuery = window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\);/,
+    "script.js must keep a live MediaQueryList for prefers-reduced-motion, not just read .matches once"
+  );
+  assert.match(
+    scriptSource,
+    /let prefersReducedMotion = motionQuery\.matches;/,
+    "prefersReducedMotion must be reassignable (let), updated by the change listener"
+  );
+
+  const changeHandler = scriptSource.match(
+    /function handleMotionPreferenceChange\(event\)\s*\{([\s\S]*?)\n\s*\}/
+  )?.[1];
+  assert.ok(changeHandler, "Expected a handleMotionPreferenceChange function");
+  assert.match(
+    changeHandler,
+    /prefersReducedMotion = event\.matches;/,
+    "The change handler must update the live prefersReducedMotion flag from the event"
+  );
+  assert.match(
+    changeHandler,
+    /disarmScrollMotion\(\);[\s\S]*disarmFooterMarquee\(\);[\s\S]*disarmProjectReveal\(\);/,
+    "Switching to reduced motion must immediately disarm scroll motion, the marquee, and any priming project rows"
+  );
+  assert.match(
+    changeHandler,
+    /armScrollMotion\(\);[\s\S]*armFooterMarquee\(\);/,
+    "Switching back to no-preference must re-arm scroll motion and the marquee"
+  );
+
+  assert.match(
+    scriptSource,
+    /motionQuery\.addEventListener\("change",\s*handleMotionPreferenceChange\)/,
+    "script.js must subscribe to live prefers-reduced-motion changes"
+  );
+
+  // Idempotency: repeated arm calls must not attach duplicate listeners
+  // or create duplicate observers.
+  assert.match(
+    scriptSource,
+    /function armScrollMotion\(\)\s*\{\s*if\s*\(scrollMotionArmed \|\| supportsScrollDrivenAnimations\)\s*\{\s*return;/,
+    "armScrollMotion must guard against being armed twice"
+  );
+  assert.match(
+    scriptSource,
+    /function armFooterMarquee\(\)\s*\{\s*if\s*\(!footerMarquee \|\| !supportsIntersectionObserver \|\| footerMarqueeObserver\)\s*\{\s*return;/,
+    "armFooterMarquee must guard against creating a second observer while one is already active"
+  );
+  assert.match(
+    scriptSource,
+    /function disarmScrollMotion\(\)\s*\{\s*if\s*\(!scrollMotionArmed\)\s*\{\s*return;/,
+    "disarmScrollMotion must be a no-op when not currently armed"
+  );
 });
 
 // OKLCH -> linear sRGB -> WCAG relative luminance, used to compute real
