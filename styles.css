@@ -968,6 +968,12 @@ html:lang(ja) .hero h1 span {
   border-block-start: 2px solid var(--color-ink);
 }
 
+.contact-email-method {
+  min-width: 0;
+  display: grid;
+  border-block-end: 2px solid var(--color-ink);
+}
+
 .contact-links a {
   min-height: 5rem;
   padding-block: var(--space-sm);
@@ -981,6 +987,51 @@ html:lang(ja) .hero h1 span {
   transition:
     background-color var(--dur-micro) var(--ease-out),
     transform var(--dur-micro) var(--ease-out);
+}
+
+.contact-email-method > a {
+  border-block-end: 0;
+}
+
+.contact-copy-button {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  margin: 0 0 var(--space-sm);
+  padding: var(--space-2xs) var(--space-sm);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border: 2px solid var(--color-ink);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  font-variation-settings: "wght" 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out),
+    transform var(--dur-micro) var(--ease-out);
+}
+
+.contact-copy-button[aria-busy="true"] {
+  cursor: progress;
+}
+
+.contact-copy-status {
+  min-height: 1.7em;
+  margin: 0 0 var(--space-sm);
+  color: var(--color-accent-ink);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+}
+
+.contact-copy-button[hidden],
+.contact-copy-status[hidden] {
+  display: none;
 }
 
 .contact-links span {
@@ -1194,6 +1245,11 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
   }
 
   .contact-links a:hover {
+    background: var(--color-paper);
+    color: var(--color-ink);
+  }
+
+  .contact-copy-button:hover {
     background: var(--color-paper);
     color: var(--color-ink);
   }

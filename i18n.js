@@ -67,7 +67,11 @@
       contact: {
         title: "Contact",
         intro: "技術や公開プロジェクトについてのご連絡は、メールまたは GitHub からどうぞ。",
-        emailLabel: "Email"
+        emailLabel: "Email",
+        copyEmail: "メールアドレスをコピー",
+        copySuccess: "メールアドレスをコピーしました。",
+        copyManualSelected: "コピーできませんでした。選択中のアドレスを手動でコピーしてください。",
+        copyFailure: "コピーできませんでした。表示中のアドレスを手動でコピーしてください。"
       },
       footer: {
         backToTop: "ページ上部へ"
@@ -135,7 +139,11 @@
       contact: {
         title: "Contact",
         intro: "For questions about technology or these public projects, reach out by email or GitHub.",
-        emailLabel: "Email"
+        emailLabel: "Email",
+        copyEmail: "Copy email address",
+        copySuccess: "Email address copied.",
+        copyManualSelected: "Copy failed. Copy the selected address manually.",
+        copyFailure: "Copy failed. Select the visible address and copy it manually."
       },
       footer: {
         backToTop: "Back to top"
