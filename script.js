@@ -6,8 +6,13 @@ const CONTACT_COPY_STATUS_KEYS = Object.freeze({
   manualSelected: "contact.copyManualSelected",
   failure: "contact.copyFailure"
 });
+const PROJECT_SHARE_STATUS_KEYS = Object.freeze({
+  shared: "projects.shareSuccess",
+  copied: "projects.copySuccess",
+  failure: "projects.shareFailure"
+});
 
-async function writeContactEmailToClipboard(address) {
+async function writeTextToClipboard(value) {
   if (
     window.isSecureContext !== true ||
     typeof window.navigator?.clipboard?.writeText !== "function"
@@ -15,8 +20,131 @@ async function writeContactEmailToClipboard(address) {
     return false;
   }
 
-  await window.navigator.clipboard.writeText(address);
+  await window.navigator.clipboard.writeText(value);
   return true;
+}
+
+async function writeContactEmailToClipboard(address) {
+  return writeTextToClipboard(address);
+}
+
+function createStableProjectShareUrl(hash, stableRouteUrl) {
+  if (
+    typeof hash !== "string" ||
+    !/^#project-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(hash)
+  ) {
+    throw new TypeError("Project share URLs require a stable project fragment.");
+  }
+
+  const target = new URL(stableRouteUrl);
+  target.search = "";
+  target.hash = hash;
+  return target.href;
+}
+
+function isShareCancellation(error) {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      error.name === "AbortError"
+  );
+}
+
+async function shareProjectLink({ title, url, share, copyText }) {
+  if (typeof share === "function") {
+    try {
+      await share({ title, url });
+      return "shared";
+    } catch (error) {
+      return isShareCancellation(error) ? "cancelled" : "failed";
+    }
+  }
+
+  try {
+    return (await copyText(url)) ? "copied" : "failed";
+  } catch {
+    return "failed";
+  }
+}
+
+function createProjectShareController({
+  title,
+  button,
+  permalink,
+  status,
+  getUrl,
+  share,
+  copyText,
+  translate,
+  schedule
+}) {
+  let operation = 0;
+
+  function reset() {
+    operation += 1;
+    button.dataset.shareState = "idle";
+    button.removeAttribute("aria-busy");
+    status.dataset.state = "idle";
+    status.textContent = "";
+  }
+
+  function announce(key, state, activeOperation) {
+    button.dataset.shareState = state;
+    button.removeAttribute("aria-busy");
+    status.dataset.state = state;
+    status.textContent = "";
+    schedule(() => {
+      if (activeOperation === operation) {
+        status.textContent = translate(key);
+      }
+    });
+  }
+
+  async function activate() {
+    const activeOperation = ++operation;
+    button.dataset.shareState = "loading";
+    button.setAttribute("aria-busy", "true");
+    status.dataset.state = "loading";
+    status.textContent = "";
+
+    const result = await shareProjectLink({
+      title,
+      url: getUrl(),
+      share,
+      copyText
+    });
+    if (activeOperation !== operation) {
+      return;
+    }
+
+    if (result === "cancelled") {
+      button.dataset.shareState = "idle";
+      button.removeAttribute("aria-busy");
+      status.dataset.state = "idle";
+      return;
+    }
+
+    if (result === "shared" || result === "copied") {
+      announce(
+        result === "shared"
+          ? PROJECT_SHARE_STATUS_KEYS.shared
+          : PROJECT_SHARE_STATUS_KEYS.copied,
+        "success",
+        activeOperation
+      );
+      return;
+    }
+
+    permalink.focus({ preventScroll: true });
+    announce(PROJECT_SHARE_STATUS_KEYS.failure, "error", activeOperation);
+  }
+
+  button.addEventListener("click", activate);
+  button.hidden = false;
+  status.hidden = false;
+  reset();
+
+  return { activate, reset };
 }
 
 function selectContactEmailForManualCopy(element, address) {
@@ -164,6 +292,7 @@ document.addEventListener("DOMContentLoaded", () => {
   ].join(", ");
   let projects = null;
   let projectState = "loading";
+  let projectShareControllers = [];
   const projectStatusKeys = {
     loading: "projects.loading",
     ready: "projects.ready",
@@ -974,6 +1103,13 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsDirectory.replaceChildren();
   }
 
+  function resetProjectShareControllers({ discard = false } = {}) {
+    projectShareControllers.forEach((controller) => controller.reset());
+    if (discard) {
+      projectShareControllers = [];
+    }
+  }
+
   function renderProjectDirectory() {
     if (!projects) {
       throw new Error("Project directory cannot render before project data is loaded.");
@@ -1011,6 +1147,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    resetProjectShareControllers({ discard: true });
     projectRevealObserver?.disconnect();
     const animateReveal = shouldAnimateProjectReveal();
 
@@ -1025,8 +1162,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const content = document.createElement("div");
       const headingGroup = document.createElement("div");
       const headingLine = document.createElement("div");
+      const headingActions = document.createElement("div");
       const title = document.createElement("h3");
       const permalink = document.createElement("a");
+      const shareButton = document.createElement("button");
+      const shareStatus = document.createElement("p");
       const kind = document.createElement("p");
       const details = document.createElement("div");
       const description = document.createElement("p");
@@ -1060,6 +1200,7 @@ document.addEventListener("DOMContentLoaded", () => {
       content.className = "project-content";
       headingGroup.className = "project-heading";
       headingLine.className = "project-heading-line";
+      headingActions.className = "project-heading-actions";
       const localizedTitle = localizedValue(project.title);
       title.id = `${article.id}-title`;
       title.textContent = localizedTitle;
@@ -1070,14 +1211,51 @@ document.addEventListener("DOMContentLoaded", () => {
         window.siteI18n.t("projects.permalinkLabel").replace("{title}", localizedTitle)
       );
       permalink.textContent = window.siteI18n.t("projects.permalinkAction");
+      shareButton.className = "project-share-button";
+      shareButton.type = "button";
+      shareButton.hidden = true;
+      shareButton.setAttribute(
+        "aria-label",
+        window.siteI18n.t("projects.shareLabel").replace("{title}", localizedTitle)
+      );
+      shareButton.textContent = window.siteI18n.t("projects.shareAction");
+      shareStatus.id = `${article.id}-share-status`;
+      shareStatus.className = "project-share-status";
+      shareStatus.setAttribute("role", "status");
+      shareStatus.setAttribute("aria-live", "polite");
+      shareStatus.setAttribute("aria-atomic", "true");
+      shareStatus.hidden = true;
+      shareButton.setAttribute("aria-describedby", shareStatus.id);
       kind.className = "project-kind";
       kind.textContent = localizedValue(project.kind);
       description.className = "project-description";
       description.textContent = localizedValue(project.description);
 
-      headingLine.append(title, permalink);
-      headingGroup.append(headingLine, kind);
+      headingActions.append(permalink, shareButton);
+      headingLine.append(title, headingActions);
+      headingGroup.append(headingLine, shareStatus, kind);
       details.append(description);
+
+      projectShareControllers.push(
+        createProjectShareController({
+          title: localizedTitle,
+          button: shareButton,
+          permalink,
+          status: shareStatus,
+          getUrl: () =>
+            createStableProjectShareUrl(
+              permalink.getAttribute("href"),
+              window.siteI18n.stableUrl(window.siteI18n.language)
+            ),
+          share:
+            typeof window.navigator?.share === "function"
+              ? window.navigator.share.bind(window.navigator)
+              : null,
+          copyText: writeTextToClipboard,
+          translate: (key) => window.siteI18n.t(key),
+          schedule: (callback) => window.setTimeout(callback, 0)
+        })
+      );
 
       if (project.stack?.length) {
         const stack = document.createElement("p");
@@ -1151,12 +1329,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderProjectLoading() {
+    resetProjectShareControllers({ discard: true });
     clearProjectDirectory();
     updateProjectStatus("loading");
     projectsContainer.replaceChildren();
   }
 
   function renderProjectError() {
+    resetProjectShareControllers({ discard: true });
     clearProjectDirectory();
     const wrapper = document.createElement("div");
     const retry = document.createElement("button");
@@ -1225,6 +1405,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("hashchange", handleProjectHashChange);
   window.addEventListener("popstate", handleProjectHistoryChange);
   window.addEventListener("pageshow", contactEmailCopyController.reset);
+  window.addEventListener("pageshow", () => resetProjectShareControllers());
   window.addEventListener("pageshow", () => scheduleProjectFragmentFocus());
 
   const observedSections = [...document.querySelectorAll("main section[id]")];

@@ -776,6 +776,16 @@ html:lang(ja) .hero h1 span {
   gap: var(--space-xs) var(--space-sm);
 }
 
+.project-heading-actions {
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 0 auto;
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+
 .project-heading h3 {
   min-width: 0;
   flex: 1 1 12rem;
@@ -818,6 +828,63 @@ html:lang(ja) .hero h1 span {
 
 .project-permalink:active {
   opacity: 0.72;
+}
+
+.project-share-button {
+  width: fit-content;
+  max-width: 100%;
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--space-2xs) var(--space-xs);
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  background: var(--color-transparent);
+  border: var(--rule-hair) solid currentcolor;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    opacity var(--dur-micro) var(--ease-out),
+    text-decoration-color var(--dur-micro) var(--ease-out);
+}
+
+.project-share-button:active,
+.project-share-button[aria-busy="true"] {
+  opacity: 0.72;
+}
+
+.project-share-button[aria-busy="true"] {
+  cursor: progress;
+}
+
+.project-share-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.project-share-status {
+  max-width: 48rem;
+  margin: var(--space-xs) 0 0;
+  color: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.project-share-status:empty {
+  margin: 0;
+}
+
+.project-share-button[hidden],
+.project-share-status[hidden] {
+  display: none;
 }
 
 .project-kind,
@@ -1278,6 +1345,12 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
     text-underline-offset: var(--space-2xs);
   }
 
+  .project-share-button:hover {
+    text-decoration: underline;
+    text-decoration-thickness: var(--rule-hair);
+    text-underline-offset: var(--space-2xs);
+  }
+
   .project-directory-link:hover {
     background: var(--color-paper-2);
     color: var(--color-ink);
@@ -1454,6 +1527,10 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
   }
 
   .project-permalink {
+    transform: none !important;
+  }
+
+  .project-share-button {
     transform: none !important;
   }
 

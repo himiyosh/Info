@@ -1428,7 +1428,11 @@ test("project catalogue status stays concise, atomic, and separate from rendered
       loadProjectsBody.indexOf('fetch(window.siteI18n.resolveSitePath("projects.json")'),
     "Loading status and busy state must be restored before retrying the fetch"
   );
-  assert.doesNotMatch(scriptSource, /setAttribute\("role", "status"\)/);
+  assert.doesNotMatch(
+    `${updateStatusBody}\n${renderLoadingBody}\n${renderErrorBody}`,
+    /projects(?:Status|Container)\.setAttribute\("role", "status"\)/,
+    "The catalogue must reuse its pre-existing status instead of creating a second one"
+  );
 
   const languageChangeHandler = scriptSource.slice(
     scriptSource.indexOf('document.addEventListener("site-languagechange"'),

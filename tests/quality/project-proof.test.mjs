@@ -127,6 +127,8 @@ test("URLDecoder and ImageResizer render their exact localized proof and immutab
       "accessibility.opensInNewTab": "（新しいタブで開きます）",
       "projects.permalinkAction": "固定リンク",
       "projects.permalinkLabel": "「{title}」プロジェクトへの固定リンク",
+      "projects.shareAction": "共有",
+      "projects.shareLabel": "「{title}」プロジェクトを共有",
       "projects.proofAction": "根拠を見る",
       "projects.proofLabel": "公開根拠",
       "projects.ready": "{count}件のプロジェクトを表示しました。"
@@ -135,6 +137,8 @@ test("URLDecoder and ImageResizer render their exact localized proof and immutab
       "accessibility.opensInNewTab": " (opens in a new tab)",
       "projects.permalinkAction": "Permalink",
       "projects.permalinkLabel": "Permalink to the {title} project",
+      "projects.shareAction": "Share",
+      "projects.shareLabel": "Share the {title} project",
       "projects.proofAction": "View evidence",
       "projects.proofLabel": "Public evidence",
       "projects.ready": "{count} projects loaded."
@@ -149,15 +153,19 @@ test("URLDecoder and ImageResizer render their exact localized proof and immutab
     projectPreviewMobileMedia: "(max-width: 47.999rem)",
     projectRevealObserver: null,
     projectRows: [],
+    projectShareControllers: [],
     projects,
     projectsContainer,
     projectTargetId: (slug) => `project-${slug}`,
+    createProjectShareController: () => ({ reset() {} }),
+    resetProjectShareControllers: () => {},
     refreshScrollScenes: () => {},
     renderProjectDirectory: () => {},
     requestScrollMotionUpdate: () => {},
     scheduleProjectFragmentFocus: () => {},
     shouldAnimateProjectReveal: () => false,
     updateProjectStatus: () => {},
+    writeTextToClipboard: async () => true,
     window: {
       setTimeout: () => {},
       siteI18n: {
