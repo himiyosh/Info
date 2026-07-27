@@ -459,6 +459,23 @@ html:lang(ja) .project-heading h3 {
   color: var(--color-ink-2);
 }
 
+.project-proof {
+  border-block-start-color: var(--color-rule);
+}
+
+.project-proof-label,
+.project-link--evidence {
+  color: var(--color-ink-2);
+}
+
+.project-proof-label {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-variation-settings: normal;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
 .project-actions {
   gap: var(--space-2xs) var(--space-sm);
 }
@@ -484,6 +501,10 @@ html:lang(ja) .project-heading h3 {
 }
 
 html:lang(ja) .project-link {
+  font-family: var(--font-body-ja);
+}
+
+html:lang(ja) .project-proof-label {
   font-family: var(--font-body-ja);
 }
 
