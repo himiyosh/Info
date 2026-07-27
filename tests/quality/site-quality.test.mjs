@@ -202,6 +202,26 @@ function localPathFromReference(reference) {
   return reference.replace(/^\.\//, "");
 }
 
+function githubRepositoryKey(url) {
+  if (
+    url.protocol !== "https:" ||
+    url.hostname.toLocaleLowerCase("en-US") !== "github.com" ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.search ||
+    url.hash
+  ) {
+    return null;
+  }
+  const pathSegments = url.pathname.split("/").filter(Boolean);
+  if (pathSegments.length !== 2) {
+    return null;
+  }
+  return `${pathSegments[0]}/${pathSegments[1].replace(/\.git$/i, "")}`
+    .toLocaleLowerCase("en-US");
+}
+
 function extractObjectLiteral(sourceText, declarationPrefix) {
   const declarationIndex = sourceText.indexOf(declarationPrefix);
   if (declarationIndex === -1) {
@@ -438,6 +458,7 @@ test("projects.json schema, localization, links, and preview assets are valid", 
   const requiredStringFields = ["link", "image", "desktopImageAvif", "mobileImageAvif"];
   const seenLinks = new Set();
   const seenAssets = new Set();
+  const seenProofTexts = new Set();
 
   for (const [index, project] of projects.entries()) {
     assert.equal(typeof project, "object", `Project ${index + 1} must be an object`);
@@ -535,6 +556,94 @@ test("projects.json schema, localization, links, and preview assets are valid", 
         `Duplicate project link found: ${project.sourceLink}`
       );
       seenLinks.add(normalizedSourceLink);
+    }
+
+    const hasProof = Object.hasOwn(project, "proof");
+    const hasProofLink = Object.hasOwn(project, "proofLink");
+    assert.equal(
+      hasProof,
+      hasProofLink,
+      `Project ${index + 1} proof and proofLink must be provided together`
+    );
+    if (hasProof) {
+      assert.equal(typeof project.proof, "object", `Project ${index + 1} proof must be localized`);
+      assert.ok(project.proof, `Project ${index + 1} proof must exist`);
+      for (const language of ["ja", "en"]) {
+        const proofText = project.proof[language];
+        assert.equal(
+          typeof proofText,
+          "string",
+          `Project ${index + 1} field "proof.${language}" must be a string`
+        );
+        assert.notEqual(
+          proofText.trim(),
+          "",
+          `Project ${index + 1} field "proof.${language}" must not be empty`
+        );
+        const normalizedProofText = proofText.trim().toLocaleLowerCase(language);
+        const comparisonFields = [
+          ...localizedFields,
+          ...(hasSourceAction ? ["sourceAction"] : [])
+        ];
+        assert.ok(
+          comparisonFields.every(
+            (fieldName) =>
+              project[fieldName][language].trim().toLocaleLowerCase(language) !==
+              normalizedProofText
+          ) &&
+            (!Array.isArray(project.stack) ||
+              project.stack.every(
+                (stackItem) =>
+                  stackItem.trim().toLocaleLowerCase(language) !== normalizedProofText
+              )),
+          `Project ${index + 1} proof must add information beyond existing card copy in ${language}`
+        );
+        const proofTextKey = `${language}:${normalizedProofText}`;
+        assert.ok(
+          !seenProofTexts.has(proofTextKey),
+          `Project ${index + 1} proof text must be unique in ${language}`
+        );
+        seenProofTexts.add(proofTextKey);
+      }
+
+      assert.equal(
+        typeof project.proofLink,
+        "string",
+        `Project ${index + 1} proofLink must be a string`
+      );
+      const proofUrl = new URL(project.proofLink);
+      const blobMatch = proofUrl.pathname.match(
+        /^\/([^/]+)\/([^/]+)\/blob\/([0-9a-f]{40})\/.+$/i
+      );
+      const lineMatch = proofUrl.hash.match(/^#L(\d+)(?:-L(\d+))?$/);
+      assert.equal(proofUrl.protocol, "https:", `Project ${index + 1} proofLink must use HTTPS`);
+      assert.equal(proofUrl.hostname, "github.com", `Project ${index + 1} proofLink must use GitHub`);
+      assert.equal(proofUrl.username, "", `Project ${index + 1} proofLink must not include a username`);
+      assert.equal(proofUrl.password, "", `Project ${index + 1} proofLink must not include a password`);
+      assert.equal(proofUrl.port, "", `Project ${index + 1} proofLink must not include a port`);
+      assert.equal(proofUrl.search, "", `Project ${index + 1} proofLink must not include a query`);
+      assert.ok(blobMatch, `Project ${index + 1} proofLink must pin a 40-character commit SHA`);
+      assert.ok(lineMatch, `Project ${index + 1} proofLink must include a bounded line anchor`);
+      assert.ok(
+        !lineMatch?.[2] || Number(lineMatch[2]) >= Number(lineMatch[1]),
+        `Project ${index + 1} proofLink line range must be ordered`
+      );
+      const proofRepositoryKey = `${blobMatch[1]}/${blobMatch[2].replace(/\.git$/i, "")}`
+        .toLocaleLowerCase("en-US");
+      const publicRepositoryKeys = new Set(
+        [githubRepositoryKey(linkUrl), hasSourceLink ? githubRepositoryKey(new URL(project.sourceLink)) : null]
+          .filter(Boolean)
+      );
+      assert.ok(
+        publicRepositoryKeys.has(proofRepositoryKey),
+        `Project ${index + 1} proofLink must match an exposed public repository action`
+      );
+      const normalizedProofLink = proofUrl.toString();
+      assert.ok(
+        !seenLinks.has(normalizedProofLink),
+        `Duplicate project proof link found: ${project.proofLink}`
+      );
+      seenLinks.add(normalizedProofLink);
     }
 
     const projectAssets = [
@@ -666,11 +775,79 @@ test("exactly six live projects expose verified public source actions", async ()
   );
 });
 
+test("exactly six public projects expose reviewed immutable proof citations", async () => {
+  const projects = JSON.parse(await readUtf8("projects.json"));
+  const expectedProofs = new Map([
+    [
+      "Portfolio",
+      {
+        ja: "公開成果物は許可リストに限定し、テスト・ワークフロー・内部ドキュメントを配信対象から除外しています。",
+        en: "The deployed artifact is allowlisted so tests, workflows, and internal docs are excluded from publication.",
+        link: "https://github.com/himiyosh/Info/blob/a1e0e2bb1e2acefce7e9795b08a4486776ddb3bb/README.md#L25-L33"
+      }
+    ],
+    [
+      "TechDB",
+      {
+        ja: "自動収集データは、秘密情報検査・型検査・ユニットテスト・Web build・ブラウザーE2Eを通過した場合だけ公開用コミットへ進みます。",
+        en: "Collected data advances to a publication commit only after secret scanning, type checks, unit tests, the web build, and browser E2E pass.",
+        link: "https://github.com/himiyosh/tech-dashboard/blob/6fde819e689fb8f19a238b1877484d8db596c59b/.github/workflows/publisher.yml#L71-L89"
+      }
+    ],
+    [
+      "AI Agents: What Is Happening Right Now?",
+      {
+        ja: "Reader は見出し・本文・全タブ状態・発表者ノート・出典を横断検索し、目次から任意のスライドへ直接移動できます。",
+        en: "Reader searches headings, body text, every tab state, speaker notes, and citations, with direct navigation from its slide index.",
+        link: "https://github.com/himiyosh/JoJo-AIAgent/blob/95e404c45bc9cd8a4c0ccbf637acc29021c8e437/README.md#L34-L40"
+      }
+    ],
+    [
+      "Git, Not Scary",
+      {
+        ja: "Reader はスライド本文・実レンダリング・公開登壇者ノートからビルド時に生成され、本文を二重管理しません。",
+        en: "Reader is generated at build time from the slide source, rendered presentation, and public speaker notes without duplicate body copy.",
+        link: "https://github.com/himiyosh/JoJo-Git/blob/c62e726c212551ac91a3c245167e0a0fc9877bb4/README.md#L31-L40"
+      }
+    ],
+    [
+      "Encode / Decode Tool",
+      {
+        ja: "テキスト変換とQR画像処理はブラウザー内で完結し、入力テキスト・生成QR・選択画像をアップロードしません。",
+        en: "Text transforms and QR image processing stay in the browser; entered text, generated QR codes, and selected images are not uploaded.",
+        link: "https://github.com/himiyosh/encode-decode-tool/blob/a1e40092f538f85f34a935188e67ef5aa657481f/README.md#L33-L35"
+      }
+    ],
+    [
+      "Network+",
+      {
+        ja: "コピーとHAR出力は既定で認証情報・Cookie・クエリ値・本文をサニタイズし、完全出力は警告確認後の1回だけ有効です。",
+        en: "Clipboard and HAR exports sanitize credentials, cookies, query values, and bodies by default; full output requires one-time confirmation.",
+        link: "https://github.com/himiyosh/network-plus-extension/blob/f1d53ce821c6b7ca8cf11b7101f800087ab19ac4/README.md#L128-L140"
+      }
+    ]
+  ]);
+  const projectsWithProof = projects.filter((project) => Object.hasOwn(project, "proof"));
+
+  assert.equal(projectsWithProof.length, expectedProofs.size);
+  for (const project of projectsWithProof) {
+    const expected = expectedProofs.get(project.title.en);
+    assert.ok(expected, `Unexpected proof-bearing project: ${project.title.en}`);
+    assert.deepEqual(project.proof, { ja: expected.ja, en: expected.en });
+    assert.equal(project.proofLink, expected.link);
+  }
+  for (const project of projects.filter((entry) => !expectedProofs.has(entry.title.en))) {
+    assert.equal(Object.hasOwn(project, "proof"), false);
+    assert.equal(Object.hasOwn(project, "proofLink"), false);
+  }
+});
+
 test("project runtime rejects incomplete, malformed, duplicate, and primary-equal source actions", async () => {
   const scriptSource = await readUtf8("script.js");
   const projects = JSON.parse(await readUtf8("projects.json"));
   const validatorDeclarations = [
     "requireNonEmptyString",
+    "githubRepositoryKey",
     "validateLocalizedField",
     "validateLocalProjectAsset",
     "validateProject"
@@ -690,8 +867,9 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
   const validateCatalogue = (catalogue) => {
     const seenLinks = new Set();
     const seenAssets = new Set();
+    const seenProofTexts = new Set();
     catalogue.forEach((project, index) =>
-      validateProject(project, index, seenLinks, seenAssets)
+      validateProject(project, index, seenLinks, seenAssets, seenProofTexts)
     );
   };
 
@@ -724,6 +902,52 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
   const duplicateLink = cloneProjects();
   duplicateLink[2].sourceLink = duplicateLink[1].sourceLink;
   assert.throws(() => validateCatalogue(duplicateLink), /Duplicate project link detected/);
+
+  const missingProofLink = cloneProjects();
+  delete missingProofLink[0].proofLink;
+  assert.throws(() => validateCatalogue(missingProofLink), /must be provided together/);
+
+  const incompleteProof = cloneProjects();
+  delete incompleteProof[0].proof.en;
+  assert.throws(() => validateCatalogue(incompleteProof), /proof\.en.*non-empty string/);
+
+  const matchingProof = cloneProjects();
+  matchingProof[0].proof = { ...matchingProof[0].description };
+  assert.throws(() => validateCatalogue(matchingProof), /must add information beyond existing card copy/);
+
+  const duplicateProof = cloneProjects();
+  duplicateProof[2].proof.ja = duplicateProof[1].proof.ja;
+  assert.throws(() => validateCatalogue(duplicateProof), /Duplicate project proof text detected/);
+
+  const mutableProofLink = cloneProjects();
+  mutableProofLink[0].proofLink =
+    "https://github.com/himiyosh/Info/blob/main/README.md#L25-L33";
+  assert.throws(() => validateCatalogue(mutableProofLink), /immutable GitHub blob HTTPS URL/);
+
+  const unboundedProofLink = cloneProjects();
+  unboundedProofLink[0].proofLink =
+    "https://github.com/himiyosh/Info/blob/a1e0e2bb1e2acefce7e9795b08a4486776ddb3bb/README.md";
+  assert.throws(() => validateCatalogue(unboundedProofLink), /immutable GitHub blob HTTPS URL/);
+
+  const foreignProofLink = cloneProjects();
+  foreignProofLink[0].proofLink =
+    "https://github.com/himiyosh/tech-dashboard/blob/6fde819e689fb8f19a238b1877484d8db596c59b/.github/workflows/publisher.yml#L71-L89";
+  assert.throws(() => validateCatalogue(foreignProofLink), /must match an existing public GitHub repository action/);
+
+  const invalidLineRange = cloneProjects();
+  invalidLineRange[0].proofLink =
+    "https://github.com/himiyosh/Info/blob/a1e0e2bb1e2acefce7e9795b08a4486776ddb3bb/README.md#L33-L25";
+  assert.throws(() => validateCatalogue(invalidLineRange), /invalid line range/);
+
+  const privateEntryProof = cloneProjects();
+  privateEntryProof[4].proof = { ...privateEntryProof[0].proof };
+  privateEntryProof[4].proof.ja += " 追加";
+  privateEntryProof[4].proof.en += " Additional.";
+  privateEntryProof[4].proofLink = privateEntryProof[0].proofLink;
+  assert.throws(
+    () => validateCatalogue(privateEntryProof),
+    /must match an existing public GitHub repository action/
+  );
 
   const missingDesktopImage = cloneProjects();
   delete missingDesktopImage[0].desktopImageAvif;
@@ -817,6 +1041,42 @@ test("project action groups preserve primary-first safe localized links and resp
     stylesSource,
     /html\s*\{[^}]*overflow-x:\s*clip;/s,
     "The page root must retain horizontal overflow protection"
+  );
+});
+
+test("project proof renders as a compact cited surface after primary actions", async () => {
+  const scriptSource = await readUtf8("script.js");
+  const stylesSource = await readUtf8("styles.css");
+  const modernSource = await readUtf8("modern.css");
+  const i18nSource = await readUtf8("i18n.js");
+  const renderProjectsBody = extractObjectLiteral(scriptSource, "function renderProjects");
+
+  assert.match(renderProjectsBody, /if \(Object\.hasOwn\(project, "proof"\)\)/);
+  assert.match(renderProjectsBody, /proofText\.append\(proofLabel, proofStatement\)/);
+  assert.match(
+    renderProjectsBody,
+    /createProjectAction\(\s*window\.siteI18n\.t\("projects\.proofAction"\),\s*project\.proofLink,\s*"evidence"/
+  );
+  assert.ok(
+    renderProjectsBody.indexOf("content.append(headingGroup, details, actions)") <
+      renderProjectsBody.indexOf("content.append(proof)"),
+    "Evidence must follow the primary live/source action group in DOM and focus order"
+  );
+  assert.match(i18nSource, /proofLabel:\s*"公開根拠"/);
+  assert.match(i18nSource, /proofAction:\s*"根拠を見る"/);
+  assert.match(i18nSource, /proofLabel:\s*"Public evidence"/);
+  assert.match(i18nSource, /proofAction:\s*"View evidence"/);
+  assert.match(
+    stylesSource,
+    /\.project-proof\s*\{[^}]*min-width:\s*0;[^}]*max-width:\s*48rem;[^}]*display:\s*grid;[^}]*border-block-start:/s
+  );
+  assert.match(
+    stylesSource,
+    /\.project-link--evidence\s*\{[^}]*font-size:\s*var\(--text-sm\);/s
+  );
+  assert.match(
+    modernSource,
+    /\.project-proof-label,\s*\.project-link--evidence\s*\{[^}]*color:\s*var\(--color-ink-2\);/s
   );
 });
 
@@ -929,7 +1189,7 @@ test("project runtime validation requires distinct local JPEG and AVIF assets", 
   assert.match(loadProjectsBody, /const seenAssets = new Set\(\)/);
   assert.match(
     loadProjectsBody,
-    /validateProject\(project, index, seenLinks, seenAssets\)/,
+    /validateProject\(project, index, seenLinks, seenAssets, seenProofTexts\)/,
     "JPEG and AVIF paths must share one uniqueness set so cross-field collisions are rejected"
   );
 });

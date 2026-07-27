@@ -20,6 +20,11 @@
       "en": "Hero view of the himiyosh portfolio"
     },
     "stack": ["HTML", "CSS", "JavaScript"],
+    "proof": {
+      "ja": "公開成果物は許可リストに限定し、テスト・ワークフロー・内部ドキュメントを配信対象から除外しています。",
+      "en": "The deployed artifact is allowlisted so tests, workflows, and internal docs are excluded from publication."
+    },
+    "proofLink": "https://github.com/himiyosh/Info/blob/a1e0e2bb1e2acefce7e9795b08a4486776ddb3bb/README.md#L25-L33",
     "action": {
       "ja": "GitHub でコードを見る",
       "en": "View code on GitHub"
@@ -47,6 +52,11 @@
       "en": "TechDB dashboard showing AI news, categories, and trending topics"
     },
     "stack": ["Astro", "TypeScript", "Cloudflare", "AI agents"],
+    "proof": {
+      "ja": "自動収集データは、秘密情報検査・型検査・ユニットテスト・Web build・ブラウザーE2Eを通過した場合だけ公開用コミットへ進みます。",
+      "en": "Collected data advances to a publication commit only after secret scanning, type checks, unit tests, the web build, and browser E2E pass."
+    },
+    "proofLink": "https://github.com/himiyosh/tech-dashboard/blob/6fde819e689fb8f19a238b1877484d8db596c59b/.github/workflows/publisher.yml#L71-L89",
     "action": {
       "ja": "TechDBを開く",
       "en": "Open TechDB"
@@ -79,6 +89,11 @@
       "en": "JoJo-AIAgent cover slide showing the Prompt, Context, Harness, and Loop structure"
     },
     "stack": ["Slidev", "Vue", "Playwright", "GitHub Pages"],
+    "proof": {
+      "ja": "Reader は見出し・本文・全タブ状態・発表者ノート・出典を横断検索し、目次から任意のスライドへ直接移動できます。",
+      "en": "Reader searches headings, body text, every tab state, speaker notes, and citations, with direct navigation from its slide index."
+    },
+    "proofLink": "https://github.com/himiyosh/JoJo-AIAgent/blob/95e404c45bc9cd8a4c0ccbf637acc29021c8e437/README.md#L34-L40",
     "action": {
       "ja": "デッキを開く",
       "en": "Open the deck"
@@ -111,6 +126,11 @@
       "en": "JoJo-Git cover slide presenting the four-area model for Git operations"
     },
     "stack": ["Slidev", "Vue", "Playwright", "GitHub Pages"],
+    "proof": {
+      "ja": "Reader はスライド本文・実レンダリング・公開登壇者ノートからビルド時に生成され、本文を二重管理しません。",
+      "en": "Reader is generated at build time from the slide source, rendered presentation, and public speaker notes without duplicate body copy."
+    },
+    "proofLink": "https://github.com/himiyosh/JoJo-Git/blob/c62e726c212551ac91a3c245167e0a0fc9877bb4/README.md#L31-L40",
     "action": {
       "ja": "デッキを開く",
       "en": "Open the deck"
@@ -170,6 +190,11 @@
       "en": "Encode / Decode Tool interface with multiple format tabs"
     },
     "stack": ["React", "Tailwind CSS", "Vite"],
+    "proof": {
+      "ja": "テキスト変換とQR画像処理はブラウザー内で完結し、入力テキスト・生成QR・選択画像をアップロードしません。",
+      "en": "Text transforms and QR image processing stay in the browser; entered text, generated QR codes, and selected images are not uploaded."
+    },
+    "proofLink": "https://github.com/himiyosh/encode-decode-tool/blob/a1e40092f538f85f34a935188e67ef5aa657481f/README.md#L33-L35",
     "action": {
       "ja": "ツールを開く",
       "en": "Open the tool"
@@ -202,6 +227,11 @@
       "en": "Network+ DevTools panel with a request list and detail panes"
     },
     "stack": ["Manifest V3", "JavaScript", "Edge DevTools", "Jest"],
+    "proof": {
+      "ja": "コピーとHAR出力は既定で認証情報・Cookie・クエリ値・本文をサニタイズし、完全出力は警告確認後の1回だけ有効です。",
+      "en": "Clipboard and HAR exports sanitize credentials, cookies, query values, and bodies by default; full output requires one-time confirmation."
+    },
+    "proofLink": "https://github.com/himiyosh/network-plus-extension/blob/f1d53ce821c6b7ca8cf11b7101f800087ab19ac4/README.md#L128-L140",
     "action": {
       "ja": "GitHubでコードを見る",
       "en": "View code on GitHub"

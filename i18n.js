@@ -54,7 +54,9 @@
         loading: "プロジェクトを読み込んでいます。",
         ready: "{count}件のプロジェクトを表示しました。",
         error: "プロジェクトを読み込めませんでした。通信状況を確認して、もう一度お試しください。",
-        retry: "再読み込み"
+        retry: "再読み込み",
+        proofLabel: "公開根拠",
+        proofAction: "根拠を見る"
       },
       contact: {
         title: "Contact",
@@ -115,7 +117,9 @@
         loading: "Loading projects.",
         ready: "{count} projects loaded.",
         error: "Projects could not be loaded. Check your connection and try again.",
-        retry: "Try again"
+        retry: "Try again",
+        proofLabel: "Public evidence",
+        proofAction: "View evidence"
       },
       contact: {
         title: "Contact",

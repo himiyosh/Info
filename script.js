@@ -44,6 +44,31 @@ document.addEventListener("DOMContentLoaded", () => {
     return value.trim();
   }
 
+  function githubRepositoryKey(url) {
+    if (
+      !url ||
+      url.protocol !== "https:" ||
+      url.hostname.toLocaleLowerCase("en-US") !== "github.com" ||
+      url.username ||
+      url.password ||
+      url.port ||
+      url.search ||
+      url.hash
+    ) {
+      return null;
+    }
+
+    const pathSegments = url.pathname.split("/").filter(Boolean);
+    if (pathSegments.length !== 2) {
+      return null;
+    }
+    const repositoryName = pathSegments[1].replace(/\.git$/i, "");
+    if (!pathSegments[0] || !repositoryName) {
+      return null;
+    }
+    return `${pathSegments[0]}/${repositoryName}`.toLocaleLowerCase("en-US");
+  }
+
   function updateNavigationLabel() {
     const labelKey =
       hamburgerMenu.getAttribute("aria-expanded") === "true"
@@ -384,7 +409,7 @@ document.addEventListener("DOMContentLoaded", () => {
     seenAssets.add(normalizedAsset);
   }
 
-  function validateProject(project, index, seenLinks, seenAssets) {
+  function validateProject(project, index, seenLinks, seenAssets, seenProofTexts) {
     if (!project || typeof project !== "object") {
       throw new TypeError(`Project ${index + 1} must be an object.`);
     }
@@ -406,6 +431,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const hasSourceAction = Object.hasOwn(project, "sourceAction");
     const hasSourceLink = Object.hasOwn(project, "sourceLink");
+    let sourceUrl = null;
     if (hasSourceAction !== hasSourceLink) {
       throw new TypeError(
         `Project ${index + 1} fields "sourceAction" and "sourceLink" must be provided together.`
@@ -429,7 +455,6 @@ document.addEventListener("DOMContentLoaded", () => {
         project.sourceLink,
         `Project ${index + 1} field "sourceLink"`
       );
-      let sourceUrl;
       try {
         sourceUrl = new URL(sourceLink);
       } catch {
@@ -450,6 +475,100 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new TypeError(`Duplicate project link detected: ${normalizedSourceLink}`);
       }
       seenLinks.add(normalizedSourceLink);
+    }
+
+    const hasProof = Object.hasOwn(project, "proof");
+    const hasProofLink = Object.hasOwn(project, "proofLink");
+    if (hasProof !== hasProofLink) {
+      throw new TypeError(
+        `Project ${index + 1} fields "proof" and "proofLink" must be provided together.`
+      );
+    }
+    if (hasProof) {
+      validateLocalizedField(project, index, "proof");
+      const comparisonFields = [
+        ...localizedProjectFields,
+        ...(hasSourceAction ? ["sourceAction"] : [])
+      ];
+      for (const language of ["ja", "en"]) {
+        const proofText = project.proof[language].trim();
+        const normalizedProofText = proofText.toLocaleLowerCase(language);
+        const duplicateField = comparisonFields.find(
+          (fieldName) =>
+            project[fieldName][language].trim().toLocaleLowerCase(language) ===
+            normalizedProofText
+        );
+        const duplicatesStack =
+          Array.isArray(project.stack) &&
+          project.stack.some(
+            (stackItem) =>
+              typeof stackItem === "string" &&
+              stackItem.trim().toLocaleLowerCase(language) === normalizedProofText
+          );
+        if (duplicateField || duplicatesStack) {
+          throw new TypeError(
+            `Project ${index + 1} field "proof.${language}" must add information beyond existing card copy.`
+          );
+        }
+
+        const proofTextKey = `${language}:${normalizedProofText}`;
+        if (seenProofTexts.has(proofTextKey)) {
+          throw new TypeError(`Duplicate project proof text detected for language "${language}".`);
+        }
+        seenProofTexts.add(proofTextKey);
+      }
+
+      const proofLink = requireNonEmptyString(
+        project.proofLink,
+        `Project ${index + 1} field "proofLink"`
+      );
+      let proofUrl;
+      try {
+        proofUrl = new URL(proofLink);
+      } catch {
+        throw new TypeError(
+          `Project ${index + 1} field "proofLink" must be an immutable GitHub blob HTTPS URL with a line anchor.`
+        );
+      }
+
+      const blobMatch = proofUrl.pathname.match(
+        /^\/([^/]+)\/([^/]+)\/blob\/([0-9a-f]{40})\/.+$/i
+      );
+      const lineMatch = proofUrl.hash.match(/^#L(\d+)(?:-L(\d+))?$/);
+      if (
+        proofUrl.protocol !== "https:" ||
+        proofUrl.hostname.toLocaleLowerCase("en-US") !== "github.com" ||
+        proofUrl.username ||
+        proofUrl.password ||
+        proofUrl.port ||
+        proofUrl.search ||
+        !blobMatch ||
+        !lineMatch
+      ) {
+        throw new TypeError(
+          `Project ${index + 1} field "proofLink" must be an immutable GitHub blob HTTPS URL with a line anchor.`
+        );
+      }
+      if (lineMatch[2] && Number(lineMatch[2]) < Number(lineMatch[1])) {
+        throw new TypeError(`Project ${index + 1} field "proofLink" has an invalid line range.`);
+      }
+
+      const proofRepositoryKey = `${blobMatch[1]}/${blobMatch[2].replace(/\.git$/i, "")}`
+        .toLocaleLowerCase("en-US");
+      const publicRepositoryKeys = new Set(
+        [githubRepositoryKey(url), githubRepositoryKey(sourceUrl)].filter(Boolean)
+      );
+      if (!publicRepositoryKeys.has(proofRepositoryKey)) {
+        throw new TypeError(
+          `Project ${index + 1} field "proofLink" must match an existing public GitHub repository action.`
+        );
+      }
+
+      const normalizedProofLink = proofUrl.toString();
+      if (seenLinks.has(normalizedProofLink)) {
+        throw new TypeError(`Duplicate project proof link detected: ${normalizedProofLink}`);
+      }
+      seenLinks.add(normalizedProofLink);
     }
 
     validateLocalProjectAsset(project, index, "image", ".jpg", seenAssets);
@@ -632,6 +751,26 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       content.append(headingGroup, details, actions);
+      if (Object.hasOwn(project, "proof")) {
+        const proof = document.createElement("div");
+        const proofText = document.createElement("p");
+        const proofLabel = document.createElement("span");
+        const proofStatement = document.createElement("span");
+        const proofLink = createProjectAction(
+          window.siteI18n.t("projects.proofAction"),
+          project.proofLink,
+          "evidence"
+        );
+
+        proof.className = "project-proof";
+        proofText.className = "project-proof-text";
+        proofLabel.className = "project-proof-label";
+        proofLabel.textContent = window.siteI18n.t("projects.proofLabel");
+        proofStatement.textContent = localizedValue(project.proof);
+        proofText.append(proofLabel, proofStatement);
+        proof.append(proofText, proofLink);
+        content.append(proof);
+      }
       article.append(media, content);
       fragment.append(article);
     });
@@ -695,7 +834,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       const seenLinks = new Set();
       const seenAssets = new Set();
-      data.forEach((project, index) => validateProject(project, index, seenLinks, seenAssets));
+      const seenProofTexts = new Set();
+      data.forEach((project, index) =>
+        validateProject(project, index, seenLinks, seenAssets, seenProofTexts)
+      );
       projects = data;
       renderProjects();
     } catch (error) {
