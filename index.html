@@ -67,8 +67,9 @@
   <link
     rel="preload"
     as="image"
-    href="assets/profile-480w.jpg"
-    imagesrcset="assets/profile-480w.jpg 480w, assets/profile.jpg 960w"
+    href="assets/profile-480w.avif"
+    type="image/avif"
+    imagesrcset="assets/profile-480w.avif 480w, assets/profile-720w.avif 720w, assets/profile-960w.avif 960w"
     imagesizes="(min-width: 48rem) 45vw, 92vw"
     fetchpriority="high"
   />
@@ -151,16 +152,23 @@
           </h1>
         </div>
         <figure class="hero-visual">
-          <img
-            src="assets/profile.jpg"
-            srcset="assets/profile-480w.jpg 480w, assets/profile.jpg 960w"
-            sizes="(min-width: 48rem) 45vw, 92vw"
-            width="960"
-            height="720"
-            fetchpriority="high"
-            alt="山岳風景の中で手を上げる himiyosh のシルエット"
-            data-i18n-alt="hero.imageAlt"
-          />
+          <picture>
+            <source
+              type="image/avif"
+              srcset="assets/profile-480w.avif 480w, assets/profile-720w.avif 720w, assets/profile-960w.avif 960w"
+              sizes="(min-width: 48rem) 45vw, 92vw"
+            />
+            <img
+              src="assets/profile.jpg"
+              srcset="assets/profile-480w.jpg 480w, assets/profile-720w.jpg 720w, assets/profile.jpg 960w"
+              sizes="(min-width: 48rem) 45vw, 92vw"
+              width="960"
+              height="720"
+              fetchpriority="high"
+              alt="山岳風景の中で手を上げる himiyosh のシルエット"
+              data-i18n-alt="hero.imageAlt"
+            />
+          </picture>
           <figcaption data-i18n="hero.caption">
             画面の内外で、好奇心を持ち続ける。
           </figcaption>

@@ -24,6 +24,81 @@ const namedHtmlEntities = new Map([
 
 const readUtf8 = (relativePath) => readFile(path.join(repoRoot, relativePath), "utf8");
 
+function attributeValue(tag, attributeName) {
+  return tag.match(new RegExp(`\\b${attributeName}="([^"]*)"`))?.[1];
+}
+
+function parseSrcsetEntries(srcset) {
+  return srcset.split(",").map((entry) => {
+    const match = entry.trim().match(/^(\S+)\s+(\d+)w$/);
+    assert.ok(match, `srcset entry must use a width descriptor: ${entry}`);
+    return { source: match[1], width: Number(match[2]) };
+  });
+}
+
+function jpegDimensions(buffer) {
+  assert.equal(buffer.readUInt16BE(0), 0xffd8, "JPEG asset must start with an SOI marker");
+
+  let offset = 2;
+  while (offset < buffer.length) {
+    while (buffer[offset] === 0xff) {
+      offset += 1;
+    }
+
+    const marker = buffer[offset];
+    offset += 1;
+    if (marker === 0xd9 || marker === 0xda) {
+      break;
+    }
+
+    const segmentLength = buffer.readUInt16BE(offset);
+    const isStartOfFrame =
+      marker >= 0xc0 &&
+      marker <= 0xcf &&
+      ![0xc4, 0xc8, 0xcc].includes(marker);
+    if (isStartOfFrame) {
+      return {
+        width: buffer.readUInt16BE(offset + 5),
+        height: buffer.readUInt16BE(offset + 3)
+      };
+    }
+    offset += segmentLength;
+  }
+
+  assert.fail("JPEG asset must contain a Start of Frame marker");
+}
+
+function avifDimensions(buffer) {
+  const spatialExtentsBox = Buffer.from("ispe");
+  let typeOffset = buffer.indexOf(spatialExtentsBox);
+
+  while (typeOffset !== -1) {
+    const boxOffset = typeOffset - 4;
+    const boxSize = buffer.readUInt32BE(boxOffset);
+    if (boxSize >= 20 && typeOffset + 16 <= buffer.length) {
+      const width = buffer.readUInt32BE(typeOffset + 8);
+      const height = buffer.readUInt32BE(typeOffset + 12);
+      if (width > 0 && height > 0) {
+        return { width, height };
+      }
+    }
+    typeOffset = buffer.indexOf(spatialExtentsBox, typeOffset + 4);
+  }
+
+  assert.fail("AVIF asset must contain an Image Spatial Extents box");
+}
+
+async function imageDimensions(relativePath) {
+  const buffer = await readFile(path.join(repoRoot, relativePath));
+  if (/\.avif$/i.test(relativePath)) {
+    return avifDimensions(buffer);
+  }
+  if (/\.jpe?g$/i.test(relativePath)) {
+    return jpegDimensions(buffer);
+  }
+  assert.fail(`Unsupported responsive image format: ${relativePath}`);
+}
+
 function parseWhitelistEntries(sourceText) {
   return sourceText
     .split(/\r?\n/)
@@ -1034,23 +1109,73 @@ test("removed legacy particles file is not referenced", async () => {
   }
 });
 
-test("hero image has fetchpriority and responsive srcset sources exist", async () => {
+test("hero image keeps an eager JPEG fallback and responsive assets match their descriptors", async () => {
   const indexHtml = await readUtf8("index.html");
-  assert.match(
-    indexHtml,
-    /fetchpriority="high"/,
-    "Hero image must have fetchpriority=high for LCP prioritisation"
+  const pictureTag = indexHtml.match(/<picture>[\s\S]*?<\/picture>/)?.[0];
+  assert.ok(pictureTag, "Hero image must use a picture element for format fallback");
+
+  const avifSourceTag = pictureTag.match(/<source[^>]*type="image\/avif"[^>]*>/)?.[0];
+  const imgTag = pictureTag.match(/<img[\s\S]*?>/)?.[0];
+  assert.ok(avifSourceTag, "Hero picture must include an AVIF source");
+  assert.ok(imgTag, "Hero picture must include an img fallback");
+  assert.equal(
+    attributeValue(imgTag, "src"),
+    "assets/profile.jpg",
+    "Hero img must retain the full-size JPEG fallback"
+  );
+  assert.match(imgTag, /\bfetchpriority="high"/, "Hero img must retain fetchpriority=high");
+  assert.doesNotMatch(imgTag, /\bloading="lazy"/, "Hero img must not be lazy loaded");
+  assert.equal(attributeValue(imgTag, "width"), "960", "Hero img width must prevent layout shift");
+  assert.equal(attributeValue(imgTag, "height"), "720", "Hero img height must prevent layout shift");
+  assert.equal(
+    attributeValue(imgTag, "data-i18n-alt"),
+    "hero.imageAlt",
+    "Hero img must retain its localized alt-text binding"
   );
 
-  const srcsetMatch = indexHtml.match(/srcset="([^"]+)"/);
-  assert.ok(srcsetMatch, "Hero image must include a srcset attribute");
-  const srcsetEntries = srcsetMatch[1].split(",").map((entry) => entry.trim());
-  for (const entry of srcsetEntries) {
-    const srcPath = entry.split(/\s+/)[0];
-    const localPath = localPathFromReference(srcPath);
-    if (localPath) {
+  const whitelistSet = new Set(
+    parseWhitelistEntries(await readUtf8(pagesWhitelistPath))
+  );
+  const sourceSets = [
+    {
+      format: "AVIF",
+      srcset: attributeValue(avifSourceTag, "srcset"),
+      extension: /\.avif$/i
+    },
+    {
+      format: "JPEG",
+      srcset: attributeValue(imgTag, "srcset"),
+      extension: /\.jpe?g$/i
+    }
+  ];
+
+  for (const { format, srcset, extension } of sourceSets) {
+    assert.ok(srcset, `${format} source must include a srcset`);
+    const entries = parseSrcsetEntries(srcset);
+    assert.deepEqual(
+      entries.map(({ width }) => width),
+      [480, 720, 960],
+      `${format} srcset must provide 480w, 720w, and 960w candidates`
+    );
+
+    for (const { source, width } of entries) {
+      const localPath = localPathFromReference(source);
+      assert.ok(localPath, `${format} srcset source must be local: ${source}`);
+      assert.match(localPath, extension, `${format} srcset source must use the expected format`);
       const fileStats = await stat(path.join(repoRoot, localPath));
       assert.ok(fileStats.isFile(), `srcset source must exist as a file: ${localPath}`);
+      assert.ok(
+        whitelistSet.has(localPath) || whitelistSet.has(topLevelPath(localPath)),
+        `srcset source must be included by the Pages artifact policy: ${localPath}`
+      );
+
+      const dimensions = await imageDimensions(localPath);
+      assert.equal(dimensions.width, width, `${localPath} width must match its descriptor`);
+      assert.equal(
+        dimensions.width * 3,
+        dimensions.height * 4,
+        `${localPath} must retain the 4:3 hero aspect ratio`
+      );
     }
   }
 });
@@ -1320,58 +1445,69 @@ test("scroll-progress is transform-based, progressive, non-essential, and stacks
   );
 });
 
-test("hero image preload in head matches srcset/sizes of the hero img element", async () => {
+test("hero image preload in head matches the rendered AVIF picture source", async () => {
   const indexHtml = await readUtf8("index.html");
 
-  // Extract preload link attributes
-  const preloadMatch = indexHtml.match(
-    /<link[^>]*rel="preload"[^>]*as="image"[^>]*>/
+  const imagePreloads = [...indexHtml.matchAll(/<link\b[^>]*>/g)]
+    .map(([tag]) => tag)
+    .filter(
+      (tag) =>
+        attributeValue(tag, "rel") === "preload" &&
+        attributeValue(tag, "as") === "image"
+    );
+  assert.equal(
+    imagePreloads.length,
+    1,
+    "index.html must include exactly one hero image preload"
   );
-  assert.ok(
-    preloadMatch,
-    "index.html must include a <link rel=\"preload\" as=\"image\"> for the hero image"
-  );
-  const preloadTag = preloadMatch[0];
+  const [preloadTag] = imagePreloads;
 
-  const preloadSrcset = preloadTag.match(/imagesrcset="([^"]+)"/)?.[1];
-  const preloadSizes  = preloadTag.match(/imagesizes="([^"]+)"/)?.[1];
-  const preloadHref   = preloadTag.match(/href="([^"]+)"/)?.[1];
+  const preloadSrcset = attributeValue(preloadTag, "imagesrcset");
+  const preloadSizes  = attributeValue(preloadTag, "imagesizes");
+  const preloadHref   = attributeValue(preloadTag, "href");
+  const preloadType   = attributeValue(preloadTag, "type");
   const preloadFP     = /fetchpriority="high"/.test(preloadTag);
 
   assert.ok(preloadSrcset, "preload link must have imagesrcset attribute");
   assert.ok(preloadSizes,  "preload link must have imagesizes attribute");
   assert.ok(preloadHref,   "preload link must have href fallback");
+  assert.equal(preloadType, "image/avif", "preload link must declare its AVIF type");
   assert.ok(preloadFP,     "preload link must have fetchpriority=high");
 
-  // Extract hero img attributes
-  const imgMatch = indexHtml.match(/<img[\s\S]*?srcset="([^"]+)"[\s\S]*?sizes="([^"]+)"/);
-  assert.ok(imgMatch, "Hero img must have srcset and sizes attributes");
-  const [, imgSrcset, imgSizes] = imgMatch;
+  const pictureTag = indexHtml.match(/<picture>[\s\S]*?<\/picture>/)?.[0];
+  const sourceTag = pictureTag?.match(/<source[^>]*type="image\/avif"[^>]*>/)?.[0];
+  assert.ok(sourceTag, "Hero picture must include an AVIF source");
+  const sourceSrcset = attributeValue(sourceTag, "srcset");
+  const sourceSizes = attributeValue(sourceTag, "sizes");
+  assert.ok(sourceSrcset, "Hero AVIF source must include srcset");
+  assert.ok(sourceSizes, "Hero AVIF source must include sizes");
 
   assert.equal(
     preloadSrcset,
-    imgSrcset,
-    "preload imagesrcset must exactly match hero img srcset"
+    sourceSrcset,
+    "preload imagesrcset must exactly match the rendered AVIF source srcset"
   );
   assert.equal(
     preloadSizes,
-    imgSizes,
-    "preload imagesizes must exactly match hero img sizes"
+    sourceSizes,
+    "preload imagesizes must exactly match the rendered AVIF source sizes"
   );
 
-  // Preload href must be a source listed in the srcset (no phantom fetch)
-  const srcsetSources = imgSrcset.split(",").map((e) => e.trim().split(/\s+/)[0]);
+  const srcsetSources = parseSrcsetEntries(sourceSrcset).map(({ source }) => source);
   assert.ok(
     srcsetSources.includes(preloadHref),
     `preload href (${preloadHref}) must be one of the srcset sources to avoid a duplicate fetch`
   );
 
-  // Preload must appear before the stylesheet in the source
-  const preloadPos    = indexHtml.indexOf(preloadTag[0]);
+  const preloadPos    = indexHtml.indexOf(preloadTag);
   const stylesheetPos = indexHtml.indexOf('<link rel="stylesheet"');
   assert.ok(
     preloadPos < stylesheetPos,
     "preload link must appear before the stylesheet link in <head>"
+  );
+  assert.ok(
+    indexHtml.indexOf(sourceTag) < indexHtml.indexOf("<img", indexHtml.indexOf("<picture>")),
+    "AVIF source must precede the JPEG img fallback in source order"
   );
 });
 
