@@ -4,6 +4,7 @@
 ## Development
 - Run `python3 -m http.server 8000` from the repository root, then open http://localhost:8000/.
 - Portfolio entries declare a 960x540 JPEG fallback in `image`, a desktop 960x540 AVIF in `desktopImageAvif`, and a mobile 720x405 AVIF in `mobileImageAvif`; verified public repositories can add paired `sourceAction` (`ja`/`en`) and HTTPS `sourceLink` fields for a secondary source action. Source-backed project facts use paired localized `proof` and `proofLink` fields; citations must be HTTPS GitHub blob URLs pinned to a 40-character commit SHA with bounded line anchors and must match a public repository action already exposed by that card. Japanese and English interface copy lives in `i18n.js`.
+- Every portfolio entry declares a unique lowercase kebab-case `slug`; its stable same-page URL is `#project-${slug}` and remains unchanged across Japanese and English rendering.
 - Project AVIF previews use a consistent `sips` quality setting: desktop `sips -s format avif -s formatOptions 70 -z 540 960 assets/name-preview.jpg --out assets/name-preview-960w.avif`; mobile `sips -s format avif -s formatOptions 70 -z 405 720 assets/name-preview.jpg --out assets/name-preview-720w.avif`.
 - The nine desktop AVIFs total 187,587 bytes versus 551,363 bytes for the JPEG fallbacks, saving 363,776 bytes (66.0%).
 

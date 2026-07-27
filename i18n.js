@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "info-language";
+  const HISTORY_LANGUAGE_KEY = "infoLanguage";
   const DEFAULT_LANGUAGE = "ja";
   const SUPPORTED_LANGUAGES = new Set(["ja", "en"]);
 
@@ -56,7 +57,9 @@
         error: "プロジェクトを読み込めませんでした。通信状況を確認して、もう一度お試しください。",
         retry: "再読み込み",
         proofLabel: "公開根拠",
-        proofAction: "根拠を見る"
+        proofAction: "根拠を見る",
+        permalinkAction: "固定リンク",
+        permalinkLabel: "「{title}」プロジェクトへの固定リンク"
       },
       contact: {
         title: "Contact",
@@ -119,7 +122,9 @@
         error: "Projects could not be loaded. Check your connection and try again.",
         retry: "Try again",
         proofLabel: "Public evidence",
-        proofAction: "View evidence"
+        proofAction: "View evidence",
+        permalinkAction: "Permalink",
+        permalinkLabel: "Permalink to the {title} project"
       },
       contact: {
         title: "Contact",
@@ -188,10 +193,49 @@
       url.searchParams.set("lang", language);
     }
     window.history.replaceState(
-      window.history.state,
+      {
+        ...(window.history.state && typeof window.history.state === "object"
+          ? window.history.state
+          : {}),
+        [HISTORY_LANGUAGE_KEY]: language
+      },
       "",
       `${url.pathname}${url.search}${url.hash}`
     );
+  }
+
+  function updateLanguageHistoryState(language) {
+    window.history.replaceState(
+      {
+        ...(window.history.state && typeof window.history.state === "object"
+          ? window.history.state
+          : {}),
+        [HISTORY_LANGUAGE_KEY]: language
+      },
+      "",
+      `${window.location.pathname}${window.location.search}${window.location.hash}`
+    );
+  }
+
+  function syncLanguageFromHistory(state) {
+    const stateLanguage =
+      state && typeof state === "object" ? state[HISTORY_LANGUAGE_KEY] : null;
+    const urlLanguage = new URLSearchParams(window.location.search).get("lang");
+    const language = SUPPORTED_LANGUAGES.has(stateLanguage)
+      ? stateLanguage
+      : SUPPORTED_LANGUAGES.has(urlLanguage)
+        ? urlLanguage
+        : currentLanguage;
+    if (language === currentLanguage) {
+      return false;
+    }
+
+    setLanguage(language, { persist: false });
+    return true;
+  }
+
+  function rememberLanguageInHistory() {
+    updateLanguageHistoryState(currentLanguage);
   }
 
   function updateTextContent() {
@@ -245,6 +289,8 @@
     if (persist) {
       persistLanguage(language);
       updateLanguageUrl(language);
+    } else {
+      updateLanguageHistoryState(language);
     }
     if (typeof window.updateNavigationLabel === "function") {
       window.updateNavigationLabel();
@@ -261,10 +307,12 @@
     get language() {
       return currentLanguage;
     },
+    rememberInHistory: rememberLanguageInHistory,
     t(key) {
       return getTranslation(currentLanguage, key);
     },
     setLanguage,
+    syncFromHistory: syncLanguageFromHistory,
     toggle() {
       setLanguage(currentLanguage === "ja" ? "en" : "ja");
     }

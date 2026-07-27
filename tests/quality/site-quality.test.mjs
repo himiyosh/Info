@@ -455,7 +455,22 @@ test("projects.json schema, localization, links, and preview assets are valid", 
   assert.ok(projects.length > 0, "projects.json must contain at least one project");
 
   const localizedFields = ["title", "kind", "description", "action", "imageAlt"];
-  const requiredStringFields = ["link", "image", "desktopImageAvif", "mobileImageAvif"];
+  const requiredStringFields = [
+    "slug",
+    "link",
+    "image",
+    "desktopImageAvif",
+    "mobileImageAvif"
+  ];
+  const projectSlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  const reservedProjectSlugs = new Set([
+    "top",
+    "about",
+    "projects",
+    "contact",
+    "main-content"
+  ]);
+  const seenSlugs = new Set();
   const seenLinks = new Set();
   const seenAssets = new Set();
   const seenProofTexts = new Set();
@@ -486,6 +501,18 @@ test("projects.json schema, localization, links, and preview assets are valid", 
       assert.equal(typeof project[field], "string", `Project ${index + 1} field "${field}" must be a string`);
       assert.notEqual(project[field].trim(), "", `Project ${index + 1} field "${field}" must not be empty`);
     }
+
+    assert.match(
+      project.slug,
+      projectSlugPattern,
+      `Project ${index + 1} slug must use lowercase kebab-case`
+    );
+    assert.ok(
+      !reservedProjectSlugs.has(project.slug),
+      `Project ${index + 1} slug must not use a reserved top-level ID`
+    );
+    assert.ok(!seenSlugs.has(project.slug), `Duplicate project slug found: ${project.slug}`);
+    seenSlugs.add(project.slug);
 
     const linkUrl = new URL(project.link);
     assert.ok(
@@ -847,6 +874,7 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
   const projects = JSON.parse(await readUtf8("projects.json"));
   const validatorDeclarations = [
     "requireNonEmptyString",
+    "validateStableSlug",
     "githubRepositoryKey",
     "validateLocalizedField",
     "validateLocalProjectAsset",
@@ -859,17 +887,33 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
     {
       URL,
       localizedProjectFields: ["title", "description", "kind", "action", "imageAlt"],
+      projectSlugPattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      reservedProjectSlugs: new Set([
+        "top",
+        "about",
+        "projects",
+        "contact",
+        "main-content"
+      ]),
       window: { location: new URL("https://example.test/") }
     },
     { timeout: 1000 }
   );
   const cloneProjects = () => JSON.parse(JSON.stringify(projects));
   const validateCatalogue = (catalogue) => {
+    const seenSlugs = new Set();
     const seenLinks = new Set();
     const seenAssets = new Set();
     const seenProofTexts = new Set();
     catalogue.forEach((project, index) =>
-      validateProject(project, index, seenLinks, seenAssets, seenProofTexts)
+      validateProject(
+        project,
+        index,
+        seenSlugs,
+        seenLinks,
+        seenAssets,
+        seenProofTexts
+      )
     );
   };
 
@@ -1189,7 +1233,7 @@ test("project runtime validation requires distinct local JPEG and AVIF assets", 
   assert.match(loadProjectsBody, /const seenAssets = new Set\(\)/);
   assert.match(
     loadProjectsBody,
-    /validateProject\(project, index, seenLinks, seenAssets, seenProofTexts\)/,
+    /validateProject\(\s*project,\s*index,\s*seenSlugs,\s*seenLinks,\s*seenAssets,\s*seenProofTexts\s*\)/,
     "JPEG and AVIF paths must share one uniqueness set so cross-field collisions are rejected"
   );
 });

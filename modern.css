@@ -449,6 +449,17 @@ html:lang(ja) .about-copy .about-statement {
   text-wrap: balance;
 }
 
+.project-permalink {
+  color: var(--color-ink-2);
+  border-color: var(--color-rule);
+  font-family: var(--font-body);
+  font-weight: 700;
+}
+
+html:lang(ja) .project-permalink {
+  font-family: var(--font-body-ja);
+}
+
 html:lang(ja) .project-heading h3 {
   font-family: var(--font-heading-ja);
   font-weight: 700;
@@ -621,6 +632,10 @@ html:lang(ja) .footer-meta a {
 
   .project-link--secondary:hover {
     background: var(--color-surface-raised);
+    color: var(--color-ink);
+  }
+
+  .project-permalink:hover {
     color: var(--color-ink);
   }
 
@@ -800,6 +815,10 @@ html:not(.js-enabled) .about-copy {
 
   .button-primary,
   .project-link {
+    transform: none !important;
+  }
+
+  .project-permalink {
     transform: none !important;
   }
 
