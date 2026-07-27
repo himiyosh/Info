@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import vm from "node:vm";
 import { test } from "node:test";
 
 const repoRoot = process.cwd();
+const retiredPortfolioPreviewSha256 =
+  "34ef4fb416975ff4e3e4b0a766e922d49f4679b16dc96b3413d155a99508d095";
 const qualityWorkflowPath = ".github/workflows/quality-baseline.yml";
 const pagesWorkflowPath = ".github/workflows/pages.yml";
 const pagesWhitelistPath = ".github/pages-artifact-whitelist.txt";
@@ -1194,6 +1197,19 @@ test("preview assets are not stale or orphaned", async () => {
     orphanProjectImages.length,
     0,
     `All project images must exist under assets/: ${orphanProjectImages.join(", ")}`
+  );
+
+  const portfolioPreview = await readFile(path.join(repoRoot, "assets/portfolio-preview.jpg"));
+  const portfolioPreviewHash = createHash("sha256").update(portfolioPreview).digest("hex");
+  assert.notEqual(
+    portfolioPreviewHash,
+    retiredPortfolioPreviewSha256,
+    "Portfolio preview must not restore the retired light-blue/orange design"
+  );
+  assert.deepEqual(
+    jpegDimensions(portfolioPreview),
+    { width: 960, height: 540 },
+    "Portfolio preview must retain its 960x540 social-card dimensions"
   );
 });
 
