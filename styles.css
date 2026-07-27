@@ -933,11 +933,38 @@ html:lang(ja) .hero h1 span {
   gap: var(--space-xs);
 }
 
+.projects-fallback-list > li {
+  min-width: 0;
+}
+
 .projects-fallback a {
+  width: 100%;
+  min-width: 0;
   min-height: 44px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  gap: var(--space-xs);
   color: var(--color-on-dark);
+  white-space: nowrap;
+}
+
+.projects-fallback-title {
+  min-width: 0;
+  flex: 1 1 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+}
+
+.projects-fallback-kind {
+  min-width: 0;
+  max-width: 70%;
+  flex: 0 1 auto;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-weight: 400;
+  text-align: end;
+  text-overflow: ellipsis;
 }
 
 .retry-button {

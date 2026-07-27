@@ -9,6 +9,8 @@ const require = createRequire(import.meta.url);
 const { translations } = require("../i18n.js");
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const templatePath = path.join(repoRoot, "templates/index.html");
+const projectsPath = path.join(repoRoot, "projects.json");
+const canonicalProjects = JSON.parse(await readFile(projectsPath, "utf8"));
 const checkOnly = process.argv.includes("--check");
 const canonicalRoot = "https://himiyosh.github.io/Info/";
 export const pages = [
@@ -39,7 +41,37 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-export function renderPage(template, page) {
+function escapedProjectValue(project, index, field, language) {
+  const value = field === "link" ? project?.link : project?.[field]?.[language];
+  if (typeof value !== "string" || value.length === 0) {
+    throw new TypeError(`Missing ${language} project ${field} at index ${index}.`);
+  }
+  return escapeHtml(value);
+}
+
+export function renderProjectFallbackLinks(projects, language, indentation = "") {
+  if (!Array.isArray(projects) || projects.length === 0) {
+    throw new TypeError("projects.json must contain a non-empty array.");
+  }
+
+  return projects
+    .map((project, index) => {
+      const link = escapedProjectValue(project, index, "link", language);
+      const title = escapedProjectValue(project, index, "title", language);
+      const kind = escapedProjectValue(project, index, "kind", language);
+      return [
+        `${indentation}<li>`,
+        `${indentation}  <a href="${link}">`,
+        `${indentation}    <span class="projects-fallback-title">${title}</span>`,
+        `${indentation}    <span class="projects-fallback-kind">${kind}</span>`,
+        `${indentation}  </a>`,
+        `${indentation}</li>`
+      ].join("\n");
+    })
+    .join("\n");
+}
+
+export function renderPage(template, page, projects = canonicalProjects) {
   let output = template.replace(/\{\{t:([a-zA-Z0-9.]+)\}\}/g, (_match, key) => {
     const value = key
       .split(".")
@@ -49,6 +81,12 @@ export function renderPage(template, page) {
     }
     return escapeHtml(value);
   });
+
+  output = output.replace(
+    /^([ \t]*)\{\{projectFallbackLinks\}\}[ \t]*$/m,
+    (_match, indentation) =>
+      renderProjectFallbackLinks(projects, page.language, indentation)
+  );
 
   for (const [key, value] of Object.entries(page)) {
     output = output.replaceAll(`{{${key}}}`, escapeHtml(value));
@@ -63,7 +101,7 @@ export function renderPage(template, page) {
 
   return output.replace(
     "<!DOCTYPE html>",
-    "<!DOCTYPE html>\n<!-- Generated from templates/index.html and i18n.js. Run npm run generate:pages. -->"
+    "<!DOCTYPE html>\n<!-- Generated from templates/index.html, i18n.js, and projects.json. Run npm run generate:pages. -->"
   );
 }
 

@@ -15,6 +15,16 @@ function sourceBetween(sourceText, startMarker, endMarker) {
   return sourceText.slice(start, end);
 }
 
+function fallbackEntries(source) {
+  const fallback = source.match(
+    /<div\b[^>]*\bid="projects-fallback"[^>]*>([\s\S]*?)<\/div>/i
+  )?.[1];
+  assert.ok(fallback, "The document must contain one shared fallback surface");
+  return [...fallback.matchAll(
+    /<li>\s*<a\b[^>]*\bhref="([^"]+)"[^>]*>\s*<span class="projects-fallback-title">([\s\S]*?)<\/span>\s*<span class="projects-fallback-kind">([\s\S]*?)<\/span>\s*<\/a>\s*<\/li>/gi
+  )].map(([, link, title, kind]) => ({ kind: kind.trim(), link, title: title.trim() }));
+}
+
 class FakeClassList {
   constructor() {
     this.values = new Set();
@@ -117,36 +127,44 @@ function createI18n() {
   });
 }
 
-test("one fallback stays available without JavaScript and matches all canonical destinations", async () => {
-  const [indexHtml, stylesSource, projects] = await Promise.all([
+test("each static fallback exposes canonical localized decision cues without JavaScript", async () => {
+  const [indexHtml, englishHtml, stylesSource, projects] = await Promise.all([
     readUtf8("index.html"),
+    readUtf8("en/index.html"),
     readUtf8("styles.css"),
     readUtf8("projects.json").then(JSON.parse)
   ]);
-  const fallbackTags = [
-    ...indexHtml.matchAll(/<div\b[^>]*\bid="projects-fallback"[^>]*>/gi)
-  ];
-  assert.equal(fallbackTags.length, 1, "The document must contain one shared fallback surface");
-  assert.doesNotMatch(
-    fallbackTags[0][0],
-    /\b(?:hidden|aria-hidden)=/i,
-    "The fallback must remain exposed when scripts do not run"
-  );
+  assert.equal(projects.length, 9);
 
-  const fallbackContent = indexHtml.slice(
-    fallbackTags[0].index,
-    indexHtml.indexOf("</div>", fallbackTags[0].index) + "</div>".length
-  );
-  const fallbackLinks = [...fallbackContent.matchAll(/\bhref="([^"]+)"/g)].map(
-    (match) => match[1]
-  );
-  assert.deepEqual(fallbackLinks, projects.map((project) => project.link));
-  assert.equal(new Set(fallbackLinks).size, 9);
-  assert.doesNotMatch(
-    indexHtml,
-    /<noscript>[\s\S]*?projects-fallback[\s\S]*?<\/noscript>/i,
-    "The reusable fallback must not be trapped inside noscript"
-  );
+  for (const [source, language] of [[indexHtml, "ja"], [englishHtml, "en"]]) {
+    const fallbackTags = [
+      ...source.matchAll(/<div\b[^>]*\bid="projects-fallback"[^>]*>/gi)
+    ];
+    assert.equal(fallbackTags.length, 1, "The document must contain one shared fallback surface");
+    assert.doesNotMatch(
+      fallbackTags[0][0],
+      /\b(?:hidden|aria-hidden)=/i,
+      "The fallback must remain exposed when scripts do not run"
+    );
+    const entries = fallbackEntries(source);
+    assert.equal(entries.length, 9);
+    assert.deepEqual(entries.map(({ link }) => link), projects.map((project) => project.link));
+    assert.deepEqual(
+      entries.map(({ title }) => title),
+      projects.map((project) => project.title[language])
+    );
+    assert.deepEqual(
+      entries.map(({ kind }) => kind),
+      projects.map((project) => project.kind[language])
+    );
+    assert.equal(new Set(entries.map(({ link }) => link)).size, 9);
+    assert.doesNotMatch(
+      source,
+      /<noscript>[\s\S]*?projects-fallback[\s\S]*?<\/noscript>/i,
+      "The reusable fallback must not be trapped inside noscript"
+    );
+  }
+
   assert.match(
     stylesSource,
     /\.js-enabled\s+\.projects-fallback:not\(\.is-visible\)\s*\{\s*display:\s*none;/,
@@ -154,8 +172,21 @@ test("one fallback stays available without JavaScript and matches all canonical 
   );
   assert.match(
     stylesSource,
-    /\.projects-fallback a\s*\{[\s\S]*?min-height:\s*44px;/,
-    "Fallback links must retain the minimum touch target height"
+    /\.projects-fallback a\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*min-height:\s*44px;[^}]*display:\s*flex;[^}]*gap:\s*var\(--space-xs\);[^}]*white-space:\s*nowrap;/s,
+    "Fallback links must remain 44px, single-line, and shrink-safe"
+  );
+  assert.match(
+    stylesSource,
+    /\.projects-fallback-title\s*\{[^}]*min-width:\s*0;[^}]*flex:\s*1 1 0;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s
+  );
+  assert.match(
+    stylesSource,
+    /\.projects-fallback-kind\s*\{[^}]*min-width:\s*0;[^}]*max-width:\s*70%;[^}]*flex:\s*0 1 auto;[^}]*overflow:\s*hidden;[^}]*text-align:\s*end;[^}]*text-overflow:\s*ellipsis;/s
+  );
+  assert.match(
+    stylesSource,
+    /:where\(a,\s*button\):focus-visible\s*\{[^}]*outline:\s*3px solid var\(--color-focus\);/s,
+    "Fallback links must retain the global visible focus treatment"
   );
 });
 
