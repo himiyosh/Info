@@ -803,7 +803,7 @@ test("exactly six live projects expose verified public source actions", async ()
   );
 });
 
-test("exactly six public projects expose reviewed immutable proof citations", async () => {
+test("exactly eight public projects expose reviewed immutable proof citations", async () => {
   const projects = JSON.parse(await readUtf8("projects.json"));
   const expectedProofs = new Map([
     [
@@ -852,6 +852,22 @@ test("exactly six public projects expose reviewed immutable proof citations", as
         ja: "コピーとHAR出力は既定で認証情報・Cookie・クエリ値・本文をサニタイズし、完全出力は警告確認後の1回だけ有効です。",
         en: "Clipboard and HAR exports sanitize credentials, cookies, query values, and bodies by default; full output requires one-time confirmation.",
         link: "https://github.com/himiyosh/network-plus-extension/blob/f1d53ce821c6b7ca8cf11b7101f800087ab19ac4/README.md#L128-L140"
+      }
+    ],
+    [
+      "URLDecoder",
+      {
+        ja: "入力を encodeURIComponent / decodeURIComponent で処理し、変換結果または失敗理由を出力欄に表示します。",
+        en: "Input is processed with encodeURIComponent or decodeURIComponent, and the output field shows either the result or the failure reason.",
+        link: "https://github.com/himiyosh/URLDecoder/blob/fa686afa5196dd7dc9432c7ab916d5376dc69954/index.html#L108-L126"
+      }
+    ],
+    [
+      "ImageResizer",
+      {
+        ja: "選択画像をブラウザー内で読み込み、192px と 32px の canvas に描画して PNG ダウンロードリンクを生成します。",
+        en: "The selected image is read in-browser, drawn to 192px and 32px canvases, and exposed as PNG download links.",
+        link: "https://github.com/himiyosh/ImageResizer/blob/f79765b06964bc1918dad7222f1c657d5d0312ca/index.html#L48-L84"
       }
     ]
   ]);

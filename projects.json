@@ -266,6 +266,11 @@
       "ja": "入力欄と操作ボタンを備えた URLDecoder の画面",
       "en": "URLDecoder interface with input, output, and action controls"
     },
+    "proof": {
+      "ja": "入力を encodeURIComponent / decodeURIComponent で処理し、変換結果または失敗理由を出力欄に表示します。",
+      "en": "Input is processed with encodeURIComponent or decodeURIComponent, and the output field shows either the result or the failure reason."
+    },
+    "proofLink": "https://github.com/himiyosh/URLDecoder/blob/fa686afa5196dd7dc9432c7ab916d5376dc69954/index.html#L108-L126",
     "action": {
       "ja": "ツールを開く",
       "en": "Open the tool"
@@ -298,6 +303,11 @@
       "ja": "画像を選択し、2 種類のサイズをダウンロードできる ImageResizer の画面",
       "en": "ImageResizer interface with a selected image and two download sizes"
     },
+    "proof": {
+      "ja": "選択画像をブラウザー内で読み込み、192px と 32px の canvas に描画して PNG ダウンロードリンクを生成します。",
+      "en": "The selected image is read in-browser, drawn to 192px and 32px canvases, and exposed as PNG download links."
+    },
+    "proofLink": "https://github.com/himiyosh/ImageResizer/blob/f79765b06964bc1918dad7222f1c657d5d0312ca/index.html#L48-L84",
     "action": {
       "ja": "ツールを開く",
       "en": "Open the tool"
