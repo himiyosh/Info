@@ -3,7 +3,7 @@
 
 ## Development
 - Run `python3 -m http.server 8000` from the repository root, then open http://localhost:8000/.
-- Portfolio entries declare a 960x540 JPEG fallback in `image` and a mobile-only 720x405 AVIF in `mobileImageAvif`; Japanese and English interface copy lives in `i18n.js`.
+- Portfolio entries declare a 960x540 JPEG fallback in `image` and a mobile-only 720x405 AVIF in `mobileImageAvif`; verified public repositories can add paired `sourceAction` (`ja`/`en`) and HTTPS `sourceLink` fields for a secondary source action. Japanese and English interface copy lives in `i18n.js`.
 - Project AVIF previews use a consistent `sips` quality setting: `sips -s format avif -s formatOptions 70 -z 405 720 assets/name-preview.jpg --out assets/name-preview-720w.avif`.
 - `tokens.css` is the design-token source of truth. The Latin display font is bundled under `assets/fonts/` with its `OFL.txt` license, so no runtime font provider is required.
 - `robots.txt` and `sitemap.xml` expose the public page to search crawlers.
