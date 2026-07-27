@@ -609,6 +609,10 @@ html:lang(ja) .hero h1 span {
   list-style: none;
 }
 
+.project-directory-list > li {
+  min-width: 0;
+}
+
 .project-directory-link {
   width: 100%;
   min-width: 0;
@@ -616,6 +620,7 @@ html:lang(ja) .hero h1 span {
   padding: var(--space-2xs) var(--space-xs);
   display: flex;
   align-items: center;
+  gap: var(--space-xs);
   color: var(--color-on-dark);
   border-block-end: var(--rule-hair) solid var(--color-rule);
   font-size: var(--text-sm);
@@ -631,7 +636,18 @@ html:lang(ja) .hero h1 span {
 
 .project-directory-title {
   min-width: 0;
+  flex: 1 1 0;
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-directory-kind {
+  min-width: 0;
+  max-width: 70%;
+  flex: 0 1 auto;
+  overflow: hidden;
+  font-weight: 400;
+  text-align: end;
   text-overflow: ellipsis;
 }
 
@@ -1354,7 +1370,7 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
   }
 
   .project-directory-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   /* Image stays left / text stays right for every row, in DOM order, on
@@ -1375,6 +1391,12 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--space-lg);
+  }
+}
+
+@media (min-width: 60rem) {
+  .project-directory-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

@@ -43,13 +43,15 @@ class FakeElement {
 }
 
 test("the enhanced directory stays empty without data and renders canonical localized links", async () => {
-  const [indexHtml, scriptSource, i18nSource, stylesSource, projects] = await Promise.all([
-    readUtf8("index.html"),
-    readUtf8("script.js"),
-    readUtf8("i18n.js"),
-    readUtf8("styles.css"),
-    readUtf8("projects.json").then(JSON.parse)
-  ]);
+  const [indexHtml, scriptSource, i18nSource, stylesSource, modernSource, projects] =
+    await Promise.all([
+      readUtf8("index.html"),
+      readUtf8("script.js"),
+      readUtf8("i18n.js"),
+      readUtf8("styles.css"),
+      readUtf8("modern.css"),
+      readUtf8("projects.json").then(JSON.parse)
+    ]);
   const directoryMarkup = indexHtml.match(
     /<nav\b[^>]*\bid="projects-directory"[^>]*>[\s\S]*?<\/nav>/i
   )?.[0];
@@ -66,15 +68,31 @@ test("the enhanced directory stays empty without data and renders canonical loca
   assert.match(i18nSource, /directoryLabel:\s*"Project directory"/);
   assert.match(
     stylesSource,
-    /\.project-directory-link\s*\{[^}]*min-height:\s*44px;[^}]*white-space:\s*nowrap;/s
+    /\.project-directory-link\s*\{[^}]*min-width:\s*0;[^}]*min-height:\s*44px;[^}]*display:\s*flex;[^}]*gap:\s*var\(--space-xs\);[^}]*white-space:\s*nowrap;/s
   );
   assert.match(
     stylesSource,
-    /\.project-directory-title\s*\{[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s
+    /\.project-directory-title\s*\{[^}]*min-width:\s*0;[^}]*flex:\s*1 1 0;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s
   );
   assert.match(
     stylesSource,
-    /@media \(min-width:\s*48rem\)[\s\S]*?\.project-directory-list\s*\{[^}]*repeat\(3,\s*minmax\(0,\s*1fr\)\);/
+    /\.project-directory-list\s*>\s*li\s*\{[^}]*min-width:\s*0;/s
+  );
+  assert.match(
+    stylesSource,
+    /\.project-directory-kind\s*\{[^}]*min-width:\s*0;[^}]*max-width:\s*70%;[^}]*flex:\s*0 1 auto;[^}]*overflow:\s*hidden;[^}]*font-weight:\s*400;[^}]*text-align:\s*end;[^}]*text-overflow:\s*ellipsis;/s
+  );
+  assert.match(
+    modernSource,
+    /\.project-directory-kind\s*\{[^}]*color:\s*var\(--color-muted\);/s
+  );
+  assert.match(
+    stylesSource,
+    /@media \(min-width:\s*48rem\)[\s\S]*?\.project-directory-list\s*\{[^}]*repeat\(2,\s*minmax\(0,\s*1fr\)\);/
+  );
+  assert.match(
+    stylesSource,
+    /@media \(min-width:\s*60rem\)[\s\S]*?\.project-directory-list\s*\{[^}]*repeat\(3,\s*minmax\(0,\s*1fr\)\);/
   );
 
   const projectsDirectory = new FakeElement("nav");
@@ -120,6 +138,15 @@ test("the enhanced directory stays empty without data and renders canonical loca
     japaneseLinks.map((link) => link.children[0].textContent),
     projects.map((project) => project.title.ja)
   );
+  assert.deepEqual(
+    japaneseLinks.map((link) => link.children[1].textContent),
+    projects.map((project) => project.kind.ja)
+  );
+  for (const link of japaneseLinks) {
+    assert.equal(link.children.length, 2);
+    assert.equal(link.children[0].className, "project-directory-title");
+    assert.equal(link.children[1].className, "project-directory-kind");
+  }
 
   language.current = "en";
   context.renderProjectDirectory();
@@ -130,6 +157,10 @@ test("the enhanced directory stays empty without data and renders canonical loca
   assert.deepEqual(
     englishLinks.map((link) => link.children[0].textContent),
     projects.map((project) => project.title.en)
+  );
+  assert.deepEqual(
+    englishLinks.map((link) => link.children[1].textContent),
+    projects.map((project) => project.kind.en)
   );
   assert.deepEqual(
     englishLinks.map((link) => link.getAttribute("href")),
