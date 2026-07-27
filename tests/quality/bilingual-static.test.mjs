@@ -5,7 +5,11 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { test } from "node:test";
-import { pages, renderPage } from "../../scripts/generate-static-pages.mjs";
+import {
+  pages,
+  renderPage,
+  renderProjectFallbackLinks
+} from "../../scripts/generate-static-pages.mjs";
 
 const require = createRequire(import.meta.url);
 const { translations } = require("../../i18n.js");
@@ -58,6 +62,16 @@ function normalizeText(value) {
   return decodeHtml(value.replace(/<[^>]*>/g, "")).replace(/\s+/g, " ").trim();
 }
 
+function fallbackEntries(source) {
+  return [...source.matchAll(
+    /<li>\s*<a\b[^>]*\bhref="([^"]+)"[^>]*>\s*<span class="projects-fallback-title">([\s\S]*?)<\/span>\s*<span class="projects-fallback-kind">([\s\S]*?)<\/span>\s*<\/a>\s*<\/li>/gi
+  )].map(([, link, title, kind]) => ({
+    kind: normalizeText(kind),
+    link: decodeHtml(link),
+    title: normalizeText(title)
+  }));
+}
+
 function translationAt(language, key) {
   return key.split(".").reduce((value, part) => value?.[part], translations[language]);
 }
@@ -101,7 +115,11 @@ async function assertLocalReference(reference, baseUrl) {
 }
 
 test("checked-in language pages are deterministic outputs of one template and locale catalogue", async () => {
-  const template = await readUtf8("templates/index.html");
+  const [template, generatorSource, projects] = await Promise.all([
+    readUtf8("templates/index.html"),
+    readUtf8("scripts/generate-static-pages.mjs"),
+    readUtf8("projects.json").then(JSON.parse)
+  ]);
   assert.equal(
     [...template.matchAll(/<!DOCTYPE html>/gi)].length,
     1,
@@ -109,13 +127,26 @@ test("checked-in language pages are deterministic outputs of one template and lo
   );
   assert.match(template, /\{\{language\}\}/);
   assert.match(template, /\{\{t:hero\.titleLine1\}\}/);
+  assert.match(template, /^\s*\{\{projectFallbackLinks\}\}\s*$/m);
+  assert.equal(
+    [...generatorSource.matchAll(/readFile\(projectsPath,\s*"utf8"\)/g)].length,
+    1,
+    "The generator must read the canonical project catalogue once"
+  );
+  for (const project of projects) {
+    assert.doesNotMatch(
+      template,
+      new RegExp(escapeRegExp(`href="${project.link}"`)),
+      "Project destinations must come from projects.json rather than template literals"
+    );
+  }
 
   for (const page of pages) {
     const generated = await readUtf8(page.outputPath);
-    assert.equal(generated, renderPage(template, page), `${page.outputPath} must not drift`);
+    assert.equal(generated, renderPage(template, page, projects), `${page.outputPath} must not drift`);
     assert.match(
       generated,
-      /<!-- Generated from templates\/index\.html and i18n\.js\. Run npm run generate:pages\. -->/
+      /<!-- Generated from templates\/index\.html, i18n\.js, and projects\.json\. Run npm run generate:pages\. -->/
     );
     assert.doesNotMatch(generated, /\{\{[^}]+\}\}/);
   }
@@ -130,6 +161,24 @@ test("checked-in language pages are deterministic outputs of one template and lo
   const packageJson = JSON.parse(await readUtf8("package.json"));
   assert.equal(packageJson.scripts["check:generated"], "node scripts/generate-static-pages.mjs --check");
   assert.match(packageJson.scripts["check:quality"], /npm run check:generated/);
+});
+
+test("fallback generation escapes every inserted project value", () => {
+  const rendered = renderProjectFallbackLinks([
+    {
+      link: `https://example.test/?query="<tag>"&mode='safe'`,
+      title: { en: `A <title> & "label"` },
+      kind: { en: "Tool 'type' & <kind>" }
+    }
+  ], "en");
+
+  assert.match(
+    rendered,
+    /href="https:\/\/example\.test\/\?query=&quot;&lt;tag&gt;&quot;&amp;mode=&#39;safe&#39;"/
+  );
+  assert.match(rendered, />A &lt;title&gt; &amp; &quot;label&quot;<\/span>/);
+  assert.match(rendered, />Tool &#39;type&#39; &amp; &lt;kind&gt;<\/span>/);
+  assert.doesNotMatch(rendered, /<tag>|<title>|<kind>/);
 });
 
 test("both routes provide complete localized initial HTML and no-JavaScript project context", async () => {
@@ -214,9 +263,19 @@ test("both routes provide complete localized initial HTML and no-JavaScript proj
       normalizeText(fallback).startsWith(translations[language].projects.fallback),
       `${page.outputPath} must localize fallback context`
     );
+    const entries = fallbackEntries(fallback);
+    assert.equal(entries.length, 9, `${page.outputPath} must render all nine fallback links`);
     assert.deepEqual(
-      [...fallback.matchAll(/\bhref="([^"]+)"/g)].map((match) => match[1]),
+      entries.map(({ link }) => link),
       projects.map((project) => project.link)
+    );
+    assert.deepEqual(
+      entries.map(({ title }) => title),
+      projects.map((project) => project.title[language])
+    );
+    assert.deepEqual(
+      entries.map(({ kind }) => kind),
+      projects.map((project) => project.kind[language])
     );
   }
 });
