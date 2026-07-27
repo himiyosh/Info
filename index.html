@@ -215,16 +215,17 @@
             日々の不便を小さくするために作った、公開中のサイト、サービス、ツールです。
           </p>
         </div>
-        <div
-          class="projects-list"
-          id="projects-container"
-          aria-live="polite"
-          aria-busy="true"
+        <p
+          class="projects-list projects-status"
+          id="projects-status"
+          role="status"
+          aria-atomic="true"
+          data-i18n="projects.loading"
+          data-i18n-dynamic=""
         >
-          <p class="projects-status" data-i18n="projects.loading">
-            プロジェクトを読み込んでいます。
-          </p>
-        </div>
+          プロジェクトを読み込んでいます。
+        </p>
+        <div id="projects-container" aria-busy="true"></div>
         <noscript>
           <div class="projects-noscript" role="note">
             <p>

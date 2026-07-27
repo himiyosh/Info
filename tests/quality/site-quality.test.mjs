@@ -430,6 +430,111 @@ test("projects.json schema, localization, links, and preview assets are valid", 
   }
 });
 
+test("project catalogue status stays concise, atomic, and separate from rendered results", async () => {
+  const indexHtml = await readUtf8("index.html");
+  const i18nSource = await readUtf8("i18n.js");
+  const scriptSource = await readUtf8("script.js");
+  const translations = parseTranslations(i18nSource);
+
+  const openingTags = [...indexHtml.matchAll(/<(?:div|p)\b[^>]*>/gi)].map((match) => ({
+    tag: match[0],
+    index: match.index
+  }));
+  const statusTag = openingTags.find(({ tag }) => readHtmlAttribute(tag, "id") === "projects-status");
+  const resultsTag = openingTags.find(({ tag }) => readHtmlAttribute(tag, "id") === "projects-container");
+
+  assert.ok(statusTag, "A pre-existing #projects-status element must be present");
+  assert.ok(resultsTag, "A separate #projects-container element must be present");
+  assert.equal(readHtmlAttribute(statusTag.tag, "role"), "status");
+  assert.equal(readHtmlAttribute(statusTag.tag, "aria-atomic"), "true");
+  assert.equal(readHtmlAttribute(statusTag.tag, "data-i18n"), "projects.loading");
+  assert.notEqual(
+    readHtmlAttribute(statusTag.tag, "data-i18n-dynamic"),
+    undefined,
+    "The script-managed status must avoid transient generic i18n announcements"
+  );
+  assert.ok(
+    statusTag.index < resultsTag.index,
+    "The dedicated status must be a sibling before the rendered catalogue"
+  );
+  assert.equal(readHtmlAttribute(resultsTag.tag, "aria-live"), undefined);
+  assert.equal(readHtmlAttribute(resultsTag.tag, "role"), undefined);
+  assert.equal(readHtmlAttribute(resultsTag.tag, "aria-busy"), "true");
+
+  const statusMarkup = indexHtml.slice(
+    statusTag.index,
+    indexHtml.indexOf("</p>", statusTag.index) + "</p>".length
+  );
+  assert.match(statusMarkup, /プロジェクトを読み込んでいます。/);
+  assert.doesNotMatch(statusMarkup, /projects-container|project-row/);
+
+  for (const language of ["ja", "en"]) {
+    assert.match(translations[language].projects.ready, /\{count\}/);
+    for (const state of ["loading", "ready", "error"]) {
+      assert.equal(
+        typeof translations[language].projects[state],
+        "string",
+        `${language} must provide concise ${state} project status copy`
+      );
+    }
+  }
+
+  assert.match(
+    i18nSource,
+    /querySelectorAll\("\[data-i18n\]:not\(\[data-i18n-dynamic\]\)"\)/,
+    "Generic translation updates must leave the stateful live status to script.js"
+  );
+
+  const statusKeys = vm.runInNewContext(
+    `(${extractObjectLiteral(scriptSource, "const projectStatusKeys =")})`,
+    Object.create(null),
+    { timeout: 1000 }
+  );
+  assert.deepEqual(
+    { ...statusKeys },
+    {
+      loading: "projects.loading",
+      ready: "projects.ready",
+      error: "projects.error"
+    }
+  );
+
+  const updateStatusBody = extractObjectLiteral(scriptSource, "function updateProjectStatus");
+  assert.match(updateStatusBody, /projectsStatus\.dataset\.i18n = translationKey/);
+  assert.match(updateStatusBody, /projectsStatus\.textContent = statusMessage/);
+  assert.match(updateStatusBody, /replace\("\{count\}", String\(projects\.length\)\)/);
+  assert.match(
+    updateStatusBody,
+    /projectsContainer\.setAttribute\("aria-busy", String\(state === "loading"\)\)/
+  );
+  assert.match(updateStatusBody, /projectsStatus\.classList\.toggle\("sr-only", isReady\)/);
+  assert.match(updateStatusBody, /projectsContainer\.classList\.toggle\("projects-list", isReady\)/);
+
+  const renderProjectsBody = extractObjectLiteral(scriptSource, "function renderProjects");
+  const renderLoadingBody = extractObjectLiteral(scriptSource, "function renderProjectLoading");
+  const renderErrorBody = extractObjectLiteral(scriptSource, "function renderProjectError");
+  const loadProjectsBody = extractObjectLiteral(scriptSource, "async function loadProjects");
+  assert.match(renderProjectsBody, /projectsContainer\.replaceChildren\(fragment\)/);
+  assert.match(renderProjectsBody, /updateProjectStatus\("ready"\)/);
+  assert.match(renderLoadingBody, /updateProjectStatus\("loading"\)/);
+  assert.match(renderLoadingBody, /projectsContainer\.replaceChildren\(\)/);
+  assert.match(renderErrorBody, /retry\.setAttribute\("aria-describedby", "projects-status"\)/);
+  assert.match(renderErrorBody, /updateProjectStatus\("error"\)/);
+  assert.ok(
+    loadProjectsBody.indexOf("renderProjectLoading()") < loadProjectsBody.indexOf('fetch("projects.json"'),
+    "Loading status and busy state must be restored before retrying the fetch"
+  );
+  assert.doesNotMatch(scriptSource, /setAttribute\("role", "status"\)/);
+
+  const languageChangeHandler = scriptSource.slice(
+    scriptSource.indexOf('document.addEventListener("site-languagechange"'),
+    scriptSource.indexOf("const observedSections", scriptSource.indexOf('document.addEventListener("site-languagechange"'))
+  );
+  assert.match(languageChangeHandler, /projectState === "ready"[\s\S]*renderProjects\(\)/);
+  assert.match(languageChangeHandler, /projectState === "error"[\s\S]*renderProjectError\(\)/);
+  assert.match(languageChangeHandler, /else[\s\S]*renderProjectLoading\(\)/);
+});
+
 test("i18n key parity, references, and Japanese static fallbacks are complete", async () => {
   const i18nSource = await readUtf8("i18n.js");
   const translations = parseTranslations(i18nSource);

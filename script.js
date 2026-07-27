@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const hamburgerMenu = requireElement("hamburger-menu");
   const navMenu = requireElement("nav-menu");
   const langToggle = requireElement("lang-toggle");
+  const projectsStatus = requireElement("projects-status");
   const projectsContainer = requireElement("projects-container");
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
   const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -27,6 +28,11 @@ document.addEventListener("DOMContentLoaded", () => {
   ].join(", ");
   let projects = null;
   let projectState = "loading";
+  const projectStatusKeys = {
+    loading: "projects.loading",
+    ready: "projects.ready",
+    error: "projects.error"
+  };
   const localizedProjectFields = ["title", "description", "kind", "action", "imageAlt"];
 
   function requireNonEmptyString(value, fieldName) {
@@ -430,6 +436,29 @@ document.addEventListener("DOMContentLoaded", () => {
       .forEach((row) => row.classList.remove("is-priming"));
   }
 
+  function updateProjectStatus(state) {
+    const translationKey = projectStatusKeys[state];
+    if (!translationKey) {
+      throw new RangeError(`Unsupported project state: ${state}`);
+    }
+
+    projectState = state;
+    const isReady = state === "ready";
+    projectsContainer.setAttribute("aria-busy", String(state === "loading"));
+    projectsContainer.classList.toggle("projects-list", isReady);
+    projectsStatus.classList.toggle("projects-list", !isReady);
+    projectsStatus.classList.toggle("sr-only", isReady);
+    projectsStatus.dataset.i18n = translationKey;
+
+    const translatedStatus = window.siteI18n.t(translationKey);
+    const statusMessage = isReady
+      ? translatedStatus.replace("{count}", String(projects.length))
+      : translatedStatus;
+    if (projectsStatus.textContent !== statusMessage) {
+      projectsStatus.textContent = statusMessage;
+    }
+  }
+
   function renderProjects() {
     if (!projects) {
       return;
@@ -507,8 +536,7 @@ document.addEventListener("DOMContentLoaded", () => {
     projectRows = [...projectsContainer.querySelectorAll(".project-row")];
     refreshScrollScenes();
     requestScrollMotionUpdate();
-    projectsContainer.setAttribute("aria-busy", "false");
-    projectState = "ready";
+    updateProjectStatus("ready");
 
     if (animateReveal) {
       const rows = [...projectsContainer.querySelectorAll(".project-row")];
@@ -527,29 +555,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderProjectLoading() {
-    const status = document.createElement("p");
-    status.className = "projects-status";
-    status.textContent = window.siteI18n.t("projects.loading");
-    projectsContainer.replaceChildren(status);
-    projectsContainer.setAttribute("aria-busy", "true");
+    updateProjectStatus("loading");
+    projectsContainer.replaceChildren();
   }
 
   function renderProjectError() {
     const wrapper = document.createElement("div");
-    const status = document.createElement("p");
     const retry = document.createElement("button");
 
-    status.className = "projects-status";
-    status.setAttribute("role", "status");
-    status.textContent = window.siteI18n.t("projects.error");
     retry.className = "retry-button";
     retry.type = "button";
+    retry.setAttribute("aria-describedby", "projects-status");
     retry.textContent = window.siteI18n.t("projects.retry");
     retry.addEventListener("click", loadProjects);
-    wrapper.append(status, retry);
+    wrapper.append(retry);
     projectsContainer.replaceChildren(wrapper);
-    projectsContainer.setAttribute("aria-busy", "false");
-    projectState = "error";
+    updateProjectStatus("error");
   }
 
   async function loadProjects() {
