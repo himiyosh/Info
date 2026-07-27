@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const projectsContainer = requireElement("projects-container");
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
   const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const projectPreviewMobileMedia = "(max-width: 47.999rem)";
   let prefersReducedMotion = motionQuery.matches;
   const supportsIntersectionObserver = "IntersectionObserver" in window;
   const menuFocusableSelector = [
@@ -354,7 +355,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function validateProject(project, index, seenLinks, seenImages) {
+  function validateLocalProjectAsset(project, index, fieldName, expectedExtension, seenAssets) {
+    const assetPath = requireNonEmptyString(
+      project[fieldName],
+      `Project ${index + 1} field "${fieldName}"`
+    );
+    const assetUrl = new URL(assetPath, window.location.href);
+    const assetsUrl = new URL("assets/", window.location.href);
+    if (
+      assetUrl.origin !== window.location.origin ||
+      !assetUrl.pathname.startsWith(assetsUrl.pathname) ||
+      assetUrl.search ||
+      assetUrl.hash
+    ) {
+      throw new TypeError(`Project ${index + 1} field "${fieldName}" must be a local assets path.`);
+    }
+    if (!assetUrl.pathname.toLocaleLowerCase("en-US").endsWith(expectedExtension)) {
+      throw new TypeError(
+        `Project ${index + 1} field "${fieldName}" must use ${expectedExtension}.`
+      );
+    }
+
+    const normalizedAsset = assetUrl.pathname;
+    if (seenAssets.has(normalizedAsset)) {
+      throw new TypeError(`Duplicate project asset detected: ${assetPath}`);
+    }
+    seenAssets.add(normalizedAsset);
+  }
+
+  function validateProject(project, index, seenLinks, seenAssets) {
     if (!project || typeof project !== "object") {
       throw new TypeError(`Project ${index + 1} must be an object.`);
     }
@@ -364,7 +393,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const projectLink = requireNonEmptyString(project.link, `Project ${index + 1} field "link"`);
-    const projectImage = requireNonEmptyString(project.image, `Project ${index + 1} field "image"`);
     const url = new URL(projectLink, window.location.href);
     if (!["http:", "https:"].includes(url.protocol)) {
       throw new TypeError(`Project ${index + 1} has an unsupported link protocol.`);
@@ -375,15 +403,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     seenLinks.add(normalizedLink);
 
-    const imageUrl = new URL(projectImage, window.location.href);
-    if (imageUrl.origin !== window.location.origin) {
-      throw new TypeError(`Project ${index + 1} preview must be a local asset.`);
-    }
-    const normalizedImage = `${imageUrl.pathname}${imageUrl.search}${imageUrl.hash}`;
-    if (seenImages.has(normalizedImage)) {
-      throw new TypeError(`Duplicate project image detected: ${projectImage}`);
-    }
-    seenImages.add(normalizedImage);
+    validateLocalProjectAsset(project, index, "image", ".jpg", seenAssets);
+    validateLocalProjectAsset(project, index, "mobileImageAvif", ".avif", seenAssets);
 
     if (Object.hasOwn(project, "stack")) {
       if (!Array.isArray(project.stack) || project.stack.length === 0) {
@@ -471,6 +492,8 @@ document.addEventListener("DOMContentLoaded", () => {
     projects.forEach((project, index) => {
       const article = document.createElement("article");
       const media = document.createElement("div");
+      const picture = document.createElement("picture");
+      const mobileSource = document.createElement("source");
       const image = document.createElement("img");
       const content = document.createElement("div");
       const headingGroup = document.createElement("div");
@@ -490,13 +513,18 @@ document.addEventListener("DOMContentLoaded", () => {
         article.classList.add("is-priming");
       }
       media.className = "project-media";
-      image.src = project.image;
+      mobileSource.type = "image/avif";
+      mobileSource.media = projectPreviewMobileMedia;
+      mobileSource.srcset = `${project.mobileImageAvif} 720w`;
+      mobileSource.sizes = "100vw";
       image.alt = localizedValue(project.imageAlt);
       image.width = 960;
       image.height = 540;
       image.loading = "lazy";
       image.decoding = "async";
-      media.append(image);
+      picture.append(mobileSource, image);
+      image.src = project.image;
+      media.append(picture);
       content.className = "project-content";
       headingGroup.className = "project-heading";
       title.textContent = localizedValue(project.title);
@@ -590,8 +618,8 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new TypeError("projects.json must contain a non-empty array.");
       }
       const seenLinks = new Set();
-      const seenImages = new Set();
-      data.forEach((project, index) => validateProject(project, index, seenLinks, seenImages));
+      const seenAssets = new Set();
+      data.forEach((project, index) => validateProject(project, index, seenLinks, seenAssets));
       projects = data;
       renderProjects();
     } catch (error) {
