@@ -33,14 +33,18 @@ Hallmark guides taste, not business logic. Never let it invent product claims, w
 
 ## Session hygiene
 
-- Start every human-readable session name created or renamed for this project with `ℹ️`, followed by a short descriptive title.
-- The canonical coordinator name is `ℹ️ YYYY-MM-DD 統括`; it is a compact control plane, not an implementation log, and alone has merge authority.
-- Split implementation into fresh task sessions: one bounded task, branch, and reviewable PR per session; keep no more than three active child tasks.
+- Reuse `ℹ️` for every human-readable session name in this project. The canonical coordinator name is `ℹ️ YYYY-MM-DD Info 統括 gN`, and each task child is named `ℹ️ YYYY-MM-DD Info <task>`.
+- Keep one logical coordinator generation active at a time. It is a compact control plane, not an implementation log, and alone has merge authority.
+- Keep task sessions attached as children of the current coordinator generation: one bounded task, branch, and reviewable PR per child, with no more than three active children.
+- Before creating a child, perform a bounded active-session lookup and reuse a compatible active child owned by the current coordinator. Never wake historical idle or unowned sessions merely to inspect or reuse them.
 - Each child report stays compact: outcome, branch/SHA/PR, changed files, validation, blockers, and cleanup readiness.
 - At meaningful milestones, record a compact recovery manifest/checkpoint.
-- After production verification, archive completed children and remove their merged branches.
+- Use the installed `autonomous-project-improvement`, `safe-session-suspend`, and `safe-session-resume` skills when their lifecycle is actually applicable instead of duplicating their procedures here.
 - When a coordinator creates the session, complete the requested PR and report its outcome, branch/SHA/PR, changed files, validation, blockers, and cleanup readiness.
 - Implementation child sessions never merge pull requests. The coordinator reviews and merges only after required checks and production gates.
+- After production verification, archive only terminal children owned by the current coordinator after their compact reports are durably recorded.
+- Delete a task branch only after its pull request is merged and its tip is verified reachable from `main`; also confirm it is not the default branch, is not protected, and has no open pull request, active worktree, or dependent stack relying on it.
+- Never delete unmerged work, force-push, rewrite history, or use destructive reset or clean operations.
 - Finish with a clean worktree and enough branch and PR information for the coordinator to delete the merged branch and archive the completed session.
 
 ## Delivery
