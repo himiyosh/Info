@@ -241,10 +241,6 @@ html:not(.js-enabled) .nav-menu {
   border-block-start: 2px solid var(--color-ink);
 }
 
-html:not(.js-enabled) .language-toggle {
-  display: none;
-}
-
 .js-enabled .nav-menu {
   position: fixed;
   inset-block-start: calc(4.75rem + var(--space-xs));

@@ -72,7 +72,6 @@ class FakeElement {
 }
 
 function createI18n() {
-  const listeners = new Map();
   const location = {
     href: "https://example.test/",
     pathname: "/",
@@ -93,11 +92,11 @@ function createI18n() {
     }
   };
   const document = {
-    documentElement: { lang: "ja" },
+    documentElement: { lang: "ja", dataset: { siteRoot: "" } },
     title: "",
     querySelectorAll: () => [],
     getElementById: () => null,
-    addEventListener: (type, listener) => listeners.set(type, listener),
+    addEventListener: () => {},
     dispatchEvent: () => {}
   };
 
@@ -114,7 +113,6 @@ function createI18n() {
       { window, document, URL, URLSearchParams, CustomEvent: FakeCustomEvent },
       { timeout: 1000 }
     );
-    listeners.get("DOMContentLoaded")();
     return window.siteI18n;
   });
 }
