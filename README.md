@@ -26,13 +26,15 @@
 
 ## Deployment
 - GitHub Pages is deployed by `.github/workflows/pages.yml` on pushes to `main` and manual `workflow_dispatch`.
+- Canonical project destinations are checked by `.github/workflows/external-link-health.yml` every Wednesday at a non-round UTC minute and on manual `workflow_dispatch`; the read-only job uses no secrets and does not run on pull requests.
 - The workflow publishes only the production artifact paths listed in `.github/pages-artifact-whitelist.txt` (site root files plus `assets/`) and does not publish repository-internal paths such as tests, workflows, or docs.
 - Workflow actions are pinned to immutable Node.js-24-compatible SHAs to avoid deprecated runtime warnings from GitHub-managed actions.
 
 ## Quality checks
-- `npm run check:js`: parse validation for `i18n.js` and `script.js`.
+- `npm run check:js`: parse validation for `i18n.js`, `script.js`, and the dependency-free external link checker.
+- `npm run check:links`: live validation of every `link`, `sourceLink`, and `proofLink` in `projects.json`, with bounded concurrency, timeouts, fallback requests, and one transient retry.
 - `npm run test:quality`: dependency-free regression suite for production content integrity.
-- `npm test`: full quality baseline (`check:js` + `test:quality`) including workflow pinning, least-privilege Pages permissions, and artifact whitelist coverage checks.
+- `npm test`: offline full quality baseline (`check:js` + `test:quality`) including workflow pinning, least-privilege permissions, external link workflow wiring, and artifact whitelist coverage checks; it never runs the live network check.
 
 ## Copilot
 - Primary project agent: `InfoAgent`
