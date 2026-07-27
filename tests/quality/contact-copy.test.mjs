@@ -43,11 +43,12 @@ function helperApi(source, windowOverrides = {}, documentOverrides = {}) {
 }
 
 class FakeElement {
-  constructor({ hidden = true } = {}) {
+  constructor({ hidden = true, ownerDocument = null } = {}) {
     this.attributes = new Map();
     this.dataset = {};
     this.hidden = hidden;
     this.listeners = new Map();
+    this.ownerDocument = ownerDocument;
     this.textHistory = [];
     this._textContent = "";
     this.focusCalls = 0;
@@ -80,6 +81,9 @@ class FakeElement {
 
   focus() {
     this.focusCalls += 1;
+    if (this.ownerDocument) {
+      this.ownerDocument.activeElement = this;
+    }
   }
 
   click() {
@@ -87,13 +91,24 @@ class FakeElement {
   }
 }
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((promiseResolve, promiseReject) => {
+    resolve = promiseResolve;
+    reject = promiseReject;
+  });
+  return { promise, reject, resolve };
+}
+
 function createControllerHarness(api, {
+  document = { activeElement: null },
   language = "ja",
   copyText = async () => true,
   selectAddress = () => false
 } = {}) {
-  const button = new FakeElement();
-  const status = new FakeElement();
+  const button = new FakeElement({ ownerDocument: document });
+  const status = new FakeElement({ ownerDocument: document });
   const scheduled = [];
   let currentLanguage = language;
   const translate = (key) =>
@@ -110,6 +125,7 @@ function createControllerHarness(api, {
   return {
     button,
     controller,
+    document,
     flush() {
       scheduled.splice(0).forEach((callback) => callback());
     },
@@ -173,12 +189,12 @@ test("copy activation writes only the canonical address, keeps focus, and re-ann
       return true;
     }
   });
-  const activeElement = harness.button;
 
   assert.equal(api.CONTACT_EMAIL_ADDRESS, canonicalEmail);
   assert.equal(harness.button.hidden, false);
   assert.equal(harness.status.hidden, false);
 
+  harness.button.focus();
   await harness.button.click();
   harness.flush();
   await harness.button.click();
@@ -193,13 +209,21 @@ test("copy activation writes only the canonical address, keeps focus, and re-ann
   );
   assert.equal(harness.button.dataset.copyState, "success");
   assert.equal(harness.button.getAttribute("aria-busy"), undefined);
-  assert.equal(harness.button.focusCalls, 0);
-  assert.equal(activeElement, harness.button);
+  assert.equal(harness.button.focusCalls, 1);
+  assert.equal(harness.document.activeElement, harness.button);
 });
 
 test("unavailable clipboard selects only the visible address and gives localized manual feedback", async () => {
   let clipboardCalls = 0;
   let selectedNode = null;
+  const browserDocument = {
+    activeElement: null,
+    createRange: () => ({
+      selectNodeContents(node) {
+        selectedNode = node;
+      }
+    })
+  };
   const selection = {
     addRange() {},
     removeAllRanges() {},
@@ -219,21 +243,17 @@ test("unavailable clipboard selects only the visible address and gives localized
       },
       getSelection: () => selection
     },
-    {
-      createRange: () => ({
-        selectNodeContents(node) {
-          selectedNode = node;
-        }
-      })
-    }
+    browserDocument
   );
   const addressElement = { textContent: canonicalEmail };
   const harness = createControllerHarness(api, {
+    document: browserDocument,
     copyText: api.writeContactEmailToClipboard,
     selectAddress: () =>
       api.selectContactEmailForManualCopy(addressElement, canonicalEmail)
   });
 
+  harness.button.focus();
   await harness.button.click();
   harness.flush();
 
@@ -241,6 +261,51 @@ test("unavailable clipboard selects only the visible address and gives localized
   assert.equal(selectedNode, addressElement);
   assert.equal(harness.status.textContent, translations.ja.contact.copyManualSelected);
   assert.equal(harness.button.dataset.copyState, "error");
+  assert.equal(harness.document.activeElement, harness.button);
+});
+
+test("overlapping copy activations ignore an older rejection after the latest success", async () => {
+  const script = await readUtf8("script.js");
+  const api = helperApi(script);
+  const firstClipboardWrite = deferred();
+  const secondClipboardWrite = deferred();
+  const clipboardWrites = [firstClipboardWrite, secondClipboardWrite];
+  let manualSelectionCalls = 0;
+  const harness = createControllerHarness(api, {
+    copyText: () => clipboardWrites.shift().promise,
+    selectAddress: () => {
+      manualSelectionCalls += 1;
+      return true;
+    }
+  });
+
+  harness.button.focus();
+  const firstActivation = harness.button.click();
+  const secondActivation = harness.button.click();
+  assert.equal(clipboardWrites.length, 0);
+  assert.equal(harness.button.dataset.copyState, "loading");
+  assert.equal(harness.button.getAttribute("aria-busy"), "true");
+
+  secondClipboardWrite.resolve(true);
+  await secondActivation;
+  harness.flush();
+  assert.equal(harness.status.textContent, translations.ja.contact.copySuccess);
+  assert.equal(harness.button.dataset.copyState, "success");
+
+  firstClipboardWrite.reject(new Error("stale clipboard rejection"));
+  await firstActivation;
+  harness.flush();
+
+  assert.equal(harness.status.textContent, translations.ja.contact.copySuccess);
+  assert.equal(harness.button.dataset.copyState, "success");
+  assert.equal(harness.button.getAttribute("aria-busy"), undefined);
+  assert.equal(manualSelectionCalls, 0);
+  assert.equal(
+    harness.status.textHistory.filter((value) => value === translations.ja.contact.copySuccess)
+      .length,
+    1
+  );
+  assert.equal(harness.document.activeElement, harness.button);
 });
 
 test("clipboard rejection surfaces failure without exception text and keeps the manual mailto path", async () => {
