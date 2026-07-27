@@ -85,8 +85,26 @@ test("collectProjectLinks collects every canonical external URL with its slug an
     await readFile(path.join(repoRoot, "projects.json"), "utf8")
   );
   const canonicalLinks = collectProjectLinks(canonicalProjects);
-  assert.equal(canonicalLinks.length, 21);
-  assert.equal(new Set(canonicalLinks.map(({ url }) => url)).size, 21);
+  assert.equal(canonicalLinks.length, 23);
+  assert.equal(new Set(canonicalLinks.map(({ url }) => url)).size, 23);
+  assert.deepEqual(
+    canonicalLinks.filter(
+      ({ slug, field }) =>
+        field === "proofLink" && ["url-decoder", "image-resizer"].includes(slug)
+    ),
+    [
+      {
+        slug: "url-decoder",
+        field: "proofLink",
+        url: "https://github.com/himiyosh/URLDecoder/blob/fa686afa5196dd7dc9432c7ab916d5376dc69954/index.html#L108-L126"
+      },
+      {
+        slug: "image-resizer",
+        field: "proofLink",
+        url: "https://github.com/himiyosh/ImageResizer/blob/f79765b06964bc1918dad7222f1c657d5d0312ca/index.html#L48-L84"
+      }
+    ]
+  );
 });
 
 test("successful HEAD checks use redirects, a clear user agent, and injected timers", async () => {
