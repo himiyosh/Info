@@ -896,7 +896,10 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
         "contact",
         "main-content"
       ]),
-      window: { location: new URL("https://example.test/") }
+      window: {
+        location: new URL("https://example.test/"),
+        siteI18n: { resolveSitePath: (relativePath) => relativePath }
+      }
     },
     { timeout: 1000 }
   );
@@ -1267,14 +1270,14 @@ test("project rendering emits mutually exclusive AVIF sources before lazy JPEG f
   assert.match(renderProjectsBody, /desktopSource\.media = projectPreviewDesktopMedia/);
   assert.match(
     renderProjectsBody,
-    /desktopSource\.srcset = `\$\{project\.desktopImageAvif\} 960w`/
+    /desktopSource\.srcset = `\$\{window\.siteI18n\.resolveSitePath\(project\.desktopImageAvif\)\} 960w`/
   );
   assert.match(renderProjectsBody, /desktopSource\.sizes = "60vw"/);
   assert.match(renderProjectsBody, /mobileSource\.type = "image\/avif"/);
   assert.match(renderProjectsBody, /mobileSource\.media = projectPreviewMobileMedia/);
   assert.match(
     renderProjectsBody,
-    /mobileSource\.srcset = `\$\{project\.mobileImageAvif\} 720w`/
+    /mobileSource\.srcset = `\$\{window\.siteI18n\.resolveSitePath\(project\.mobileImageAvif\)\} 720w`/
   );
   assert.match(renderProjectsBody, /mobileSource\.sizes = "100vw"/);
   assert.match(
@@ -1289,16 +1292,19 @@ test("project rendering emits mutually exclusive AVIF sources before lazy JPEG f
   );
   assert.ok(
     renderProjectsBody.indexOf("picture.append(desktopSource, mobileSource, image)") <
-      renderProjectsBody.indexOf("image.src = project.image"),
+      renderProjectsBody.indexOf("image.src = window.siteI18n.resolveSitePath(project.image)"),
     "Both AVIF choices must join picture before src assignment to avoid a duplicate JPEG download"
   );
   assert.ok(
     renderProjectsBody.indexOf("media.append(picture)") <
-      renderProjectsBody.indexOf("image.src = project.image"),
+      renderProjectsBody.indexOf("image.src = window.siteI18n.resolveSitePath(project.image)"),
     "The completed picture must join its disconnected media container before fallback src assignment"
   );
 
-  assert.match(renderProjectsBody, /image\.src = project\.image/);
+  assert.match(
+    renderProjectsBody,
+    /image\.src = window\.siteI18n\.resolveSitePath\(project\.image\)/
+  );
   assert.match(renderProjectsBody, /image\.alt = localizedValue\(project\.imageAlt\)/);
   assert.match(renderProjectsBody, /image\.width = 960/);
   assert.match(renderProjectsBody, /image\.height = 540/);
@@ -1402,7 +1408,8 @@ test("project catalogue status stays concise, atomic, and separate from rendered
   assert.match(renderErrorBody, /retry\.setAttribute\("aria-describedby", "projects-status"\)/);
   assert.match(renderErrorBody, /updateProjectStatus\("error"\)/);
   assert.ok(
-    loadProjectsBody.indexOf("renderProjectLoading()") < loadProjectsBody.indexOf('fetch("projects.json"'),
+    loadProjectsBody.indexOf("renderProjectLoading()") <
+      loadProjectsBody.indexOf('fetch(window.siteI18n.resolveSitePath("projects.json")'),
     "Loading status and busy state must be restored before retrying the fetch"
   );
   assert.doesNotMatch(scriptSource, /setAttribute\("role", "status"\)/);
@@ -1521,14 +1528,12 @@ test("protected Japanese phrase boundaries match between static and translated c
   const expectedAbout =
     "某グローバルIT企業で、テクノロジー領域の課題解決に取り組\u2060んでいます。役に立つ知識や技術を見つけ、試し、分かりやすい形にすることが好きです。";
 
-  assert.match(
-    indexHtml,
-    /課題を解き、学びを分かち合う。好奇心を実用へつなぐ、himiyosh&nbsp;のポートフォリオです。/,
+  assert.ok(
+    indexHtml.includes(expectedHero),
     "Static hero copy must protect the himiyosh の boundary with an NBSP"
   );
-  assert.match(
-    indexHtml,
-    /取り組&#8288;んでいます/,
+  assert.ok(
+    indexHtml.includes(expectedAbout),
     "Static About copy must protect the observed Japanese phrase boundary with a word joiner"
   );
   assert.equal(
@@ -1598,13 +1603,13 @@ test("required SEO and social metadata exist and are consistent", async () => {
   const alternateMap = new Map(alternateLinks.map(([, language, href]) => [language, href]));
   assert.equal(
     alternateMap.get("ja"),
-    "https://himiyosh.github.io/Info/?lang=ja",
-    'hreflang="ja" URL must match the Japanese query URL'
+    "https://himiyosh.github.io/Info/",
+    'hreflang="ja" URL must match the Japanese stable route'
   );
   assert.equal(
     alternateMap.get("en"),
-    "https://himiyosh.github.io/Info/?lang=en",
-    'hreflang="en" URL must match the English query URL'
+    "https://himiyosh.github.io/Info/en/",
+    'hreflang="en" URL must match the English stable route'
   );
   assert.equal(
     alternateMap.get("x-default"),
@@ -1869,8 +1874,14 @@ test("all referenced local files exist", async () => {
   }
 
   for (const localReference of localReferences) {
-    const fileStats = await stat(path.join(repoRoot, localReference));
-    assert.ok(fileStats.isFile(), `Missing referenced local file: ${localReference}`);
+    const localPath = path.join(repoRoot, localReference);
+    const fileStats = await stat(localPath);
+    if (fileStats.isDirectory()) {
+      const routeIndex = await stat(path.join(localPath, "index.html"));
+      assert.ok(routeIndex.isFile(), `Missing route index: ${localReference}index.html`);
+    } else {
+      assert.ok(fileStats.isFile(), `Missing referenced local file: ${localReference}`);
+    }
   }
 });
 
@@ -1955,10 +1966,15 @@ test("Pages workflow keeps least-privilege permissions and artifact-only deploym
     /uses:\s*actions\/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d/,
     "Build job must not run configure-pages"
   );
-  assert.doesNotMatch(
+  assert.match(
     buildBlock[1],
     /uses:\s*actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020/,
-    "Build job must not run setup-node for shell-only artifact assembly"
+    "Build job must pin Node before checking generated pages"
+  );
+  assert.match(
+    buildBlock[1],
+    /name:\s*Verify generated static pages[\s\S]*run:\s*npm run check:generated/,
+    "Build job must reject generated-page drift before artifact assembly"
   );
 
   assert.match(
@@ -1981,6 +1997,7 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
   const whitelistSet = new Set(whitelistEntries);
   const expectedWhitelist = new Set([
     "index.html",
+    "en",
     "tokens.css",
     "styles.css",
     "modern.css",
@@ -2028,7 +2045,15 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
     );
   }
 
-  const forbiddenEntries = [".github", "tests", "README.md", "PRODUCT.md", "package.json"];
+  const forbiddenEntries = [
+    ".github",
+    "templates",
+    "scripts",
+    "tests",
+    "README.md",
+    "PRODUCT.md",
+    "package.json"
+  ];
   for (const forbiddenEntry of forbiddenEntries) {
     assert.ok(
       !whitelistSet.has(forbiddenEntry),

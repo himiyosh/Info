@@ -1,6 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
   "use strict";
 
+  if (window.siteI18n.redirecting) {
+    return;
+  }
+
   function requireElement(id) {
     const element = document.getElementById(id);
     if (!element) {
@@ -191,7 +195,21 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   mobileNavigation.addEventListener("change", syncNavigationMode);
-  langToggle.addEventListener("click", () => window.siteI18n.toggle());
+  langToggle.addEventListener("click", (event) => {
+    const destination = window.siteI18n.prepareAlternateNavigation();
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    window.location.assign(destination);
+  });
   syncNavigationMode();
 
   // --- Motion: one shared viewport-scene lifecycle -------------------
@@ -417,8 +435,11 @@ document.addEventListener("DOMContentLoaded", () => {
       project[fieldName],
       `Project ${index + 1} field "${fieldName}"`
     );
-    const assetUrl = new URL(assetPath, window.location.href);
-    const assetsUrl = new URL("assets/", window.location.href);
+    const assetUrl = new URL(window.siteI18n.resolveSitePath(assetPath), window.location.href);
+    const assetsUrl = new URL(
+      window.siteI18n.resolveSitePath("assets/"),
+      window.location.href
+    );
     if (
       assetUrl.origin !== window.location.origin ||
       !assetUrl.pathname.startsWith(assetsUrl.pathname) ||
@@ -766,10 +787,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     event.preventDefault();
-    window.siteI18n.rememberInHistory();
     if (window.location.hash !== hash) {
       window.history.pushState(window.history.state, "", hash);
     }
+    window.siteI18n.rememberInHistory();
     scheduleProjectFragmentFocus(hash);
   }
 
@@ -881,11 +902,11 @@ document.addEventListener("DOMContentLoaded", () => {
       media.className = "project-media";
       desktopSource.type = "image/avif";
       desktopSource.media = projectPreviewDesktopMedia;
-      desktopSource.srcset = `${project.desktopImageAvif} 960w`;
+      desktopSource.srcset = `${window.siteI18n.resolveSitePath(project.desktopImageAvif)} 960w`;
       desktopSource.sizes = "60vw";
       mobileSource.type = "image/avif";
       mobileSource.media = projectPreviewMobileMedia;
-      mobileSource.srcset = `${project.mobileImageAvif} 720w`;
+      mobileSource.srcset = `${window.siteI18n.resolveSitePath(project.mobileImageAvif)} 720w`;
       mobileSource.sizes = "100vw";
       image.alt = localizedValue(project.imageAlt);
       image.width = 960;
@@ -894,7 +915,7 @@ document.addEventListener("DOMContentLoaded", () => {
       image.decoding = "async";
       picture.append(desktopSource, mobileSource, image);
       media.append(picture);
-      image.src = project.image;
+      image.src = window.siteI18n.resolveSitePath(project.image);
       content.className = "project-content";
       headingGroup.className = "project-heading";
       headingLine.className = "project-heading-line";
@@ -1014,7 +1035,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderProjectLoading();
 
     try {
-      const response = await fetch("projects.json", {
+      const response = await fetch(window.siteI18n.resolveSitePath("projects.json"), {
         headers: { Accept: "application/json" }
       });
       if (!response.ok) {
@@ -1061,6 +1082,7 @@ document.addEventListener("DOMContentLoaded", () => {
   projectsContainer.addEventListener("click", handleProjectPermalinkClick);
   window.addEventListener("hashchange", handleProjectHashChange);
   window.addEventListener("popstate", handleProjectHistoryChange);
+  window.addEventListener("pageshow", () => scheduleProjectFragmentFocus());
 
   const observedSections = [...document.querySelectorAll("main section[id]")];
   const navigationLinks = [...navMenu.querySelectorAll('a[href^="#"]')];

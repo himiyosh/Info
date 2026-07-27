@@ -352,6 +352,11 @@ test("project fragment focus handles cold render, click history, back-forward, a
     1,
     "History entries that also change language must use one popstate listener"
   );
+  assert.match(
+    scriptSource,
+    /window\.addEventListener\("pageshow", \(\) => scheduleProjectFragmentFocus\(\)\)/,
+    "Cross-document back-forward restoration must reapply the project focus contract"
+  );
 });
 
 test("language rerenders preserve the fragment and project focus contract", async () => {
@@ -367,17 +372,17 @@ test("language rerenders preserve the fragment and project focus contract", asyn
     "function renderProjects",
     "function renderProjectLoading"
   );
-  const updateLanguageUrl = sourceBetween(
+  const stableLanguageUrl = sourceBetween(
     i18nSource,
-    "function updateLanguageUrl",
-    "function updateTextContent"
+    "function stableLanguageUrl",
+    "function resolveSitePath"
   );
 
   assert.match(languageHandler, /projectState === "ready"[\s\S]*renderProjects\(\)/);
   assert.match(renderSource, /scheduleProjectFragmentFocus\(\);\s*\}/);
   assert.match(
-    updateLanguageUrl,
-    /`\$\{url\.pathname\}\$\{url\.search\}\$\{url\.hash\}`/
+    stableLanguageUrl,
+    /target\.searchParams\.delete\("lang"\)[\s\S]*target\.hash = source\.hash/
   );
   assert.doesNotMatch(languageHandler, /location\.hash\s*=|pushState/);
   assert.match(
@@ -390,95 +395,129 @@ test("language rerenders preserve the fragment and project focus contract", asyn
   );
 });
 
-test("history traversal restores each permalink entry's language without changing its hash", async () => {
+test("stable routes normalize legacy language bookmarks and preserve project hashes", async () => {
   const i18nSource = await readUtf8("i18n.js");
-  const listeners = new Map();
-  const languageEvents = [];
-  let currentUrl = new URL("https://example.test/?lang=en#project-techdb");
-  const location = {};
-  const syncLocation = (url) => {
-    currentUrl = new URL(url, currentUrl);
-    for (const property of ["href", "pathname", "search", "hash"]) {
-      location[property] = currentUrl[property];
-    }
-  };
-  syncLocation(currentUrl);
-
-  const history = {
-    state: null,
-    replaceState(state, _title, url) {
-      this.state = state;
-      syncLocation(url);
-    }
-  };
-  const document = {
-    documentElement: { lang: "ja" },
-    title: "",
-    querySelectorAll: () => [],
-    getElementById: () => null,
-    addEventListener: (type, listener) => listeners.set(type, listener),
-    dispatchEvent: (event) => languageEvents.push(event)
-  };
   class FakeCustomEvent {
     constructor(type, options) {
       this.type = type;
       this.detail = options?.detail;
     }
   }
-  const window = {
-    location,
-    history,
-    localStorage: {
-      getItem: () => null,
-      setItem: () => {}
+
+  function executeI18n({ url, language, siteRoot, storedLanguage = null }) {
+    let currentUrl = new URL(url);
+    const replacements = [];
+    const storedWrites = [];
+    const toggleAttributes = new Map();
+    const location = {
+      replace(nextUrl) {
+        replacements.push(String(nextUrl));
+        syncLocation(nextUrl);
+      },
+      assign(nextUrl) {
+        syncLocation(nextUrl);
+      }
+    };
+    function syncLocation(nextUrl) {
+      currentUrl = new URL(nextUrl, currentUrl);
+      for (const property of ["href", "pathname", "search", "hash"]) {
+        location[property] = currentUrl[property];
+      }
     }
-  };
+    syncLocation(currentUrl);
 
-  vm.runInNewContext(
-    i18nSource,
-    {
-      window,
-      document,
-      URL,
-      URLSearchParams,
-      CustomEvent: FakeCustomEvent,
-      console
-    },
-    { timeout: 1000 }
+    const history = {
+      state: null,
+      replaceState(state, _title, nextUrl) {
+        this.state = state;
+        syncLocation(nextUrl);
+      }
+    };
+    const toggleLabel = {
+      setAttribute(name, value) {
+        toggleAttributes.set(`label:${name}`, String(value));
+      }
+    };
+    const toggle = {
+      querySelector: (selector) =>
+        selector === "[data-language-label]" ? toggleLabel : null,
+      setAttribute(name, value) {
+        toggleAttributes.set(name, String(value));
+      }
+    };
+    const document = {
+      documentElement: { lang: language, dataset: { siteRoot } },
+      title: "",
+      querySelectorAll: () => [],
+      getElementById: (id) => (id === "lang-toggle" ? toggle : null),
+      dispatchEvent: () => {}
+    };
+    const window = {
+      location,
+      history,
+      localStorage: {
+        getItem: () => storedLanguage,
+        setItem: (key, value) => storedWrites.push([key, value])
+      }
+    };
+
+    vm.runInNewContext(
+      i18nSource,
+      { window, document, URL, URLSearchParams, CustomEvent: FakeCustomEvent, console },
+      { timeout: 1000 }
+    );
+    return { document, history, location, replacements, storedWrites, toggleAttributes, window };
+  }
+
+  const legacy = executeI18n({
+    url: "https://example.test/?lang=en#project-techdb",
+    language: "ja",
+    siteRoot: ""
+  });
+  assert.deepEqual(legacy.replacements, ["https://example.test/en/#project-techdb"]);
+  assert.equal(legacy.window.siteI18n.redirecting, true);
+  assert.deepEqual(legacy.storedWrites.at(-1), ["info-language", "en"]);
+
+  const english = executeI18n({
+    url: "https://example.test/en/#project-techdb",
+    language: "en",
+    siteRoot: "../",
+    storedLanguage: "ja"
+  });
+  assert.equal(english.window.siteI18n.language, "en");
+  assert.equal(english.history.state.infoLanguage, "en");
+  assert.equal(english.location.hash, "#project-techdb");
+  assert.equal(
+    english.toggleAttributes.get("href"),
+    "https://example.test/#project-techdb"
   );
-  listeners.get("DOMContentLoaded")();
-  assert.equal(window.siteI18n.language, "en");
-  assert.equal(history.state.infoLanguage, "en");
-  assert.equal(location.hash, "#project-techdb");
+  assert.equal(
+    english.window.siteI18n.prepareAlternateNavigation(),
+    "https://example.test/#project-techdb"
+  );
+  assert.deepEqual(english.storedWrites.at(-1), ["info-language", "ja"]);
+  assert.equal(english.toggleAttributes.get("label:lang"), "ja");
 
-  window.siteI18n.toggle();
-  assert.equal(window.siteI18n.language, "ja");
-  assert.equal(history.state.infoLanguage, "ja");
-  assert.equal(location.search, "");
-  assert.equal(location.hash, "#project-techdb");
+  english.location.hash = "#project-portfolio";
+  english.location.href = "https://example.test/en/#project-portfolio";
+  english.window.siteI18n.rememberInHistory();
+  assert.equal(
+    english.toggleAttributes.get("href"),
+    "https://example.test/#project-portfolio"
+  );
 
-  history.state = null;
-  syncLocation("https://example.test/#projects");
-  window.siteI18n.rememberInHistory();
-  assert.equal(history.state.infoLanguage, "ja");
-  assert.equal(location.hash, "#projects");
-
-  syncLocation("https://example.test/?lang=en#project-portfolio");
-  assert.equal(window.siteI18n.syncFromHistory({ infoLanguage: "en" }), true);
-  assert.equal(window.siteI18n.language, "en");
-  assert.equal(history.state.infoLanguage, "en");
-  assert.equal(location.search, "?lang=en");
-  assert.equal(location.hash, "#project-portfolio");
-
-  const eventCount = languageEvents.length;
-  assert.equal(window.siteI18n.syncFromHistory({ infoLanguage: "en" }), false);
-  assert.equal(languageEvents.length, eventCount);
-
-  syncLocation("https://example.test/#project-jojo-git");
-  assert.equal(window.siteI18n.syncFromHistory({ infoLanguage: "ja" }), true);
-  assert.equal(window.siteI18n.language, "ja");
-  assert.equal(location.search, "");
-  assert.equal(location.hash, "#project-jojo-git");
+  const storedPreference = executeI18n({
+    url: "https://example.test/#project-portfolio",
+    language: "ja",
+    siteRoot: "",
+    storedLanguage: "en"
+  });
+  assert.equal(storedPreference.window.siteI18n.language, "ja");
+  assert.equal(storedPreference.replacements.length, 0);
+  assert.equal(
+    storedPreference.toggleAttributes.get("href"),
+    "https://example.test/en/#project-portfolio"
+  );
 });
 
 test("permalink and target styles preserve focus, touch size, and responsive overflow", async () => {

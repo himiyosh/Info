@@ -28,7 +28,8 @@
         contact: "Contact",
         openMenu: "ナビゲーションを開く",
         closeMenu: "ナビゲーションを閉じる",
-        switchLanguage: "EN（英語に切り替える）"
+        switchLanguage: "EN（英語に切り替える）",
+        toggleShort: "EN"
       },
       hero: {
         role: "Engineer / Rookie Dad",
@@ -53,6 +54,7 @@
         title: "Projects",
         intro: "日々の不便を小さくするために作った、公開中のサイト、サービス、ツールです。",
         directoryLabel: "プロジェクト一覧",
+        fallback: "JavaScript なしでも公開プロジェクトへ直接アクセスできます",
         loading: "プロジェクトを読み込んでいます。",
         ready: "{count}件のプロジェクトを表示しました。",
         error: "プロジェクトを読み込めませんでした。通信状況を確認して、もう一度お試しください。",
@@ -94,7 +96,8 @@
         contact: "Contact",
         openMenu: "Open navigation",
         closeMenu: "Close navigation",
-        switchLanguage: "JP (Switch to Japanese)"
+        switchLanguage: "JP (Switch to Japanese)",
+        toggleShort: "JP"
       },
       hero: {
         role: "Engineer / Rookie Dad",
@@ -119,6 +122,7 @@
         title: "Projects",
         intro: "Public sites, services, and tools built to make small, everyday tasks a little easier.",
         directoryLabel: "Project directory",
+        fallback: "Direct links to public projects:",
         loading: "Loading projects.",
         ready: "{count} projects loaded.",
         error: "Projects could not be loaded. Check your connection and try again.",
@@ -162,21 +166,23 @@
     return key;
   }
 
-  function readStoredLanguage() {
-    const urlLanguage = new URLSearchParams(window.location.search).get("lang");
-    if (SUPPORTED_LANGUAGES.has(urlLanguage)) {
-      return urlLanguage;
-    }
+  if (
+    typeof window === "undefined" &&
+    typeof module !== "undefined" &&
+    module.exports
+  ) {
+    module.exports = {
+      DEFAULT_LANGUAGE,
+      SUPPORTED_LANGUAGES,
+      getTranslation,
+      translations
+    };
+    return;
+  }
 
-    try {
-      const storedLanguage = window.localStorage.getItem(STORAGE_KEY);
-      return SUPPORTED_LANGUAGES.has(storedLanguage)
-        ? storedLanguage
-        : DEFAULT_LANGUAGE;
-    } catch (error) {
-      console.warn("Language preference could not be read:", error);
-      return DEFAULT_LANGUAGE;
-    }
+  function readRouteLanguage() {
+    const routeLanguage = document.documentElement.lang.toLocaleLowerCase("en-US");
+    return SUPPORTED_LANGUAGES.has(routeLanguage) ? routeLanguage : DEFAULT_LANGUAGE;
   }
 
   function persistLanguage(language) {
@@ -187,57 +193,113 @@
     }
   }
 
-  function updateLanguageUrl(language) {
-    const url = new URL(window.location.href);
-    if (language === DEFAULT_LANGUAGE) {
-      url.searchParams.delete("lang");
-    } else {
-      url.searchParams.set("lang", language);
+  function siteRootUrl(sourceUrl = window.location.href) {
+    return new URL(document.documentElement.dataset.siteRoot || ".", sourceUrl);
+  }
+
+  function stableLanguageUrl(language, sourceUrl = window.location.href) {
+    if (!SUPPORTED_LANGUAGES.has(language)) {
+      throw new RangeError(`Unsupported language: ${language}`);
     }
+
+    const source = new URL(sourceUrl);
+    const root = siteRootUrl(source);
+    const target = new URL(language === DEFAULT_LANGUAGE ? "." : "en/", root);
+    target.search = source.search;
+    target.searchParams.delete("lang");
+    target.hash = source.hash;
+    return target;
+  }
+
+  function resolveSitePath(relativePath) {
+    if (
+      typeof relativePath !== "string" ||
+      relativePath === "" ||
+      /^(?:[a-z][a-z\d+.-]*:|\/\/|\/|#)/i.test(relativePath)
+    ) {
+      throw new TypeError("Site paths must be non-empty relative paths.");
+    }
+    return `${document.documentElement.dataset.siteRoot || ""}${relativePath}`;
+  }
+
+  function historyState(language) {
+    return {
+      ...(window.history.state && typeof window.history.state === "object"
+        ? window.history.state
+        : {}),
+      [HISTORY_LANGUAGE_KEY]: language
+    };
+  }
+
+  function replaceHistoryUrl(language, url) {
     window.history.replaceState(
-      {
-        ...(window.history.state && typeof window.history.state === "object"
-          ? window.history.state
-          : {}),
-        [HISTORY_LANGUAGE_KEY]: language
-      },
+      historyState(language),
       "",
       `${url.pathname}${url.search}${url.hash}`
     );
   }
 
   function updateLanguageHistoryState(language) {
-    window.history.replaceState(
-      {
-        ...(window.history.state && typeof window.history.state === "object"
-          ? window.history.state
-          : {}),
-        [HISTORY_LANGUAGE_KEY]: language
-      },
-      "",
-      `${window.location.pathname}${window.location.search}${window.location.hash}`
-    );
+    replaceHistoryUrl(language, new URL(window.location.href));
   }
 
-  function syncLanguageFromHistory(state) {
-    const stateLanguage =
-      state && typeof state === "object" ? state[HISTORY_LANGUAGE_KEY] : null;
-    const urlLanguage = new URLSearchParams(window.location.search).get("lang");
-    const language = SUPPORTED_LANGUAGES.has(stateLanguage)
-      ? stateLanguage
-      : SUPPORTED_LANGUAGES.has(urlLanguage)
-        ? urlLanguage
-        : currentLanguage;
-    if (language === currentLanguage) {
+  function alternateLanguage() {
+    return currentLanguage === DEFAULT_LANGUAGE ? "en" : DEFAULT_LANGUAGE;
+  }
+
+  function updateLanguageLink() {
+    const toggle = document.getElementById("lang-toggle");
+    if (!toggle) {
+      return;
+    }
+
+    const language = alternateLanguage();
+    const label = toggle.querySelector("[data-language-label]");
+    toggle.setAttribute("href", stableLanguageUrl(language).href);
+    toggle.setAttribute("hreflang", language);
+    label?.setAttribute("lang", language);
+  }
+
+  function prepareAlternateNavigation() {
+    const language = alternateLanguage();
+    persistLanguage(language);
+    updateLanguageLink();
+    return stableLanguageUrl(language).href;
+  }
+
+  function normalizeLegacyLanguageQuery() {
+    const source = new URL(window.location.href);
+    const queryLanguage = source.searchParams.get("lang");
+    if (!SUPPORTED_LANGUAGES.has(queryLanguage)) {
       return false;
     }
 
-    setLanguage(language, { persist: false });
-    return true;
+    const target = stableLanguageUrl(queryLanguage, source);
+    persistLanguage(queryLanguage);
+    if (target.pathname !== source.pathname) {
+      window.location.replace(target.href);
+      return true;
+    }
+
+    replaceHistoryUrl(queryLanguage, target);
+    return false;
+  }
+
+  function syncLanguageFromHistory() {
+    const routeLanguage = readRouteLanguage();
+    if (routeLanguage !== currentLanguage) {
+      setLanguage(routeLanguage, { persist: false });
+      return true;
+    }
+
+    updateLanguageHistoryState(currentLanguage);
+    updateLanguageLink();
+    return false;
   }
 
   function rememberLanguageInHistory() {
     updateLanguageHistoryState(currentLanguage);
+    updateLanguageLink();
   }
 
   function updateTextContent() {
@@ -279,21 +341,11 @@
       "aria-label"
     );
 
-    const toggle = document.getElementById("lang-toggle");
-    if (toggle) {
-      toggle.textContent = language === "ja" ? "EN" : "JP";
-      toggle.setAttribute(
-        "aria-label",
-        getTranslation(language, "nav.switchLanguage")
-      );
-    }
-
     if (persist) {
       persistLanguage(language);
-      updateLanguageUrl(language);
-    } else {
-      updateLanguageHistoryState(language);
     }
+    updateLanguageHistoryState(language);
+    updateLanguageLink();
     if (typeof window.updateNavigationLabel === "function") {
       window.updateNavigationLabel();
     }
@@ -315,12 +367,20 @@
     },
     setLanguage,
     syncFromHistory: syncLanguageFromHistory,
+    prepareAlternateNavigation,
+    resolveSitePath,
+    stableUrl(language) {
+      return stableLanguageUrl(language).href;
+    },
     toggle() {
-      setLanguage(currentLanguage === "ja" ? "en" : "ja");
+      window.location.assign(prepareAlternateNavigation());
     }
   };
 
-  document.addEventListener("DOMContentLoaded", () => {
-    setLanguage(readStoredLanguage(), { persist: false });
-  });
+  currentLanguage = readRouteLanguage();
+  const redirecting = normalizeLegacyLanguageQuery();
+  window.siteI18n.redirecting = redirecting;
+  if (!redirecting) {
+    setLanguage(currentLanguage);
+  }
 })();
