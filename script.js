@@ -1,6 +1,122 @@
-document.addEventListener("DOMContentLoaded", () => {
-  "use strict";
+"use strict";
 
+const CONTACT_EMAIL_ADDRESS = "himiyosh@gmail.com";
+const CONTACT_COPY_STATUS_KEYS = Object.freeze({
+  success: "contact.copySuccess",
+  manualSelected: "contact.copyManualSelected",
+  failure: "contact.copyFailure"
+});
+
+async function writeContactEmailToClipboard(address) {
+  if (
+    window.isSecureContext !== true ||
+    typeof window.navigator?.clipboard?.writeText !== "function"
+  ) {
+    return false;
+  }
+
+  await window.navigator.clipboard.writeText(address);
+  return true;
+}
+
+function selectContactEmailForManualCopy(element, address) {
+  if (
+    typeof document.createRange !== "function" ||
+    typeof window.getSelection !== "function"
+  ) {
+    return false;
+  }
+
+  const selection = window.getSelection();
+  if (!selection) {
+    return false;
+  }
+
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  return selection.toString().trim() === address;
+}
+
+function createContactEmailCopyController({
+  address,
+  button,
+  status,
+  copyText,
+  selectAddress,
+  translate,
+  schedule
+}) {
+  let operation = 0;
+
+  function reset() {
+    operation += 1;
+    button.dataset.copyState = "idle";
+    button.removeAttribute("aria-busy");
+    status.dataset.state = "idle";
+    status.textContent = "";
+  }
+
+  function announce(key, state, activeOperation) {
+    button.dataset.copyState = state;
+    button.removeAttribute("aria-busy");
+    status.dataset.state = state;
+    status.textContent = "";
+    schedule(() => {
+      if (activeOperation === operation) {
+        status.textContent = translate(key);
+      }
+    });
+  }
+
+  async function copyEmail() {
+    const activeOperation = ++operation;
+    button.dataset.copyState = "loading";
+    button.setAttribute("aria-busy", "true");
+    status.dataset.state = "loading";
+    status.textContent = "";
+
+    let copied = false;
+    try {
+      copied = await copyText(address);
+    } catch {
+      copied = false;
+    }
+
+    if (activeOperation !== operation) {
+      return;
+    }
+
+    if (copied) {
+      announce(CONTACT_COPY_STATUS_KEYS.success, "success", activeOperation);
+      return;
+    }
+
+    let selected = false;
+    try {
+      selected = selectAddress();
+    } catch {
+      selected = false;
+    }
+    announce(
+      selected
+        ? CONTACT_COPY_STATUS_KEYS.manualSelected
+        : CONTACT_COPY_STATUS_KEYS.failure,
+      "error",
+      activeOperation
+    );
+  }
+
+  button.addEventListener("click", copyEmail);
+  button.hidden = false;
+  status.hidden = false;
+  reset();
+
+  return { copyEmail, reset };
+}
+
+document.addEventListener("DOMContentLoaded", () => {
   if (window.siteI18n.redirecting) {
     return;
   }
@@ -20,6 +136,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const projectsDirectory = requireElement("projects-directory");
   const projectsContainer = requireElement("projects-container");
   const projectsFallback = requireElement("projects-fallback");
+  const contactEmailLink = requireElement("contact-email-link");
+  const contactEmailText = requireElement("contact-email-address");
+  const contactCopyButton = requireElement("copy-email-address");
+  const contactCopyStatus = requireElement("copy-email-status");
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
   const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const projectPreviewDesktopMedia = "(min-width: 48rem)";
@@ -50,6 +170,24 @@ document.addEventListener("DOMContentLoaded", () => {
     error: "projects.error"
   };
   const localizedProjectFields = ["title", "description", "kind", "action", "imageAlt"];
+
+  if (
+    contactEmailLink.getAttribute("href") !== `mailto:${CONTACT_EMAIL_ADDRESS}` ||
+    contactEmailText.textContent.trim() !== CONTACT_EMAIL_ADDRESS
+  ) {
+    throw new Error("The Contact email link and visible address must match.");
+  }
+
+  const contactEmailCopyController = createContactEmailCopyController({
+    address: CONTACT_EMAIL_ADDRESS,
+    button: contactCopyButton,
+    status: contactCopyStatus,
+    copyText: writeContactEmailToClipboard,
+    selectAddress: () =>
+      selectContactEmailForManualCopy(contactEmailText, CONTACT_EMAIL_ADDRESS),
+    translate: (key) => window.siteI18n.t(key),
+    schedule: (callback) => window.setTimeout(callback, 0)
+  });
 
   function requireNonEmptyString(value, fieldName) {
     if (typeof value !== "string" || value.trim() === "") {
@@ -1069,6 +1207,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.addEventListener("site-languagechange", () => {
+    contactEmailCopyController.reset();
     updateNavigationLabel();
     if (projectState === "ready") {
       renderProjects();
@@ -1082,6 +1221,7 @@ document.addEventListener("DOMContentLoaded", () => {
   projectsContainer.addEventListener("click", handleProjectPermalinkClick);
   window.addEventListener("hashchange", handleProjectHashChange);
   window.addEventListener("popstate", handleProjectHistoryChange);
+  window.addEventListener("pageshow", contactEmailCopyController.reset);
   window.addEventListener("pageshow", () => scheduleProjectFragmentFocus());
 
   const observedSections = [...document.querySelectorAll("main section[id]")];

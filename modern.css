@@ -560,8 +560,33 @@ html:lang(ja) .project-proof-label {
   border-block-start: var(--rule-hair) solid var(--color-rule);
 }
 
+.contact-email-method {
+  border-block-end: var(--rule-hair) solid var(--color-rule);
+}
+
 .contact-links a {
   border-block-end: var(--rule-hair) solid var(--color-rule);
+}
+
+.contact-copy-button {
+  background: var(--color-transparent);
+  color: var(--color-ink);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-variation-settings: normal;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+html:lang(ja) .contact-copy-button {
+  font-family: var(--font-body-ja);
+}
+
+.contact-copy-status {
+  color: var(--color-ink-2);
 }
 
 .projects-list .project-row :where(a, button):focus-visible,
@@ -658,6 +683,11 @@ html:lang(ja) .footer-meta a {
   }
 
   .contact-links a:hover {
+    background: var(--color-paper-2);
+    color: var(--color-ink);
+  }
+
+  .contact-copy-button:hover {
     background: var(--color-paper-2);
     color: var(--color-ink);
   }

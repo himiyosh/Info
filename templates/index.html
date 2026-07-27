@@ -273,10 +273,30 @@
           </p>
         </div>
         <div class="contact-links">
-          <a href="mailto:himiyosh@gmail.com">
-            <span data-i18n="contact.emailLabel">{{t:contact.emailLabel}}</span>
-            <strong>himiyosh@gmail.com</strong>
-          </a>
+          <div class="contact-email-method">
+            <a id="contact-email-link" href="mailto:himiyosh@gmail.com">
+              <span data-i18n="contact.emailLabel">{{t:contact.emailLabel}}</span>
+              <strong id="contact-email-address">himiyosh@gmail.com</strong>
+            </a>
+            <button
+              id="copy-email-address"
+              class="contact-copy-button"
+              type="button"
+              aria-describedby="copy-email-status"
+              hidden
+            >
+              <span data-i18n="contact.copyEmail">{{t:contact.copyEmail}}</span>
+            </button>
+            <p
+              id="copy-email-status"
+              class="contact-copy-status"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              data-i18n-dynamic
+              hidden
+            ></p>
+          </div>
           <a href="https://github.com/himiyosh" target="_blank" rel="me noopener noreferrer">
             <span>GitHub</span>
             <strong>@himiyosh</strong>
