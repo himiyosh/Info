@@ -858,19 +858,26 @@ html:lang(ja) .hero h1 span {
 }
 
 .projects-status,
-.projects-noscript {
+.projects-fallback {
   margin: 0;
   color: var(--color-on-dark);
 }
 
-.projects-noscript-list {
+.js-enabled .projects-fallback:not(.is-visible) {
+  display: none;
+}
+
+.projects-fallback-list {
   margin: var(--space-sm) 0 0;
   padding-inline-start: var(--space-md);
   display: grid;
   gap: var(--space-xs);
 }
 
-.projects-noscript a {
+.projects-fallback a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   color: var(--color-on-dark);
 }
 

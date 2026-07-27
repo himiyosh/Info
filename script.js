@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const langToggle = requireElement("lang-toggle");
   const projectsStatus = requireElement("projects-status");
   const projectsContainer = requireElement("projects-container");
+  const projectsFallback = requireElement("projects-fallback");
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
   const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const projectPreviewDesktopMedia = "(min-width: 48rem)";
@@ -789,10 +790,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     projectState = state;
     const isReady = state === "ready";
+    const isError = state === "error";
     projectsContainer.setAttribute("aria-busy", String(state === "loading"));
     projectsContainer.classList.toggle("projects-list", isReady);
     projectsStatus.classList.toggle("projects-list", !isReady);
     projectsStatus.classList.toggle("sr-only", isReady);
+    projectsFallback.classList.toggle("is-visible", isError);
+    projectsFallback.setAttribute("aria-hidden", String(!isError));
     projectsStatus.dataset.i18n = translationKey;
 
     const translatedStatus = window.siteI18n.t(translationKey);

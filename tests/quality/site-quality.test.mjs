@@ -1612,20 +1612,23 @@ test("required SEO and social metadata exist and are consistent", async () => {
   );
 });
 
-test("noscript project links provide direct access to every listed project", async () => {
+test("static project fallback provides direct access to every listed project", async () => {
   const indexHtml = await readUtf8("index.html");
   const projects = JSON.parse(await readUtf8("projects.json"));
-  const noscriptContent = indexHtml.match(/<noscript>([\s\S]*?)<\/noscript>/i)?.[1];
-  assert.ok(noscriptContent, "index.html must include a noscript fallback block");
+  const fallbackContent = indexHtml.match(
+    /<div\b[^>]*\bid="projects-fallback"[^>]*>([\s\S]*?)<\/div>/i
+  )?.[1];
+  assert.ok(fallbackContent, "index.html must include one reusable project fallback");
 
-  const noscriptLinks = [...noscriptContent.matchAll(/\bhref="([^"]+)"/g)].map((match) => match[1]);
-  assert.ok(noscriptLinks.length > 0, "noscript fallback must include direct project links");
-  for (const project of projects) {
-    assert.ok(
-      noscriptLinks.includes(project.link),
-      `noscript fallback must include direct link for project: ${project.title.en}`
-    );
-  }
+  const fallbackLinks = [...fallbackContent.matchAll(/\bhref="([^"]+)"/g)].map(
+    (match) => match[1]
+  );
+  assert.deepEqual(
+    fallbackLinks,
+    projects.map((project) => project.link),
+    "The static fallback must exactly match the canonical project destinations"
+  );
+  assert.equal(new Set(fallbackLinks).size, projects.length);
 });
 
 test("JoJo deck entries stay distinct and aligned with live deck routes", async () => {
