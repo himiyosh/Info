@@ -11,6 +11,10 @@ const retiredPortfolioPreviewSha256 =
 const qualityWorkflowPath = ".github/workflows/quality-baseline.yml";
 const pagesWorkflowPath = ".github/workflows/pages.yml";
 const pagesWhitelistPath = ".github/pages-artifact-whitelist.txt";
+const projectPreviewAvifBaselineBytes = 554_001;
+const projectPreviewAvifMaximumBytes = 200_000;
+const projectPreviewMinimumSavingsRatio = 0.6;
+const projectPreviewMobileMedia = "(max-width: 47.999rem)";
 const translatedStaticAttributes = [
   ["data-i18n-content", "content"],
   ["data-i18n-alt", "alt"],
@@ -72,8 +76,36 @@ function jpegDimensions(buffer) {
 }
 
 function avifDimensions(buffer) {
+  // Odd-height AVIFs can pad ispe while clap records the displayed aperture.
+  const cleanApertureBox = Buffer.from("clap");
+  let typeOffset = buffer.indexOf(cleanApertureBox);
+
+  while (typeOffset !== -1) {
+    const boxOffset = typeOffset - 4;
+    const boxSize = buffer.readUInt32BE(boxOffset);
+    if (boxSize >= 40 && typeOffset + 36 <= buffer.length) {
+      const widthNumerator = buffer.readUInt32BE(typeOffset + 4);
+      const widthDenominator = buffer.readUInt32BE(typeOffset + 8);
+      const heightNumerator = buffer.readUInt32BE(typeOffset + 12);
+      const heightDenominator = buffer.readUInt32BE(typeOffset + 16);
+      const width = widthNumerator / widthDenominator;
+      const height = heightNumerator / heightDenominator;
+      if (
+        widthDenominator > 0 &&
+        heightDenominator > 0 &&
+        Number.isInteger(width) &&
+        Number.isInteger(height) &&
+        width > 0 &&
+        height > 0
+      ) {
+        return { width, height };
+      }
+    }
+    typeOffset = buffer.indexOf(cleanApertureBox, typeOffset + 4);
+  }
+
   const spatialExtentsBox = Buffer.from("ispe");
-  let typeOffset = buffer.indexOf(spatialExtentsBox);
+  typeOffset = buffer.indexOf(spatialExtentsBox);
 
   while (typeOffset !== -1) {
     const boxOffset = typeOffset - 4;
@@ -364,13 +396,16 @@ test("JavaScript files are parseable", async () => {
 
 test("projects.json schema, localization, links, and preview assets are valid", async () => {
   const projects = JSON.parse(await readUtf8("projects.json"));
+  const whitelistSet = new Set(
+    parseWhitelistEntries(await readUtf8(pagesWhitelistPath))
+  );
   assert.ok(Array.isArray(projects), "projects.json must be an array");
   assert.ok(projects.length > 0, "projects.json must contain at least one project");
 
   const localizedFields = ["title", "kind", "description", "action", "imageAlt"];
-  const requiredStringFields = ["link", "image"];
+  const requiredStringFields = ["link", "image", "mobileImageAvif"];
   const seenLinks = new Set();
-  const seenImages = new Set();
+  const seenAssets = new Set();
 
   for (const [index, project] of projects.entries()) {
     assert.equal(typeof project, "object", `Project ${index + 1} must be an object`);
@@ -407,13 +442,60 @@ test("projects.json schema, localization, links, and preview assets are valid", 
     assert.ok(!seenLinks.has(project.link), `Duplicate project link found: ${project.link}`);
     seenLinks.add(project.link);
 
-    assert.ok(!/^https?:\/\//i.test(project.image), `Project ${index + 1} image must be local: ${project.image}`);
-    assert.ok(!seenImages.has(project.image), `Duplicate project image found: ${project.image}`);
-    seenImages.add(project.image);
+    const projectAssets = [
+      {
+        field: "image",
+        assetPath: project.image,
+        extension: /\.jpg$/i,
+        dimensions: { width: 960, height: 540 }
+      },
+      {
+        field: "mobileImageAvif",
+        assetPath: project.mobileImageAvif,
+        extension: /\.avif$/i,
+        dimensions: { width: 720, height: 405 }
+      }
+    ];
+    for (const { field, assetPath, extension, dimensions } of projectAssets) {
+      const assetUrl = new URL(assetPath, "https://example.test/");
+      assert.equal(
+        assetUrl.origin,
+        "https://example.test",
+        `Project ${index + 1} field "${field}" must be same-origin`
+      );
+      assert.ok(
+        assetPath.startsWith("assets/") &&
+          path.posix.normalize(assetPath) === assetPath &&
+          !assetPath.includes("..") &&
+          !assetUrl.search &&
+          !assetUrl.hash,
+        `Project ${index + 1} field "${field}" must be a normalized local assets path`
+      );
+      assert.match(
+        assetPath,
+        extension,
+        `Project ${index + 1} field "${field}" must use the expected format`
+      );
+      assert.ok(!seenAssets.has(assetPath), `Duplicate project asset found: ${assetPath}`);
+      seenAssets.add(assetPath);
 
-    const imagePath = path.join(repoRoot, project.image);
-    const imageStats = await stat(imagePath);
-    assert.ok(imageStats.isFile(), `Project image must exist as a file: ${project.image}`);
+      const assetStats = await stat(path.join(repoRoot, assetPath));
+      assert.ok(assetStats.isFile(), `Project asset must exist as a file: ${assetPath}`);
+      assert.deepEqual(
+        await imageDimensions(assetPath),
+        dimensions,
+        `Project asset must retain its expected dimensions: ${assetPath}`
+      );
+      assert.ok(
+        whitelistSet.has(assetPath) || whitelistSet.has(topLevelPath(assetPath)),
+        `Project asset must be included by the Pages artifact policy: ${assetPath}`
+      );
+    }
+    assert.notEqual(
+      project.image,
+      project.mobileImageAvif,
+      `Project ${index + 1} mobile AVIF must not collide with its JPEG fallback`
+    );
 
     if (Object.hasOwn(project, "stack")) {
       assert.ok(Array.isArray(project.stack), `Project ${index + 1} stack must be an array when present`);
@@ -431,6 +513,126 @@ test("projects.json schema, localization, links, and preview assets are valid", 
       }
     }
   }
+});
+
+test("mobile project AVIF pairs meet dimension and bandwidth budgets", async () => {
+  const projects = JSON.parse(await readUtf8("projects.json"));
+  assert.equal(projects.length, 9, "The current catalogue must provide all nine AVIF/JPEG pairs");
+
+  let totalJpegBytes = 0;
+  let totalAvifBytes = 0;
+  for (const project of projects) {
+    assert.equal(
+      project.mobileImageAvif,
+      project.image.replace(/\.jpg$/i, "-720w.avif"),
+      `Mobile AVIF must pair with its JPEG fallback: ${project.image}`
+    );
+
+    const jpegStats = await stat(path.join(repoRoot, project.image));
+    const avifStats = await stat(path.join(repoRoot, project.mobileImageAvif));
+    totalJpegBytes += jpegStats.size;
+    totalAvifBytes += avifStats.size;
+    assert.ok(
+      avifStats.size <= jpegStats.size,
+      `Mobile AVIF must not exceed its JPEG fallback: ${project.mobileImageAvif}`
+    );
+  }
+
+  assert.ok(
+    totalAvifBytes <= projectPreviewAvifMaximumBytes,
+    `Aggregate mobile AVIF bytes must not exceed ${projectPreviewAvifMaximumBytes}; received ${totalAvifBytes}`
+  );
+  assert.ok(
+    (projectPreviewAvifBaselineBytes - totalAvifBytes) / projectPreviewAvifBaselineBytes >=
+      projectPreviewMinimumSavingsRatio,
+    `Mobile AVIFs must save at least 60% versus the documented ${projectPreviewAvifBaselineBytes}-byte baseline`
+  );
+  assert.ok(
+    (totalJpegBytes - totalAvifBytes) / totalJpegBytes >= projectPreviewMinimumSavingsRatio,
+    "Mobile AVIFs must save at least 60% versus the current JPEG fallbacks"
+  );
+});
+
+test("project runtime validation requires distinct local JPEG and AVIF assets", async () => {
+  const scriptSource = await readUtf8("script.js");
+  const validateAssetBody = extractObjectLiteral(
+    scriptSource,
+    "function validateLocalProjectAsset"
+  );
+  const validateProjectBody = extractObjectLiteral(scriptSource, "function validateProject");
+  const loadProjectsBody = extractObjectLiteral(scriptSource, "async function loadProjects");
+
+  assert.match(validateAssetBody, /requireNonEmptyString\(\s*project\[fieldName\]/);
+  assert.match(validateAssetBody, /assetUrl\.origin !== window\.location\.origin/);
+  assert.match(validateAssetBody, /!assetUrl\.pathname\.startsWith\(assetsUrl\.pathname\)/);
+  assert.match(validateAssetBody, /assetUrl\.search/);
+  assert.match(validateAssetBody, /assetUrl\.hash/);
+  assert.match(validateAssetBody, /\.endsWith\(expectedExtension\)/);
+  assert.match(validateAssetBody, /seenAssets\.has\(normalizedAsset\)/);
+  assert.match(validateAssetBody, /seenAssets\.add\(normalizedAsset\)/);
+  assert.match(
+    validateProjectBody,
+    /validateLocalProjectAsset\(project, index, "image", "\.jpg", seenAssets\)/
+  );
+  assert.match(
+    validateProjectBody,
+    /validateLocalProjectAsset\(project, index, "mobileImageAvif", "\.avif", seenAssets\)/
+  );
+  assert.match(loadProjectsBody, /const seenAssets = new Set\(\)/);
+  assert.match(
+    loadProjectsBody,
+    /validateProject\(project, index, seenLinks, seenAssets\)/,
+    "JPEG and AVIF paths must share one uniqueness set so cross-field collisions are rejected"
+  );
+});
+
+test("project rendering emits mobile-gated AVIF pictures with lazy JPEG fallbacks", async () => {
+  const scriptSource = await readUtf8("script.js");
+  const renderProjectsBody = extractObjectLiteral(scriptSource, "function renderProjects");
+
+  assert.match(
+    scriptSource,
+    new RegExp(
+      `const projectPreviewMobileMedia = \"${escapeRegExp(projectPreviewMobileMedia)}\";`
+    ),
+    "Project AVIF media gate must match the existing mobile breakpoint"
+  );
+  assert.match(renderProjectsBody, /document\.createElement\("picture"\)/);
+  assert.match(renderProjectsBody, /document\.createElement\("source"\)/);
+  assert.match(renderProjectsBody, /mobileSource\.type = "image\/avif"/);
+  assert.match(renderProjectsBody, /mobileSource\.media = projectPreviewMobileMedia/);
+  assert.match(
+    renderProjectsBody,
+    /mobileSource\.srcset = `\$\{project\.mobileImageAvif\} 720w`/
+  );
+  assert.match(renderProjectsBody, /mobileSource\.sizes = "100vw"/);
+  assert.match(
+    renderProjectsBody,
+    /picture\.append\(mobileSource, image\)/,
+    "AVIF source must precede the JPEG img fallback inside picture"
+  );
+  assert.ok(
+    renderProjectsBody.indexOf("picture.append(mobileSource, image)") <
+      renderProjectsBody.indexOf("media.append(picture)"),
+    "Completed picture must be appended to the project media container"
+  );
+  assert.ok(
+    renderProjectsBody.indexOf("picture.append(mobileSource, image)") <
+      renderProjectsBody.indexOf("image.src = project.image"),
+    "The img must join picture before src assignment so the JPEG fallback is not fetched first"
+  );
+
+  assert.match(renderProjectsBody, /image\.src = project\.image/);
+  assert.match(renderProjectsBody, /image\.alt = localizedValue\(project\.imageAlt\)/);
+  assert.match(renderProjectsBody, /image\.width = 960/);
+  assert.match(renderProjectsBody, /image\.height = 540/);
+  assert.match(renderProjectsBody, /image\.loading = "lazy"/);
+  assert.match(renderProjectsBody, /image\.decoding = "async"/);
+  assert.doesNotMatch(
+    renderProjectsBody,
+    /fetchpriority|fetchPriority|loading = "eager"/,
+    "Project cards must remain lazy and must not compete with the hero LCP resource"
+  );
 });
 
 test("project catalogue status stays concise, atomic, and separate from rendered results", async () => {
@@ -983,6 +1185,7 @@ test("all referenced local files exist", async () => {
 
   for (const project of projects) {
     localReferences.add(project.image);
+    localReferences.add(project.mobileImageAvif);
   }
 
   for (const localReference of localReferences) {
@@ -1130,6 +1333,7 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
   }
   for (const project of projects) {
     localReferences.add(project.image);
+    localReferences.add(project.mobileImageAvif);
   }
   localReferences.add("ads.txt");
 
@@ -1183,8 +1387,13 @@ test("preview assets are not stale or orphaned", async () => {
     path.relative(repoRoot, absolutePath).split(path.sep).join("/")
   );
 
-  const projectImages = projects.map((project) => project.image);
-  const previewFiles = assetFiles.filter((filePath) => /-preview\.[a-z0-9]+$/i.test(filePath));
+  const projectImages = projects.flatMap((project) => [
+    project.image,
+    project.mobileImageAvif
+  ]);
+  const previewFiles = assetFiles.filter((filePath) =>
+    /-preview(?:-720w)?\.(?:avif|jpg)$/i.test(filePath)
+  );
   assert.ok(previewFiles.length > 0, "At least one preview asset must exist");
 
   for (const previewPath of previewFiles) {
