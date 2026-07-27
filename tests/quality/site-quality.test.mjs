@@ -14,6 +14,9 @@ const pagesWhitelistPath = ".github/pages-artifact-whitelist.txt";
 const projectPreviewAvifBaselineBytes = 554_001;
 const projectPreviewAvifMaximumBytes = 200_000;
 const projectPreviewMinimumSavingsRatio = 0.6;
+const projectPreviewDesktopJpegBaselineBytes = 551_363;
+const projectPreviewDesktopAvifMaximumRatio = 0.5;
+const projectPreviewDesktopMedia = "(min-width: 48rem)";
 const projectPreviewMobileMedia = "(max-width: 47.999rem)";
 const translatedStaticAttributes = [
   ["data-i18n-content", "content"],
@@ -76,6 +79,24 @@ function jpegDimensions(buffer) {
 }
 
 function avifDimensions(buffer) {
+  assert.equal(
+    buffer.subarray(4, 8).toString("ascii"),
+    "ftyp",
+    "AVIF asset must start with an ISO Base Media File Type box"
+  );
+  const fileTypeBoxSize = buffer.readUInt32BE(0);
+  const brands = [
+    buffer.subarray(8, 12).toString("ascii"),
+    ...Array.from(
+      { length: Math.max(0, Math.floor((fileTypeBoxSize - 16) / 4)) },
+      (_, index) => buffer.subarray(16 + index * 4, 20 + index * 4).toString("ascii")
+    )
+  ];
+  assert.ok(
+    brands.includes("avif") || brands.includes("avis"),
+    "AVIF asset must declare the avif or avis brand"
+  );
+
   // Odd-height AVIFs can pad ispe while clap records the displayed aperture.
   const cleanApertureBox = Buffer.from("clap");
   let typeOffset = buffer.indexOf(cleanApertureBox);
@@ -414,7 +435,7 @@ test("projects.json schema, localization, links, and preview assets are valid", 
   assert.ok(projects.length > 0, "projects.json must contain at least one project");
 
   const localizedFields = ["title", "kind", "description", "action", "imageAlt"];
-  const requiredStringFields = ["link", "image", "mobileImageAvif"];
+  const requiredStringFields = ["link", "image", "desktopImageAvif", "mobileImageAvif"];
   const seenLinks = new Set();
   const seenAssets = new Set();
 
@@ -524,6 +545,12 @@ test("projects.json schema, localization, links, and preview assets are valid", 
         dimensions: { width: 960, height: 540 }
       },
       {
+        field: "desktopImageAvif",
+        assetPath: project.desktopImageAvif,
+        extension: /\.avif$/i,
+        dimensions: { width: 960, height: 540 }
+      },
+      {
         field: "mobileImageAvif",
         assetPath: project.mobileImageAvif,
         extension: /\.avif$/i,
@@ -565,10 +592,10 @@ test("projects.json schema, localization, links, and preview assets are valid", 
         `Project asset must be included by the Pages artifact policy: ${assetPath}`
       );
     }
-    assert.notEqual(
-      project.image,
-      project.mobileImageAvif,
-      `Project ${index + 1} mobile AVIF must not collide with its JPEG fallback`
+    assert.equal(
+      new Set([project.image, project.desktopImageAvif, project.mobileImageAvif]).size,
+      3,
+      `Project ${index + 1} preview assets must be distinct`
     );
 
     if (Object.hasOwn(project, "stack")) {
@@ -697,6 +724,33 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
   const duplicateLink = cloneProjects();
   duplicateLink[2].sourceLink = duplicateLink[1].sourceLink;
   assert.throws(() => validateCatalogue(duplicateLink), /Duplicate project link detected/);
+
+  const missingDesktopImage = cloneProjects();
+  delete missingDesktopImage[0].desktopImageAvif;
+  assert.throws(
+    () => validateCatalogue(missingDesktopImage),
+    /desktopImageAvif.*non-empty string/
+  );
+
+  const externalDesktopImage = cloneProjects();
+  externalDesktopImage[0].desktopImageAvif = "https://example.test/project.avif";
+  assert.throws(() => validateCatalogue(externalDesktopImage), /must be a local assets path/);
+
+  const queriedDesktopImage = cloneProjects();
+  queriedDesktopImage[0].desktopImageAvif += "?v=1";
+  assert.throws(() => validateCatalogue(queriedDesktopImage), /must be a local assets path/);
+
+  const hashedDesktopImage = cloneProjects();
+  hashedDesktopImage[0].desktopImageAvif += "#preview";
+  assert.throws(() => validateCatalogue(hashedDesktopImage), /must be a local assets path/);
+
+  const wrongDesktopFormat = cloneProjects();
+  wrongDesktopFormat[0].desktopImageAvif = wrongDesktopFormat[0].image;
+  assert.throws(() => validateCatalogue(wrongDesktopFormat), /must use \.avif/);
+
+  const duplicatePreviewAsset = cloneProjects();
+  duplicatePreviewAsset[0].desktopImageAvif = duplicatePreviewAsset[0].mobileImageAvif;
+  assert.throws(() => validateCatalogue(duplicatePreviewAsset), /Duplicate project asset detected/);
 });
 
 test("project action groups preserve primary-first safe localized links and responsive focus behavior", async () => {
@@ -804,6 +858,45 @@ test("mobile project AVIF pairs meet dimension and bandwidth budgets", async () 
   );
 });
 
+test("desktop project AVIF pairs meet exact format, dimensions, and bandwidth budgets", async () => {
+  const projects = JSON.parse(await readUtf8("projects.json"));
+  assert.equal(projects.length, 9, "The current catalogue must provide all nine desktop AVIF pairs");
+
+  let totalJpegBytes = 0;
+  let totalAvifBytes = 0;
+  for (const project of projects) {
+    assert.equal(
+      project.desktopImageAvif,
+      project.image.replace(/\.jpg$/i, "-960w.avif"),
+      `Desktop AVIF must pair with its JPEG fallback: ${project.image}`
+    );
+
+    const jpegStats = await stat(path.join(repoRoot, project.image));
+    const avifStats = await stat(path.join(repoRoot, project.desktopImageAvif));
+    totalJpegBytes += jpegStats.size;
+    totalAvifBytes += avifStats.size;
+    assert.deepEqual(
+      await imageDimensions(project.desktopImageAvif),
+      { width: 960, height: 540 },
+      `Desktop AVIF must be exactly 960x540: ${project.desktopImageAvif}`
+    );
+    assert.ok(
+      avifStats.size < jpegStats.size,
+      `Desktop AVIF must be smaller than its JPEG fallback: ${project.desktopImageAvif}`
+    );
+  }
+
+  assert.equal(
+    totalJpegBytes,
+    projectPreviewDesktopJpegBaselineBytes,
+    "The reviewed desktop JPEG baseline changed; regenerate and re-review all AVIF measurements"
+  );
+  assert.ok(
+    totalAvifBytes <= totalJpegBytes * projectPreviewDesktopAvifMaximumRatio,
+    `Aggregate desktop AVIF bytes must be at most 50% of JPEG bytes; received ${totalAvifBytes}/${totalJpegBytes}`
+  );
+});
+
 test("project runtime validation requires distinct local JPEG and AVIF assets", async () => {
   const scriptSource = await readUtf8("script.js");
   const validateAssetBody = extractObjectLiteral(
@@ -827,6 +920,10 @@ test("project runtime validation requires distinct local JPEG and AVIF assets", 
   );
   assert.match(
     validateProjectBody,
+    /validateLocalProjectAsset\(project, index, "desktopImageAvif", "\.avif", seenAssets\)/
+  );
+  assert.match(
+    validateProjectBody,
     /validateLocalProjectAsset\(project, index, "mobileImageAvif", "\.avif", seenAssets\)/
   );
   assert.match(loadProjectsBody, /const seenAssets = new Set\(\)/);
@@ -837,10 +934,17 @@ test("project runtime validation requires distinct local JPEG and AVIF assets", 
   );
 });
 
-test("project rendering emits mobile-gated AVIF pictures with lazy JPEG fallbacks", async () => {
+test("project rendering emits mutually exclusive AVIF sources before lazy JPEG fallbacks", async () => {
   const scriptSource = await readUtf8("script.js");
   const renderProjectsBody = extractObjectLiteral(scriptSource, "function renderProjects");
 
+  assert.match(
+    scriptSource,
+    new RegExp(
+      `const projectPreviewDesktopMedia = \"${escapeRegExp(projectPreviewDesktopMedia)}\";`
+    ),
+    "Desktop AVIF media gate must match the existing desktop breakpoint"
+  );
   assert.match(
     scriptSource,
     new RegExp(
@@ -849,7 +953,18 @@ test("project rendering emits mobile-gated AVIF pictures with lazy JPEG fallback
     "Project AVIF media gate must match the existing mobile breakpoint"
   );
   assert.match(renderProjectsBody, /document\.createElement\("picture"\)/);
-  assert.match(renderProjectsBody, /document\.createElement\("source"\)/);
+  assert.equal(
+    [...renderProjectsBody.matchAll(/document\.createElement\("source"\)/g)].length,
+    2,
+    "Each project picture must create exactly one desktop and one mobile source"
+  );
+  assert.match(renderProjectsBody, /desktopSource\.type = "image\/avif"/);
+  assert.match(renderProjectsBody, /desktopSource\.media = projectPreviewDesktopMedia/);
+  assert.match(
+    renderProjectsBody,
+    /desktopSource\.srcset = `\$\{project\.desktopImageAvif\} 960w`/
+  );
+  assert.match(renderProjectsBody, /desktopSource\.sizes = "60vw"/);
   assert.match(renderProjectsBody, /mobileSource\.type = "image\/avif"/);
   assert.match(renderProjectsBody, /mobileSource\.media = projectPreviewMobileMedia/);
   assert.match(
@@ -859,18 +974,23 @@ test("project rendering emits mobile-gated AVIF pictures with lazy JPEG fallback
   assert.match(renderProjectsBody, /mobileSource\.sizes = "100vw"/);
   assert.match(
     renderProjectsBody,
-    /picture\.append\(mobileSource, image\)/,
-    "AVIF source must precede the JPEG img fallback inside picture"
+    /picture\.append\(desktopSource, mobileSource, image\)/,
+    "Desktop and mobile AVIF sources must precede the JPEG img fallback inside picture"
   );
   assert.ok(
-    renderProjectsBody.indexOf("picture.append(mobileSource, image)") <
+    renderProjectsBody.indexOf("picture.append(desktopSource, mobileSource, image)") <
       renderProjectsBody.indexOf("media.append(picture)"),
     "Completed picture must be appended to the project media container"
   );
   assert.ok(
-    renderProjectsBody.indexOf("picture.append(mobileSource, image)") <
+    renderProjectsBody.indexOf("picture.append(desktopSource, mobileSource, image)") <
       renderProjectsBody.indexOf("image.src = project.image"),
-    "The img must join picture before src assignment so the JPEG fallback is not fetched first"
+    "Both AVIF choices must join picture before src assignment to avoid a duplicate JPEG download"
+  );
+  assert.ok(
+    renderProjectsBody.indexOf("media.append(picture)") <
+      renderProjectsBody.indexOf("image.src = project.image"),
+    "The completed picture must join its disconnected media container before fallback src assignment"
   );
 
   assert.match(renderProjectsBody, /image\.src = project\.image/);
@@ -1436,6 +1556,7 @@ test("all referenced local files exist", async () => {
 
   for (const project of projects) {
     localReferences.add(project.image);
+    localReferences.add(project.desktopImageAvif);
     localReferences.add(project.mobileImageAvif);
   }
 
@@ -1584,6 +1705,7 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
   }
   for (const project of projects) {
     localReferences.add(project.image);
+    localReferences.add(project.desktopImageAvif);
     localReferences.add(project.mobileImageAvif);
   }
   localReferences.add("ads.txt");
@@ -1640,10 +1762,11 @@ test("preview assets are not stale or orphaned", async () => {
 
   const projectImages = projects.flatMap((project) => [
     project.image,
+    project.desktopImageAvif,
     project.mobileImageAvif
   ]);
   const previewFiles = assetFiles.filter((filePath) =>
-    /-preview(?:-720w)?\.(?:avif|jpg)$/i.test(filePath)
+    /-preview(?:-(?:720|960)w)?\.(?:avif|jpg)$/i.test(filePath)
   );
   assert.ok(previewFiles.length > 0, "At least one preview asset must exist");
 

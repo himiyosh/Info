@@ -3,8 +3,21 @@
 
 ## Development
 - Run `python3 -m http.server 8000` from the repository root, then open http://localhost:8000/.
-- Portfolio entries declare a 960x540 JPEG fallback in `image` and a mobile-only 720x405 AVIF in `mobileImageAvif`; verified public repositories can add paired `sourceAction` (`ja`/`en`) and HTTPS `sourceLink` fields for a secondary source action. Japanese and English interface copy lives in `i18n.js`.
-- Project AVIF previews use a consistent `sips` quality setting: `sips -s format avif -s formatOptions 70 -z 405 720 assets/name-preview.jpg --out assets/name-preview-720w.avif`.
+- Portfolio entries declare a 960x540 JPEG fallback in `image`, a desktop 960x540 AVIF in `desktopImageAvif`, and a mobile 720x405 AVIF in `mobileImageAvif`; verified public repositories can add paired `sourceAction` (`ja`/`en`) and HTTPS `sourceLink` fields for a secondary source action. Japanese and English interface copy lives in `i18n.js`.
+- Project AVIF previews use a consistent `sips` quality setting: desktop `sips -s format avif -s formatOptions 70 -z 540 960 assets/name-preview.jpg --out assets/name-preview-960w.avif`; mobile `sips -s format avif -s formatOptions 70 -z 405 720 assets/name-preview.jpg --out assets/name-preview-720w.avif`.
+- The nine desktop AVIFs total 187,587 bytes versus 551,363 bytes for the JPEG fallbacks, saving 363,776 bytes (66.0%).
+
+| Project preview | JPEG bytes | Desktop AVIF bytes | Savings |
+| --- | ---: | ---: | ---: |
+| `portfolio-preview` | 78,916 | 37,634 | 52.3% |
+| `techdb-preview` | 131,203 | 48,704 | 62.9% |
+| `jojo-aiagent-preview` | 78,218 | 25,011 | 68.0% |
+| `jojo-git-preview` | 55,239 | 18,481 | 66.5% |
+| `ucfitness-preview` | 67,559 | 24,380 | 63.9% |
+| `encode-decode-preview` | 36,393 | 6,474 | 82.2% |
+| `network-plus-preview` | 45,463 | 11,759 | 74.1% |
+| `url-decoder-preview` | 37,955 | 9,316 | 75.5% |
+| `image-resizer-preview` | 20,417 | 5,828 | 71.5% |
 - `tokens.css` is the design-token source of truth. The Latin display font is bundled under `assets/fonts/` with its `OFL.txt` license, so no runtime font provider is required.
 - `robots.txt` and `sitemap.xml` expose the public page to search crawlers.
 - The site uses local HTML, CSS, JavaScript, and imagery for its initial render. AdSense is deferred to production so core content remains fast and resilient.

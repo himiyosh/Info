@@ -13,6 +13,7 @@
       "en": "The source for this portfolio: a static bilingual site with responsive behavior and accessible interactions."
     },
     "image": "assets/portfolio-preview.jpg",
+    "desktopImageAvif": "assets/portfolio-preview-960w.avif",
     "mobileImageAvif": "assets/portfolio-preview-720w.avif",
     "imageAlt": {
       "ja": "himiyosh ポートフォリオのヒーロー画面",
@@ -39,6 +40,7 @@
       "en": "An automatically updated portal that collects and summarizes AI ecosystem news across 14 categories, with reading priority, search, and service status in one place."
     },
     "image": "assets/techdb-preview.jpg",
+    "desktopImageAvif": "assets/techdb-preview-960w.avif",
     "mobileImageAvif": "assets/techdb-preview-720w.avif",
     "imageAlt": {
       "ja": "AI関連ニュースとトレンドを一覧表示するTechDBのダッシュボード",
@@ -70,6 +72,7 @@
       "en": "A beginner-friendly public slide deck that explains AI agents through Prompt → Context → Harness → Loop, with a mobile reader mode."
     },
     "image": "assets/jojo-aiagent-preview.jpg",
+    "desktopImageAvif": "assets/jojo-aiagent-preview-960w.avif",
     "mobileImageAvif": "assets/jojo-aiagent-preview-720w.avif",
     "imageAlt": {
       "ja": "Prompt→Context→Harness→Loop の章立てを表示する JoJo-AIAgent のスライド表紙",
@@ -101,6 +104,7 @@
       "en": "A Slidev deck for Git beginners that explains clone, fetch, pull, fork, and merge vs rebase decisions through a visual four-area model, with Reader search, mobile, and print support."
     },
     "image": "assets/jojo-git-preview.jpg",
+    "desktopImageAvif": "assets/jojo-git-preview-960w.avif",
     "mobileImageAvif": "assets/jojo-git-preview-720w.avif",
     "imageAlt": {
       "ja": "4領域モデルでGit操作を整理した JoJo-Git のスライド表紙",
@@ -132,6 +136,7 @@
       "en": "A Fitbit-connected fitness service for tracking steps, progress, group competition, UC rewards, and badges in one place."
     },
     "image": "assets/ucfitness-preview.jpg",
+    "desktopImageAvif": "assets/ucfitness-preview-960w.avif",
     "mobileImageAvif": "assets/ucfitness-preview-720w.avif",
     "imageAlt": {
       "ja": "Fitbitの歩数と達成率を表示するUCFitnessのトップ画面",
@@ -158,6 +163,7 @@
       "en": "A multi-format browser utility for encoding and decoding URL, Base64, JWT, Unicode, and QR code data."
     },
     "image": "assets/encode-decode-preview.jpg",
+    "desktopImageAvif": "assets/encode-decode-preview-960w.avif",
     "mobileImageAvif": "assets/encode-decode-preview-720w.avif",
     "imageAlt": {
       "ja": "複数の形式を切り替えられるEncode / Decode Toolの画面",
@@ -189,6 +195,7 @@
       "en": "A network analysis extension for Microsoft Edge DevTools with multi-keyword search, column filters, request details, and HAR export."
     },
     "image": "assets/network-plus-preview.jpg",
+    "desktopImageAvif": "assets/network-plus-preview-960w.avif",
     "mobileImageAvif": "assets/network-plus-preview-720w.avif",
     "imageAlt": {
       "ja": "リクエスト一覧と詳細ペインを備えたNetwork+のDevToolsパネル",
@@ -215,6 +222,7 @@
       "en": "A simple browser utility for encoding and decoding URLs."
     },
     "image": "assets/url-decoder-preview.jpg",
+    "desktopImageAvif": "assets/url-decoder-preview-960w.avif",
     "mobileImageAvif": "assets/url-decoder-preview-720w.avif",
     "imageAlt": {
       "ja": "入力欄と操作ボタンを備えた URLDecoder の画面",
@@ -245,6 +253,7 @@
       "en": "A browser tool that converts an image into a 192px or 32px square icon."
     },
     "image": "assets/image-resizer-preview.jpg",
+    "desktopImageAvif": "assets/image-resizer-preview-960w.avif",
     "mobileImageAvif": "assets/image-resizer-preview-720w.avif",
     "imageAlt": {
       "ja": "画像を選択し、2 種類のサイズをダウンロードできる ImageResizer の画面",
