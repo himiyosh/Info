@@ -478,8 +478,25 @@ html:lang(ja) .project-directory-link {
   font-weight: 700;
 }
 
+.project-share-button {
+  background: var(--color-transparent);
+  color: var(--color-ink-2);
+  border-color: var(--color-rule);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-weight: 700;
+}
+
 html:lang(ja) .project-permalink {
   font-family: var(--font-body-ja);
+}
+
+html:lang(ja) .project-share-button {
+  font-family: var(--font-body-ja);
+}
+
+.project-share-status {
+  color: var(--color-ink-2);
 }
 
 html:lang(ja) .project-heading h3 {
@@ -686,6 +703,10 @@ html:lang(ja) .footer-meta a {
     color: var(--color-ink);
   }
 
+  .project-share-button:hover {
+    color: var(--color-ink);
+  }
+
   .contact-links a:hover {
     background: var(--color-paper-2);
     color: var(--color-ink);
@@ -867,6 +888,10 @@ html:not(.js-enabled) .about-copy {
 
   .button-primary,
   .project-link {
+    transform: none !important;
+  }
+
+  .project-share-button {
     transform: none !important;
   }
 

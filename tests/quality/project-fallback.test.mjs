@@ -228,6 +228,7 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
       return response;
     },
     projectState: "loading",
+    projectShareControllers: [],
     projectStatusKeys: {
       loading: "projects.loading",
       ready: "projects.ready",

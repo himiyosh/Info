@@ -167,7 +167,8 @@ test("project renderer emits localized focusable same-page permalinks without ch
     renderSource,
     /permalink\.textContent = window\.siteI18n\.t\("projects\.permalinkAction"\)/
   );
-  assert.match(renderSource, /headingLine\.append\(title, permalink\)/);
+  assert.match(renderSource, /headingActions\.append\(permalink, shareButton\)/);
+  assert.match(renderSource, /headingLine\.append\(title, headingActions\)/);
   assert.doesNotMatch(
     sourceBetween(renderSource, 'permalink.className = "project-permalink"', "kind.className"),
     /\.target\s*=|target="_blank"/

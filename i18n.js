@@ -62,7 +62,13 @@
         proofLabel: "公開根拠",
         proofAction: "根拠を見る",
         permalinkAction: "固定リンク",
-        permalinkLabel: "「{title}」プロジェクトへの固定リンク"
+        permalinkLabel: "「{title}」プロジェクトへの固定リンク",
+        shareAction: "共有",
+        shareLabel: "「{title}」プロジェクトを共有",
+        shareSuccess: "プロジェクトのリンクを共有しました。",
+        copySuccess: "プロジェクトのリンクをコピーしました。",
+        shareFailure:
+          "共有できませんでした。固定リンクのコンテキストメニューからリンクをコピーしてください。"
       },
       contact: {
         title: "Contact",
@@ -134,7 +140,13 @@
         proofLabel: "Public evidence",
         proofAction: "View evidence",
         permalinkAction: "Permalink",
-        permalinkLabel: "Permalink to the {title} project"
+        permalinkLabel: "Permalink to the {title} project",
+        shareAction: "Share",
+        shareLabel: "Share the {title} project",
+        shareSuccess: "Project link shared.",
+        copySuccess: "Project link copied.",
+        shareFailure:
+          "Sharing failed. Use the permalink's context menu to copy the link."
       },
       contact: {
         title: "Contact",
