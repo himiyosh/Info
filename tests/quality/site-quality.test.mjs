@@ -280,6 +280,17 @@ function extractObjectLiteral(sourceText, declarationPrefix) {
   throw new Error(`Could not close object literal for declaration: ${declarationPrefix}`);
 }
 
+function extractFunctionDeclaration(sourceText, functionName) {
+  const declarationPrefix = `function ${functionName}`;
+  const declarationIndex = sourceText.indexOf(declarationPrefix);
+  if (declarationIndex === -1) {
+    throw new Error(`Could not find function declaration: ${functionName}`);
+  }
+  const bodyIndex = sourceText.indexOf("{", declarationIndex);
+  const body = extractObjectLiteral(sourceText, declarationPrefix);
+  return `${sourceText.slice(declarationIndex, bodyIndex)}${body}`;
+}
+
 function parseTranslations(sourceText) {
   const translationLiteral = extractObjectLiteral(sourceText, "const translations =");
   return vm.runInNewContext(`(${translationLiteral})`, Object.create(null), {
@@ -439,8 +450,71 @@ test("projects.json schema, localization, links, and preview assets are valid", 
       linkUrl.protocol === "http:" || linkUrl.protocol === "https:",
       `Project ${index + 1} link must use http/https`
     );
-    assert.ok(!seenLinks.has(project.link), `Duplicate project link found: ${project.link}`);
-    seenLinks.add(project.link);
+    const normalizedLink = linkUrl.toString();
+    assert.ok(!seenLinks.has(normalizedLink), `Duplicate project link found: ${project.link}`);
+    seenLinks.add(normalizedLink);
+
+    const hasSourceAction = Object.hasOwn(project, "sourceAction");
+    const hasSourceLink = Object.hasOwn(project, "sourceLink");
+    assert.equal(
+      hasSourceAction,
+      hasSourceLink,
+      `Project ${index + 1} sourceAction and sourceLink must be provided together`
+    );
+    if (hasSourceAction) {
+      assert.equal(
+        typeof project.sourceAction,
+        "object",
+        `Project ${index + 1} field "sourceAction" must be localized`
+      );
+      assert.ok(project.sourceAction, `Project ${index + 1} field "sourceAction" must exist`);
+      for (const language of ["ja", "en"]) {
+        const sourceLabel = project.sourceAction[language];
+        assert.equal(
+          typeof sourceLabel,
+          "string",
+          `Project ${index + 1} field "sourceAction.${language}" must be a string`
+        );
+        assert.notEqual(
+          sourceLabel.trim(),
+          "",
+          `Project ${index + 1} field "sourceAction.${language}" must not be empty`
+        );
+        assert.notEqual(
+          sourceLabel.trim().toLocaleLowerCase(language),
+          project.action[language].trim().toLocaleLowerCase(language),
+          `Project ${index + 1} source action must differ from its primary action in ${language}`
+        );
+      }
+
+      assert.equal(
+        typeof project.sourceLink,
+        "string",
+        `Project ${index + 1} field "sourceLink" must be a string`
+      );
+      assert.notEqual(
+        project.sourceLink.trim(),
+        "",
+        `Project ${index + 1} field "sourceLink" must not be empty`
+      );
+      const sourceUrl = new URL(project.sourceLink);
+      assert.equal(
+        sourceUrl.protocol,
+        "https:",
+        `Project ${index + 1} sourceLink must use HTTPS`
+      );
+      const normalizedSourceLink = sourceUrl.toString();
+      assert.notEqual(
+        normalizedSourceLink,
+        normalizedLink,
+        `Project ${index + 1} sourceLink must differ from its primary link`
+      );
+      assert.ok(
+        !seenLinks.has(normalizedSourceLink),
+        `Duplicate project link found: ${project.sourceLink}`
+      );
+      seenLinks.add(normalizedSourceLink);
+    }
 
     const projectAssets = [
       {
@@ -513,6 +587,183 @@ test("projects.json schema, localization, links, and preview assets are valid", 
       }
     }
   }
+});
+
+test("exactly six live projects expose verified public source actions", async () => {
+  const projects = JSON.parse(await readUtf8("projects.json"));
+  const indexHtml = await readUtf8("index.html");
+  const scriptSource = await readUtf8("script.js");
+  const expectedSources = new Map([
+    ["TechDB", "https://github.com/himiyosh/tech-dashboard"],
+    ["AI Agents: What Is Happening Right Now?", "https://github.com/himiyosh/JoJo-AIAgent"],
+    ["Git, Not Scary", "https://github.com/himiyosh/JoJo-Git"],
+    ["Encode / Decode Tool", "https://github.com/himiyosh/encode-decode-tool"],
+    ["URLDecoder", "https://github.com/himiyosh/URLDecoder"],
+    ["ImageResizer", "https://github.com/himiyosh/ImageResizer"]
+  ]);
+  const projectsWithSources = projects.filter((project) => Object.hasOwn(project, "sourceLink"));
+
+  assert.equal(projectsWithSources.length, expectedSources.size);
+  for (const project of projectsWithSources) {
+    assert.equal(
+      project.sourceLink,
+      expectedSources.get(project.title.en),
+      `Unexpected source mapping for ${project.title.en}`
+    );
+    assert.deepEqual(project.sourceAction, {
+      ja: "GitHub でソースを見る",
+      en: "View source on GitHub"
+    });
+  }
+  assert.deepEqual(
+    new Set(projectsWithSources.map((project) => project.title.en)),
+    new Set(expectedSources.keys()),
+    "Only the six verified live projects may expose secondary source actions"
+  );
+
+  for (const title of ["Portfolio", "UCFitness", "Network+"]) {
+    const project = projects.find((entry) => entry.title.en === title);
+    assert.ok(project, `Expected excluded project ${title}`);
+    assert.equal(Object.hasOwn(project, "sourceAction"), false);
+    assert.equal(Object.hasOwn(project, "sourceLink"), false);
+  }
+
+  const portfolio = projects.find((project) => project.title.en === "Portfolio");
+  const networkPlus = projects.find((project) => project.title.en === "Network+");
+  assert.match(portfolio.link, /^https:\/\/github\.com\//);
+  assert.match(networkPlus.link, /^https:\/\/github\.com\//);
+  assert.doesNotMatch(
+    [JSON.stringify(projects), indexHtml, scriptSource].join("\n"),
+    /github\.com\/himiyosh\/UCFitness/i,
+    "The private UCFitness repository must never be disclosed"
+  );
+});
+
+test("project runtime rejects incomplete, malformed, duplicate, and primary-equal source actions", async () => {
+  const scriptSource = await readUtf8("script.js");
+  const projects = JSON.parse(await readUtf8("projects.json"));
+  const validatorDeclarations = [
+    "requireNonEmptyString",
+    "validateLocalizedField",
+    "validateLocalProjectAsset",
+    "validateProject"
+  ]
+    .map((functionName) => extractFunctionDeclaration(scriptSource, functionName))
+    .join("\n");
+  const validateProject = vm.runInNewContext(
+    `(() => { ${validatorDeclarations}; return validateProject; })()`,
+    {
+      URL,
+      localizedProjectFields: ["title", "description", "kind", "action", "imageAlt"],
+      window: { location: new URL("https://example.test/") }
+    },
+    { timeout: 1000 }
+  );
+  const cloneProjects = () => JSON.parse(JSON.stringify(projects));
+  const validateCatalogue = (catalogue) => {
+    const seenLinks = new Set();
+    const seenAssets = new Set();
+    catalogue.forEach((project, index) =>
+      validateProject(project, index, seenLinks, seenAssets)
+    );
+  };
+
+  assert.doesNotThrow(() => validateCatalogue(cloneProjects()));
+
+  const missingAction = cloneProjects();
+  delete missingAction[1].sourceAction;
+  assert.throws(() => validateCatalogue(missingAction), /must be provided together/);
+
+  const incompleteLabel = cloneProjects();
+  delete incompleteLabel[1].sourceAction.en;
+  assert.throws(() => validateCatalogue(incompleteLabel), /sourceAction\.en.*non-empty string/);
+
+  const matchingAction = cloneProjects();
+  matchingAction[1].sourceAction = { ...matchingAction[1].action };
+  assert.throws(() => validateCatalogue(matchingAction), /must differ from "action\.ja"/);
+
+  const malformedLink = cloneProjects();
+  malformedLink[1].sourceLink = "not an absolute URL";
+  assert.throws(() => validateCatalogue(malformedLink), /must be an absolute HTTPS URL/);
+
+  const insecureLink = cloneProjects();
+  insecureLink[1].sourceLink = "http://github.com/himiyosh/tech-dashboard";
+  assert.throws(() => validateCatalogue(insecureLink), /must be an absolute HTTPS URL/);
+
+  const matchingLink = cloneProjects();
+  matchingLink[1].sourceLink = matchingLink[1].link;
+  assert.throws(() => validateCatalogue(matchingLink), /source link must differ/);
+
+  const duplicateLink = cloneProjects();
+  duplicateLink[2].sourceLink = duplicateLink[1].sourceLink;
+  assert.throws(() => validateCatalogue(duplicateLink), /Duplicate project link detected/);
+});
+
+test("project action groups preserve primary-first safe localized links and responsive focus behavior", async () => {
+  const scriptSource = await readUtf8("script.js");
+  const stylesSource = await readUtf8("styles.css");
+  const modernSource = await readUtf8("modern.css");
+  const createActionBody = extractObjectLiteral(
+    scriptSource,
+    "function createProjectAction"
+  );
+  const renderProjectsBody = extractObjectLiteral(scriptSource, "function renderProjects");
+
+  assert.match(createActionBody, /link\.target = "_blank"/);
+  assert.match(createActionBody, /link\.rel = "noopener noreferrer"/);
+  assert.match(createActionBody, /linkText\.textContent = localizedValue\(action\)/);
+  assert.match(
+    createActionBody,
+    /window\.siteI18n\.t\("accessibility\.opensInNewTab"\)/
+  );
+  assert.match(createActionBody, /linkArrow\.setAttribute\("aria-hidden", "true"\)/);
+  assert.match(renderProjectsBody, /actions\.className = "project-actions"/);
+  assert.match(renderProjectsBody, /actions\.setAttribute\("role", "group"\)/);
+  assert.match(renderProjectsBody, /actions\.setAttribute\("aria-labelledby", title\.id\)/);
+  assert.match(
+    renderProjectsBody,
+    /createProjectAction\(project\.action, project\.link, "primary"\)/
+  );
+  assert.match(
+    renderProjectsBody,
+    /createProjectAction\(\s*project\.sourceAction,\s*project\.sourceLink,\s*"secondary"/
+  );
+  assert.ok(
+    renderProjectsBody.indexOf("actions.append(primaryLink)") <
+      renderProjectsBody.indexOf("actions.append(sourceLink)"),
+    "Primary live action must precede the secondary source action in DOM and focus order"
+  );
+
+  assert.match(
+    stylesSource,
+    /\.project-actions\s*\{[^}]*max-width:\s*100%;[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*gap:/s,
+    "Action groups must wrap instead of overflowing narrow project cards"
+  );
+  assert.match(
+    stylesSource,
+    /\.project-link\s*\{[^}]*max-width:\s*100%;[^}]*min-height:\s*44px;[^}]*white-space:\s*nowrap;/s,
+    "Every project action must retain a 44px single-line target"
+  );
+  assert.match(
+    modernSource,
+    /\.project-link--secondary\s*\{[^}]*color:\s*var\(--color-ink-2\);[^}]*border:\s*var\(--rule-hair\) solid currentcolor;[^}]*font-size:\s*var\(--text-sm\);/s,
+    "The source action must use a quieter outlined hierarchy"
+  );
+  assert.match(
+    stylesSource,
+    /:where\(a, button\):focus-visible\s*\{\s*outline:\s*3px solid var\(--color-focus\);/,
+    "Project actions must inherit the visible global focus ring"
+  );
+  assert.match(
+    modernSource,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.project-link\s*\{[^}]*transform:\s*none !important;/,
+    "Project action motion must remain disabled under reduced motion"
+  );
+  assert.match(
+    stylesSource,
+    /html\s*\{[^}]*overflow-x:\s*clip;/s,
+    "The page root must retain horizontal overflow protection"
+  );
 });
 
 test("mobile project AVIF pairs meet dimension and bandwidth budgets", async () => {

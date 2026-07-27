@@ -459,6 +459,10 @@ html:lang(ja) .project-heading h3 {
   color: var(--color-ink-2);
 }
 
+.project-actions {
+  gap: var(--space-2xs) var(--space-sm);
+}
+
 .project-link {
   border-block-end: var(--rule-hair) solid currentcolor;
   font-family: var(--font-body);
@@ -467,6 +471,16 @@ html:lang(ja) .project-heading h3 {
   font-variation-settings: normal;
   letter-spacing: 0.01em;
   text-transform: none;
+}
+
+.project-link--secondary {
+  padding-inline: var(--space-sm);
+  color: var(--color-ink-2);
+  border: var(--rule-hair) solid currentcolor;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 html:lang(ja) .project-link {
@@ -582,6 +596,11 @@ html:lang(ja) .footer-meta a {
 
   .project-link:hover {
     transform: translateX(var(--space-2xs));
+  }
+
+  .project-link--secondary:hover {
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
   }
 
   .contact-links a:hover {

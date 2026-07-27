@@ -731,8 +731,18 @@ html:lang(ja) .hero h1 span {
   text-wrap: pretty;
 }
 
+.project-actions {
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-sm);
+}
+
 .project-link {
   width: fit-content;
+  max-width: 100%;
   min-height: 44px;
   padding: var(--space-2xs) 0;
   display: inline-flex;
@@ -752,6 +762,14 @@ html:lang(ja) .hero h1 span {
   transition:
     color var(--dur-micro) var(--ease-out),
     transform var(--dur-micro) var(--ease-out);
+}
+
+.project-link--secondary {
+  padding-inline: var(--space-sm);
+  border: 2px solid currentcolor;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  letter-spacing: 0.02em;
 }
 
 .project-link-arrow {

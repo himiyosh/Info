@@ -403,6 +403,54 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     seenLinks.add(normalizedLink);
 
+    const hasSourceAction = Object.hasOwn(project, "sourceAction");
+    const hasSourceLink = Object.hasOwn(project, "sourceLink");
+    if (hasSourceAction !== hasSourceLink) {
+      throw new TypeError(
+        `Project ${index + 1} fields "sourceAction" and "sourceLink" must be provided together.`
+      );
+    }
+    if (hasSourceAction) {
+      validateLocalizedField(project, index, "sourceAction");
+      for (const language of ["ja", "en"]) {
+        const primaryAction = project.action[language].trim().toLocaleLowerCase(language);
+        const sourceAction = project.sourceAction[language]
+          .trim()
+          .toLocaleLowerCase(language);
+        if (sourceAction === primaryAction) {
+          throw new TypeError(
+            `Project ${index + 1} field "sourceAction.${language}" must differ from "action.${language}".`
+          );
+        }
+      }
+
+      const sourceLink = requireNonEmptyString(
+        project.sourceLink,
+        `Project ${index + 1} field "sourceLink"`
+      );
+      let sourceUrl;
+      try {
+        sourceUrl = new URL(sourceLink);
+      } catch {
+        throw new TypeError(
+          `Project ${index + 1} field "sourceLink" must be an absolute HTTPS URL.`
+        );
+      }
+      if (sourceUrl.protocol !== "https:") {
+        throw new TypeError(
+          `Project ${index + 1} field "sourceLink" must be an absolute HTTPS URL.`
+        );
+      }
+      const normalizedSourceLink = sourceUrl.toString();
+      if (normalizedSourceLink === normalizedLink) {
+        throw new TypeError(`Project ${index + 1} source link must differ from its primary link.`);
+      }
+      if (seenLinks.has(normalizedSourceLink)) {
+        throw new TypeError(`Duplicate project link detected: ${normalizedSourceLink}`);
+      }
+      seenLinks.add(normalizedSourceLink);
+    }
+
     validateLocalProjectAsset(project, index, "image", ".jpg", seenAssets);
     validateLocalProjectAsset(project, index, "mobileImageAvif", ".avif", seenAssets);
 
@@ -423,6 +471,27 @@ document.addEventListener("DOMContentLoaded", () => {
         normalizedStack.add(normalizedValue);
       });
     }
+  }
+
+  function createProjectAction(action, href, variant) {
+    const link = document.createElement("a");
+    const linkText = document.createElement("span");
+    const linkAnnouncement = document.createElement("span");
+    const linkArrow = document.createElement("span");
+
+    link.className = `project-link project-link--${variant}`;
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    linkText.textContent = localizedValue(action);
+    linkAnnouncement.className = "sr-only";
+    linkAnnouncement.textContent = window.siteI18n.t("accessibility.opensInNewTab");
+    linkArrow.className = "project-link-arrow";
+    linkArrow.setAttribute("aria-hidden", "true");
+    linkArrow.textContent = "\u2197";
+    link.append(linkText, linkAnnouncement, linkArrow);
+
+    return link;
   }
 
   // --- Motion: bounded, one-time project-row reveal -------------------
@@ -501,10 +570,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const kind = document.createElement("p");
       const details = document.createElement("div");
       const description = document.createElement("p");
-      const link = document.createElement("a");
-      const linkText = document.createElement("span");
-      const linkAnnouncement = document.createElement("span");
-      const linkArrow = document.createElement("span");
+      const actions = document.createElement("div");
 
       article.className = "project-row";
       article.dataset.scene = `project-${index + 1}`;
@@ -527,6 +593,7 @@ document.addEventListener("DOMContentLoaded", () => {
       media.append(picture);
       content.className = "project-content";
       headingGroup.className = "project-heading";
+      title.id = `project-title-${index + 1}`;
       title.textContent = localizedValue(project.title);
       kind.className = "project-kind";
       kind.textContent = localizedValue(project.kind);
@@ -543,19 +610,21 @@ document.addEventListener("DOMContentLoaded", () => {
         details.append(stack);
       }
 
-      link.className = "project-link";
-      link.href = project.link;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      linkText.textContent = localizedValue(project.action);
-      linkAnnouncement.className = "sr-only";
-      linkAnnouncement.textContent = window.siteI18n.t("accessibility.opensInNewTab");
-      linkArrow.className = "project-link-arrow";
-      linkArrow.setAttribute("aria-hidden", "true");
-      linkArrow.textContent = "\u2197";
-      link.append(linkText, linkAnnouncement, linkArrow);
+      actions.className = "project-actions";
+      actions.setAttribute("role", "group");
+      actions.setAttribute("aria-labelledby", title.id);
+      const primaryLink = createProjectAction(project.action, project.link, "primary");
+      actions.append(primaryLink);
+      if (Object.hasOwn(project, "sourceAction")) {
+        const sourceLink = createProjectAction(
+          project.sourceAction,
+          project.sourceLink,
+          "secondary"
+        );
+        actions.append(sourceLink);
+      }
 
-      content.append(headingGroup, details, link);
+      content.append(headingGroup, details, actions);
       article.append(media, content);
       fragment.append(article);
     });
