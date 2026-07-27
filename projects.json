@@ -1,5 +1,6 @@
 [
   {
+    "slug": "portfolio",
     "title": {
       "ja": "Portfolio",
       "en": "Portfolio"
@@ -32,6 +33,7 @@
     "link": "https://github.com/himiyosh/Info"
   },
   {
+    "slug": "techdb",
     "title": {
       "ja": "TechDB",
       "en": "TechDB"
@@ -69,6 +71,7 @@
     "sourceLink": "https://github.com/himiyosh/tech-dashboard"
   },
   {
+    "slug": "jojo-aiagent",
     "title": {
       "ja": "AIエージェント、いま何が起きている?",
       "en": "AI Agents: What Is Happening Right Now?"
@@ -106,6 +109,7 @@
     "sourceLink": "https://github.com/himiyosh/JoJo-AIAgent"
   },
   {
+    "slug": "jojo-git",
     "title": {
       "ja": "Git、こわくない",
       "en": "Git, Not Scary"
@@ -143,6 +147,7 @@
     "sourceLink": "https://github.com/himiyosh/JoJo-Git"
   },
   {
+    "slug": "ucfitness",
     "title": {
       "ja": "UCFitness",
       "en": "UCFitness"
@@ -170,6 +175,7 @@
     "link": "https://ucfitness.studio344.net/"
   },
   {
+    "slug": "encode-decode-tool",
     "title": {
       "ja": "Encode / Decode Tool",
       "en": "Encode / Decode Tool"
@@ -207,6 +213,7 @@
     "sourceLink": "https://github.com/himiyosh/encode-decode-tool"
   },
   {
+    "slug": "network-plus",
     "title": {
       "ja": "Network+",
       "en": "Network+"
@@ -239,6 +246,7 @@
     "link": "https://github.com/himiyosh/network-plus-extension"
   },
   {
+    "slug": "url-decoder",
     "title": {
       "ja": "URLDecoder",
       "en": "URLDecoder"
@@ -270,6 +278,7 @@
     "sourceLink": "https://github.com/himiyosh/URLDecoder"
   },
   {
+    "slug": "image-resizer",
     "title": {
       "ja": "ImageResizer",
       "en": "ImageResizer"

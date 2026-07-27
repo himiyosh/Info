@@ -18,6 +18,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   const projectPreviewDesktopMedia = "(min-width: 48rem)";
   const projectPreviewMobileMedia = "(max-width: 47.999rem)";
+  const projectSlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  const reservedProjectSlugs = new Set([
+    "top",
+    "about",
+    "projects",
+    "contact",
+    "main-content"
+  ]);
   let prefersReducedMotion = motionQuery.matches;
   const supportsIntersectionObserver = "IntersectionObserver" in window;
   const menuFocusableSelector = [
@@ -42,6 +50,27 @@ document.addEventListener("DOMContentLoaded", () => {
       throw new TypeError(`${fieldName} must be a non-empty string.`);
     }
     return value.trim();
+  }
+
+  function projectTargetId(slug) {
+    return `project-${slug}`;
+  }
+
+  function validateStableSlug(project, index, seenSlugs) {
+    const slug = requireNonEmptyString(project.slug, `Project ${index + 1} field "slug"`);
+    if (project.slug !== slug || !projectSlugPattern.test(slug)) {
+      throw new TypeError(
+        `Project ${index + 1} field "slug" must use lowercase kebab-case.`
+      );
+    }
+    if (reservedProjectSlugs.has(slug)) {
+      throw new TypeError(`Project ${index + 1} field "slug" is reserved: ${slug}`);
+    }
+    if (seenSlugs.has(slug)) {
+      throw new TypeError(`Duplicate project slug detected: ${slug}`);
+    }
+    seenSlugs.add(slug);
+    return slug;
   }
 
   function githubRepositoryKey(url) {
@@ -409,10 +438,19 @@ document.addEventListener("DOMContentLoaded", () => {
     seenAssets.add(normalizedAsset);
   }
 
-  function validateProject(project, index, seenLinks, seenAssets, seenProofTexts) {
+  function validateProject(
+    project,
+    index,
+    seenSlugs,
+    seenLinks,
+    seenAssets,
+    seenProofTexts
+  ) {
     if (!project || typeof project !== "object") {
       throw new TypeError(`Project ${index + 1} must be an object.`);
     }
+
+    validateStableSlug(project, index, seenSlugs);
 
     for (const fieldName of localizedProjectFields) {
       validateLocalizedField(project, index, fieldName);
@@ -647,6 +685,102 @@ document.addEventListener("DOMContentLoaded", () => {
       .forEach((row) => row.classList.remove("is-priming"));
   }
 
+  function projectFragmentTarget(hash) {
+    if (typeof hash !== "string" || !hash.startsWith("#")) {
+      return null;
+    }
+
+    let targetId;
+    try {
+      targetId = decodeURIComponent(hash.slice(1));
+    } catch {
+      return null;
+    }
+    if (!/^project-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(targetId)) {
+      return null;
+    }
+
+    const target = document.getElementById(targetId);
+    return target &&
+      projectsContainer.contains(target) &&
+      target.classList.contains("project-row")
+      ? target
+      : null;
+  }
+
+  function focusProjectFragment(hash = window.location.hash) {
+    const target = projectFragmentTarget(hash);
+    if (!target) {
+      return false;
+    }
+
+    target.classList.remove("is-priming");
+    projectRevealObserver?.unobserve(target);
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "start"
+    });
+    return true;
+  }
+
+  let pendingProjectFragmentHash = null;
+  let projectFragmentFocusQueued = false;
+
+  function scheduleProjectFragmentFocus(hash = window.location.hash) {
+    pendingProjectFragmentHash = hash;
+    if (projectFragmentFocusQueued) {
+      return;
+    }
+
+    projectFragmentFocusQueued = true;
+    queueMicrotask(() => {
+      const scheduledHash = pendingProjectFragmentHash;
+      pendingProjectFragmentHash = null;
+      projectFragmentFocusQueued = false;
+      focusProjectFragment(scheduledHash);
+    });
+  }
+
+  function handleProjectPermalinkClick(event) {
+    const permalink = event.target?.closest?.("a.project-permalink");
+    if (
+      !permalink ||
+      !projectsContainer.contains(permalink) ||
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    const hash = permalink.getAttribute("href");
+    if (!hash) {
+      return;
+    }
+
+    event.preventDefault();
+    window.siteI18n.rememberInHistory();
+    if (window.location.hash !== hash) {
+      window.history.pushState(window.history.state, "", hash);
+    }
+    scheduleProjectFragmentFocus(hash);
+  }
+
+  function handleProjectHashChange() {
+    window.siteI18n.rememberInHistory();
+    scheduleProjectFragmentFocus();
+  }
+
+  function handleProjectHistoryChange(event) {
+    if (!window.siteI18n.syncFromHistory(event.state)) {
+      scheduleProjectFragmentFocus();
+    }
+  }
+
   function updateProjectStatus(state) {
     const translationKey = projectStatusKeys[state];
     if (!translationKey) {
@@ -688,13 +822,17 @@ document.addEventListener("DOMContentLoaded", () => {
       const image = document.createElement("img");
       const content = document.createElement("div");
       const headingGroup = document.createElement("div");
+      const headingLine = document.createElement("div");
       const title = document.createElement("h3");
+      const permalink = document.createElement("a");
       const kind = document.createElement("p");
       const details = document.createElement("div");
       const description = document.createElement("p");
       const actions = document.createElement("div");
 
       article.className = "project-row";
+      article.id = projectTargetId(project.slug);
+      article.tabIndex = -1;
       article.dataset.scene = `project-${index + 1}`;
       article.style.setProperty("--row-index", String(index));
       if (animateReveal) {
@@ -719,14 +857,24 @@ document.addEventListener("DOMContentLoaded", () => {
       image.src = project.image;
       content.className = "project-content";
       headingGroup.className = "project-heading";
-      title.id = `project-title-${index + 1}`;
-      title.textContent = localizedValue(project.title);
+      headingLine.className = "project-heading-line";
+      const localizedTitle = localizedValue(project.title);
+      title.id = `${article.id}-title`;
+      title.textContent = localizedTitle;
+      permalink.className = "project-permalink";
+      permalink.setAttribute("href", `#${article.id}`);
+      permalink.setAttribute(
+        "aria-label",
+        window.siteI18n.t("projects.permalinkLabel").replace("{title}", localizedTitle)
+      );
+      permalink.textContent = window.siteI18n.t("projects.permalinkAction");
       kind.className = "project-kind";
       kind.textContent = localizedValue(project.kind);
       description.className = "project-description";
       description.textContent = localizedValue(project.description);
 
-      headingGroup.append(title, kind);
+      headingLine.append(title, permalink);
+      headingGroup.append(headingLine, kind);
       details.append(description);
 
       if (project.stack?.length) {
@@ -795,6 +943,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }, 2500);
     }
+
+    scheduleProjectFragmentFocus();
   }
 
   function renderProjectLoading() {
@@ -833,10 +983,18 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new TypeError("projects.json must contain a non-empty array.");
       }
       const seenLinks = new Set();
+      const seenSlugs = new Set();
       const seenAssets = new Set();
       const seenProofTexts = new Set();
       data.forEach((project, index) =>
-        validateProject(project, index, seenLinks, seenAssets, seenProofTexts)
+        validateProject(
+          project,
+          index,
+          seenSlugs,
+          seenLinks,
+          seenAssets,
+          seenProofTexts
+        )
       );
       projects = data;
       renderProjects();
@@ -856,6 +1014,9 @@ document.addEventListener("DOMContentLoaded", () => {
       renderProjectLoading();
     }
   });
+  projectsContainer.addEventListener("click", handleProjectPermalinkClick);
+  window.addEventListener("hashchange", handleProjectHashChange);
+  window.addEventListener("popstate", handleProjectHistoryChange);
 
   const observedSections = [...document.querySelectorAll("main section[id]")];
   const navigationLinks = [...navMenu.querySelectorAll('a[href^="#"]')];
