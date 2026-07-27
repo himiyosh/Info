@@ -52,6 +52,7 @@
       projects: {
         title: "Projects",
         intro: "日々の不便を小さくするために作った、公開中のサイト、サービス、ツールです。",
+        directoryLabel: "プロジェクト一覧",
         loading: "プロジェクトを読み込んでいます。",
         ready: "{count}件のプロジェクトを表示しました。",
         error: "プロジェクトを読み込めませんでした。通信状況を確認して、もう一度お試しください。",
@@ -117,6 +118,7 @@
       projects: {
         title: "Projects",
         intro: "Public sites, services, and tools built to make small, everyday tasks a little easier.",
+        directoryLabel: "Project directory",
         loading: "Loading projects.",
         ready: "{count} projects loaded.",
         error: "Projects could not be loaded. Check your connection and try again.",

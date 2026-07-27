@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const navMenu = requireElement("nav-menu");
   const langToggle = requireElement("lang-toggle");
   const projectsStatus = requireElement("projects-status");
+  const projectsDirectory = requireElement("projects-directory");
   const projectsContainer = requireElement("projects-container");
   const projectsFallback = requireElement("projects-fallback");
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
@@ -744,10 +745,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function handleProjectPermalinkClick(event) {
-    const permalink = event.target?.closest?.("a.project-permalink");
+    const permalink = event.target?.closest?.(
+      "a.project-permalink, a.project-directory-link"
+    );
     if (
       !permalink ||
-      !projectsContainer.contains(permalink) ||
       event.defaultPrevented ||
       event.button !== 0 ||
       event.metaKey ||
@@ -759,7 +761,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const hash = permalink.getAttribute("href");
-    if (!hash) {
+    if (!hash || !projectFragmentTarget(hash)) {
       return;
     }
 
@@ -806,6 +808,40 @@ document.addEventListener("DOMContentLoaded", () => {
     if (projectsStatus.textContent !== statusMessage) {
       projectsStatus.textContent = statusMessage;
     }
+  }
+
+  function clearProjectDirectory() {
+    projectsDirectory.hidden = true;
+    projectsDirectory.replaceChildren();
+  }
+
+  function renderProjectDirectory() {
+    if (!projects) {
+      throw new Error("Project directory cannot render before project data is loaded.");
+    }
+
+    const list = document.createElement("ul");
+    list.className = "project-directory-list";
+    projects.forEach((project) => {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      const title = document.createElement("span");
+
+      link.className = "project-directory-link";
+      link.setAttribute("href", `#${projectTargetId(project.slug)}`);
+      title.className = "project-directory-title";
+      title.textContent = localizedValue(project.title);
+      link.append(title);
+      item.append(link);
+      list.append(item);
+    });
+
+    projectsDirectory.setAttribute(
+      "aria-label",
+      window.siteI18n.t("projects.directoryLabel")
+    );
+    projectsDirectory.replaceChildren(list);
+    projectsDirectory.hidden = false;
   }
 
   function renderProjects() {
@@ -928,6 +964,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     projectsContainer.replaceChildren(fragment);
+    renderProjectDirectory();
     projectRows = [...projectsContainer.querySelectorAll(".project-row")];
     refreshScrollScenes();
     requestScrollMotionUpdate();
@@ -952,11 +989,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderProjectLoading() {
+    clearProjectDirectory();
     updateProjectStatus("loading");
     projectsContainer.replaceChildren();
   }
 
   function renderProjectError() {
+    clearProjectDirectory();
     const wrapper = document.createElement("div");
     const retry = document.createElement("button");
 
@@ -1018,6 +1057,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderProjectLoading();
     }
   });
+  projectsDirectory.addEventListener("click", handleProjectPermalinkClick);
   projectsContainer.addEventListener("click", handleProjectPermalinkClick);
   window.addEventListener("hashchange", handleProjectHashChange);
   window.addEventListener("popstate", handleProjectHistoryChange);
