@@ -9,6 +9,7 @@ const repoRoot = process.cwd();
 const retiredPortfolioPreviewSha256 =
   "34ef4fb416975ff4e3e4b0a766e922d49f4679b16dc96b3413d155a99508d095";
 const qualityWorkflowPath = ".github/workflows/quality-baseline.yml";
+const externalLinkWorkflowPath = ".github/workflows/external-link-health.yml";
 const pagesWorkflowPath = ".github/workflows/pages.yml";
 const pagesWhitelistPath = ".github/pages-artifact-whitelist.txt";
 const projectPreviewAvifBaselineBytes = 554_001;
@@ -1875,6 +1876,7 @@ test("all referenced local files exist", async () => {
 
 test("workflow actions are pinned to immutable Node.js-24-compatible SHAs", async () => {
   const qualityWorkflow = await readUtf8(qualityWorkflowPath);
+  const externalLinkWorkflow = await readUtf8(externalLinkWorkflowPath);
   const pagesWorkflow = await readUtf8(pagesWorkflowPath);
   const expectedPins = new Map([
     ["actions/checkout", "3d3c42e5aac5ba805825da76410c181273ba90b1"],
@@ -1886,7 +1888,7 @@ test("workflow actions are pinned to immutable Node.js-24-compatible SHAs", asyn
 
   const usesPattern = /^\s*uses:\s*([a-z0-9-]+\/[a-z0-9-]+)@([a-f0-9]{40})\s*$/gim;
   const usesByAction = new Map();
-  for (const workflow of [qualityWorkflow, pagesWorkflow]) {
+  for (const workflow of [qualityWorkflow, externalLinkWorkflow, pagesWorkflow]) {
     for (const match of workflow.matchAll(usesPattern)) {
       usesByAction.set(match[1], match[2]);
     }
@@ -1901,7 +1903,7 @@ test("workflow actions are pinned to immutable Node.js-24-compatible SHAs", asyn
   }
 
   assert.doesNotMatch(
-    `${qualityWorkflow}\n${pagesWorkflow}`,
+    `${qualityWorkflow}\n${externalLinkWorkflow}\n${pagesWorkflow}`,
     /actions\/(?:checkout|setup-node|upload-pages-artifact|configure-pages|deploy-pages)@v\d+/i,
     "Pinned actions must not use mutable version tags"
   );
@@ -1910,6 +1912,7 @@ test("workflow actions are pinned to immutable Node.js-24-compatible SHAs", asyn
 test("workflow checkouts do not persist credentials", async () => {
   for (const [workflowName, workflowPath] of [
     ["Quality", qualityWorkflowPath],
+    ["External link health", externalLinkWorkflowPath],
     ["Pages", pagesWorkflowPath]
   ]) {
     const workflow = await readUtf8(workflowPath);

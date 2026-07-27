@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "description": "Dependency-free quality baseline for himiyosh/Info",
   "scripts": {
-    "check:js": "node --check i18n.js && node --check script.js",
+    "check:js": "node --check i18n.js && node --check script.js && node --check scripts/check-external-links.mjs",
+    "check:links": "node scripts/check-external-links.mjs",
     "test:quality": "node --test tests/quality/*.test.mjs",
     "check:quality": "npm run check:js && npm run test:quality",
     "test": "npm run check:quality"
