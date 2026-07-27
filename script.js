@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const projectsContainer = requireElement("projects-container");
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
   const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const projectPreviewDesktopMedia = "(min-width: 48rem)";
   const projectPreviewMobileMedia = "(max-width: 47.999rem)";
   let prefersReducedMotion = motionQuery.matches;
   const supportsIntersectionObserver = "IntersectionObserver" in window;
@@ -452,6 +453,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     validateLocalProjectAsset(project, index, "image", ".jpg", seenAssets);
+    validateLocalProjectAsset(project, index, "desktopImageAvif", ".avif", seenAssets);
     validateLocalProjectAsset(project, index, "mobileImageAvif", ".avif", seenAssets);
 
     if (Object.hasOwn(project, "stack")) {
@@ -562,6 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const article = document.createElement("article");
       const media = document.createElement("div");
       const picture = document.createElement("picture");
+      const desktopSource = document.createElement("source");
       const mobileSource = document.createElement("source");
       const image = document.createElement("img");
       const content = document.createElement("div");
@@ -579,6 +582,10 @@ document.addEventListener("DOMContentLoaded", () => {
         article.classList.add("is-priming");
       }
       media.className = "project-media";
+      desktopSource.type = "image/avif";
+      desktopSource.media = projectPreviewDesktopMedia;
+      desktopSource.srcset = `${project.desktopImageAvif} 960w`;
+      desktopSource.sizes = "60vw";
       mobileSource.type = "image/avif";
       mobileSource.media = projectPreviewMobileMedia;
       mobileSource.srcset = `${project.mobileImageAvif} 720w`;
@@ -588,9 +595,9 @@ document.addEventListener("DOMContentLoaded", () => {
       image.height = 540;
       image.loading = "lazy";
       image.decoding = "async";
-      picture.append(mobileSource, image);
-      image.src = project.image;
+      picture.append(desktopSource, mobileSource, image);
       media.append(picture);
+      image.src = project.image;
       content.className = "project-content";
       headingGroup.className = "project-heading";
       title.id = `project-title-${index + 1}`;
