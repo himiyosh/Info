@@ -178,6 +178,8 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
     'document.addEventListener("site-languagechange"'
   );
   const projectsStatus = new FakeElement("p");
+  const projectsDirectory = new FakeElement("nav");
+  projectsDirectory.hidden = true;
   const projectsContainer = new FakeElement("div");
   const projectsFallback = new FakeElement("div");
   const consoleErrors = [];
@@ -203,9 +205,12 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
       error: "projects.error"
     },
     projects: null,
+    projectsDirectory,
     projectsContainer,
     projectsFallback,
     projectsStatus,
+    projectTargetId: (slug) => `project-${slug}`,
+    localizedValue: (value) => value[siteI18n.language],
     validateProject: () => {},
     window: { siteI18n }
   };
@@ -216,6 +221,7 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
       return card;
     });
     projectsContainer.replaceChildren(...cards);
+    context.renderProjectDirectory();
     context.updateProjectStatus("ready");
   };
 
@@ -227,6 +233,8 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
   assert.equal(projectsContainer.getAttribute("aria-busy"), "false");
   assert.equal(projectsContainer.children.length, 1);
+  assert.equal(projectsDirectory.hidden, true);
+  assert.equal(projectsDirectory.children.length, 0);
   const firstRetry = projectsContainer.children[0].children[0];
   assert.equal(firstRetry.textContent, "再読み込み");
   assert.equal(firstRetry.getAttribute("aria-describedby"), "projects-status");
@@ -241,6 +249,8 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   assert.equal(projectsStatus.textContent, "Projects could not be loaded. Check your connection and try again.");
   assert.equal(projectsFallback.classList.contains("is-visible"), true);
   assert.equal(projectsContainer.children.length, 1);
+  assert.equal(projectsDirectory.hidden, true);
+  assert.equal(projectsDirectory.children.length, 0);
   const recoveryRetry = projectsContainer.children[0].children[0];
   assert.equal(recoveryRetry.textContent, "Try again");
 
@@ -254,6 +264,16 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   assert.equal(projectsStatus.classList.contains("sr-only"), true);
   assert.equal(projectsFallback.classList.contains("is-visible"), false);
   assert.equal(projectsFallback.getAttribute("aria-hidden"), "true");
+  assert.equal(projectsDirectory.hidden, false);
+  assert.equal(projectsDirectory.children.length, 1);
+  const directoryLinks = projectsDirectory.children[0].children.map(
+    (item) => item.children[0]
+  );
+  assert.deepEqual(
+    directoryLinks.map((link) => link.getAttribute("href")),
+    projects.map((project) => `#project-${project.slug}`)
+  );
+  assert.equal(new Set(directoryLinks.map((link) => link.getAttribute("href"))).size, 9);
   assert.deepEqual(
     projectsContainer.children.map((card) => card.destination),
     projects.map((project) => project.link)

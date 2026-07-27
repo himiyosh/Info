@@ -596,6 +596,53 @@ html:lang(ja) .hero h1 span {
   text-wrap: pretty;
 }
 
+.project-directory {
+  min-width: 0;
+  margin-block-start: var(--space-lg);
+}
+
+.project-directory[hidden] {
+  display: none;
+}
+
+.project-directory-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  list-style: none;
+}
+
+.project-directory-link {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-2xs) var(--space-xs);
+  display: flex;
+  align-items: center;
+  color: var(--color-on-dark);
+  border-block-end: var(--rule-hair) solid var(--color-rule);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out),
+    opacity var(--dur-micro) var(--ease-out);
+}
+
+.project-directory-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-directory-link:active {
+  opacity: 0.72;
+}
+
 .projects-list {
   margin-block-start: var(--space-xl);
   display: grid;
@@ -1141,6 +1188,11 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
     text-underline-offset: var(--space-2xs);
   }
 
+  .project-directory-link:hover {
+    background: var(--color-paper-2);
+    color: var(--color-ink);
+  }
+
   .project-row:hover .project-media img {
     transform: scale(1.02);
   }
@@ -1240,8 +1292,17 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
 
   .projects-intro p {
     grid-column: 2;
-    grid-row: 1 / span 2;
+    grid-row: 1;
     align-self: end;
+  }
+
+  .project-directory {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .project-directory-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   /* Image stays left / text stays right for every row, in DOM order, on
