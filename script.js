@@ -985,12 +985,15 @@ document.addEventListener("DOMContentLoaded", () => {
       const item = document.createElement("li");
       const link = document.createElement("a");
       const title = document.createElement("span");
+      const kind = document.createElement("span");
 
       link.className = "project-directory-link";
       link.setAttribute("href", `#${projectTargetId(project.slug)}`);
       title.className = "project-directory-title";
       title.textContent = localizedValue(project.title);
-      link.append(title);
+      kind.className = "project-directory-kind";
+      kind.textContent = localizedValue(project.kind);
+      link.append(title, kind);
       item.append(link);
       list.append(item);
     });

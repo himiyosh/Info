@@ -395,6 +395,10 @@ html:lang(ja) .about-copy .about-statement {
   font-family: var(--font-body);
 }
 
+.project-directory-kind {
+  color: var(--color-muted);
+}
+
 html:lang(ja) .project-directory-link {
   font-family: var(--font-body-ja);
 }
