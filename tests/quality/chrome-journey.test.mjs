@@ -66,17 +66,53 @@ async function assertJourneyCleaned(metadata, context) {
 test("successful and timed-out Chrome journeys use unique profiles and clean every process", async () => {
   const runChromeJourney = await loadJourneyHelper();
   const marker = "px-browser-001-success";
-  const successful = await runChromeJourney({
-    chromeArgs: [
-      "--dump-dom",
-      `data:text/html,${encodeURIComponent(`<main id="${marker}">ready</main>`)}`
-    ],
-    completeWhen: (stdout) =>
-      stdout.includes(`id="${marker}"`) && stdout.includes("</html>"),
-    maxStdoutBytes,
-    name: "cleanup-success",
-    timeoutMs: 10_000
-  });
+  const fakeChromeDirectory = await mkdtemp(
+    path.join(os.tmpdir(), "info-controlled-chrome-")
+  );
+  const fakeChromePath = path.join(fakeChromeDirectory, "chrome");
+  const previousChromePath = process.env.CHROME_PATH;
+  await writeFile(
+    fakeChromePath,
+    `#!/bin/sh
+case "$*" in
+  *--remote-debugging-port=0*) ;;
+  *) printf '%s' '<html><main id="${marker}">ready</main></html>' ;;
+esac
+while :; do sleep 1; done
+`,
+    "utf8"
+  );
+  await chmod(fakeChromePath, 0o755);
+
+  let successful;
+  let timedOut;
+  try {
+    process.env.CHROME_PATH = fakeChromePath;
+    successful = await runChromeJourney({
+      chromeArgs: ["--dump-dom", "about:blank"],
+      completeWhen: (stdout) =>
+        stdout.includes(`id="${marker}"`) && stdout.includes("</html>"),
+      maxStdoutBytes,
+      name: "cleanup-success",
+      timeoutMs: 10_000
+    });
+    try {
+      await runChromeJourney({
+        chromeArgs: ["--remote-debugging-port=0", "about:blank"],
+        name: "cleanup-timeout",
+        timeoutMs
+      });
+    } catch (error) {
+      timedOut = error;
+    }
+  } finally {
+    if (previousChromePath === undefined) {
+      delete process.env.CHROME_PATH;
+    } else {
+      process.env.CHROME_PATH = previousChromePath;
+    }
+    await rm(fakeChromeDirectory, { force: true, recursive: true });
+  }
 
   assert.match(successful.stdout, new RegExp(`id="${marker}"`));
   assert.ok(successful.stdoutBytes > 0, "Successful Chrome output must be measured");
@@ -85,18 +121,6 @@ test("successful and timed-out Chrome journeys use unique profiles and clean eve
     "Successful Chrome output exceeded its configured bound"
   );
   await assertJourneyCleaned(successful, "successful journey");
-
-  let timedOut;
-  try {
-    await runChromeJourney({
-      chromeArgs: ["--remote-debugging-port=0", "about:blank"],
-      name: "cleanup-timeout",
-      timeoutMs
-    });
-  } catch (error) {
-    timedOut = error;
-  }
-
   assert.ok(timedOut instanceof Error, "The non-terminating journey must fail");
   assert.equal(timedOut.code, "CHROME_TIMEOUT");
   assert.match(timedOut.message, new RegExp(`timed out after ${timeoutMs} ms`));

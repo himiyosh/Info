@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { access } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "node:test";
@@ -25,6 +26,30 @@ const routes = {
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function assertChromeCleanup(result, context) {
+  assert.ok(
+    Number.isInteger(result.pid) && result.pid > 0,
+    `${context} did not capture its Chrome PID`
+  );
+  const signalTarget = process.platform === "win32" ? result.pid : -result.pid;
+  assert.throws(
+    () => process.kill(signalTarget, 0),
+    (error) => error?.code === "ESRCH",
+    `${context} left Chrome process target ${signalTarget} running`
+  );
+  assert.ok(
+    result.profileCreated &&
+      typeof result.profilePath === "string" &&
+      path.isAbsolute(result.profilePath),
+    `${context} did not capture an initialized Chrome profile`
+  );
+  await assert.rejects(
+    access(result.profilePath),
+    (error) => error?.code === "ENOENT",
+    `${context} left Chrome profile ${result.profilePath} behind`
+  );
 }
 
 async function renderGeneratedRoute(language) {
@@ -108,9 +133,11 @@ function assertLocalizedRender({ language, pageUrl, result, route }) {
 test("JA / and EN /en/ generated pages render non-empty localized DOM without network access", async () => {
   const ja = await renderGeneratedRoute("ja");
   assert.ok(ja.result.stdout.trim().length > 0, "JA / returned an empty Chrome DOM");
+  await assertChromeCleanup(ja.result, "JA /");
 
   const en = await renderGeneratedRoute("en");
   assert.ok(en.result.stdout.trim().length > 0, "EN /en/ returned an empty Chrome DOM");
+  await assertChromeCleanup(en.result, "EN /en/");
   const renderedRoutes = [ja, en];
   assert.notEqual(
     ja.result.stdout,

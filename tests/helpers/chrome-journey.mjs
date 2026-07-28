@@ -110,6 +110,18 @@ function isProcessTargetRunning(target) {
   }
 }
 
+function signalProcessTarget(target, signal) {
+  try {
+    process.kill(target, signal);
+    return true;
+  } catch (error) {
+    if (error?.code === "ESRCH") {
+      return false;
+    }
+    throw error;
+  }
+}
+
 async function waitForProcessTargetToStop(target, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -130,12 +142,16 @@ async function stopChromeProcess(chrome, detached, graceMs) {
     return;
   }
 
-  process.kill(target, "SIGTERM");
+  if (!signalProcessTarget(target, "SIGTERM")) {
+    return;
+  }
   if (await waitForProcessTargetToStop(target, graceMs)) {
     return;
   }
 
-  process.kill(target, "SIGKILL");
+  if (!signalProcessTarget(target, "SIGKILL")) {
+    return;
+  }
   if (!(await waitForProcessTargetToStop(target, processKillWaitMs))) {
     throw new ChromeJourneyError(
       `Chrome process target ${target} survived SIGTERM and SIGKILL`,

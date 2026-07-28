@@ -66,63 +66,56 @@ function fixtureHtml() {
       </section>
     </main>
     <script>
-      addEventListener("load", async () => {
-        await document.fonts.ready;
-        await new Promise((resolve) =>
-          requestAnimationFrame(() => requestAnimationFrame(resolve))
-        );
+      const root = document.documentElement;
+      const directory = document.querySelector(".project-directory");
+      const list = document.querySelector(".project-directory-list");
+      const item = list.querySelector("li");
+      const title = item.querySelector(".project-directory-title");
+      const titleStyle = getComputedStyle(title);
+      const listStyle = getComputedStyle(list);
+      const titleRect = title.getBoundingClientRect();
+      const itemRect = item.getBoundingClientRect();
+      const listRect = list.getBoundingClientRect();
+      const directoryRect = directory.getBoundingClientRect();
+      const metrics = {
+        breakpointMatches: matchMedia("(min-width: 67rem)").matches,
+        viewportWidth: innerWidth,
+        columns: listStyle.gridTemplateColumns.split(" ").filter(Boolean),
+        document: {
+          clientWidth: root.clientWidth,
+          scrollWidth: root.scrollWidth
+        },
+        directory: {
+          clientWidth: directory.clientWidth,
+          scrollWidth: directory.scrollWidth,
+          left: directoryRect.left,
+          right: directoryRect.right
+        },
+        list: {
+          clientWidth: list.clientWidth,
+          scrollWidth: list.scrollWidth,
+          left: listRect.left,
+          right: listRect.right
+        },
+        item: {
+          left: itemRect.left,
+          right: itemRect.right
+        },
+        title: {
+          clientWidth: title.clientWidth,
+          scrollWidth: title.scrollWidth,
+          left: titleRect.left,
+          right: titleRect.right,
+          overflowX: titleStyle.overflowX,
+          textOverflow: titleStyle.textOverflow,
+          whiteSpace: titleStyle.whiteSpace
+        }
+      };
 
-        const root = document.documentElement;
-        const directory = document.querySelector(".project-directory");
-        const list = document.querySelector(".project-directory-list");
-        const item = list.querySelector("li");
-        const title = item.querySelector(".project-directory-title");
-        const titleStyle = getComputedStyle(title);
-        const listStyle = getComputedStyle(list);
-        const titleRect = title.getBoundingClientRect();
-        const itemRect = item.getBoundingClientRect();
-        const listRect = list.getBoundingClientRect();
-        const directoryRect = directory.getBoundingClientRect();
-        const metrics = {
-          breakpointMatches: matchMedia("(min-width: 67rem)").matches,
-          viewportWidth: innerWidth,
-          columns: listStyle.gridTemplateColumns.split(" ").filter(Boolean),
-          document: {
-            clientWidth: root.clientWidth,
-            scrollWidth: root.scrollWidth
-          },
-          directory: {
-            clientWidth: directory.clientWidth,
-            scrollWidth: directory.scrollWidth,
-            left: directoryRect.left,
-            right: directoryRect.right
-          },
-          list: {
-            clientWidth: list.clientWidth,
-            scrollWidth: list.scrollWidth,
-            left: listRect.left,
-            right: listRect.right
-          },
-          item: {
-            left: itemRect.left,
-            right: itemRect.right
-          },
-          title: {
-            clientWidth: title.clientWidth,
-            scrollWidth: title.scrollWidth,
-            left: titleRect.left,
-            right: titleRect.right,
-            overflowX: titleStyle.overflowX,
-            textOverflow: titleStyle.textOverflow,
-            whiteSpace: titleStyle.whiteSpace
-          }
-        };
-
-        document
-          .querySelector('meta[name="geometry"]')
-          .setAttribute("content", btoa(JSON.stringify(metrics)));
-        root.dataset.geometryReady = "true";
-      });
+      document
+        .querySelector('meta[name="geometry"]')
+        .setAttribute("content", btoa(JSON.stringify(metrics)));
+      root.dataset.geometryReady = "true";
     </script>
   </body>
 </html>`;
@@ -135,9 +128,14 @@ test("directory geometry publishes its completion signal before Chrome can dump 
     /addEventListener\("load"|document\.fonts\.ready|requestAnimationFrame/,
     "Geometry readiness must not wait behind asynchronous browser lifecycle work"
   );
+  const markerIndex = source.indexOf('root.dataset.geometryReady = "true"');
+  const scriptEndIndex = source.lastIndexOf("</script>");
   assert.ok(
-    source.indexOf('root.dataset.geometryReady = "true"') <
-      source.lastIndexOf("</script>"),
+    markerIndex >= 0,
+    "The fixture must contain an explicit geometry completion marker"
+  );
+  assert.ok(
+    scriptEndIndex > markerIndex,
     "The fixture must publish a synchronous geometry marker before parsing completes"
   );
 });
@@ -151,7 +149,6 @@ async function renderGeometry() {
         "--force-device-scale-factor=1",
         "--run-all-compositor-stages-before-draw",
         `--window-size=${desktopViewportWidth},900`,
-        "--virtual-time-budget=3000",
         "--allow-file-access-from-files",
         "--dump-dom",
         pathToFileURL(fixturePath).href
