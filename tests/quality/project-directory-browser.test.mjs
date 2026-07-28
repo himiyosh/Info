@@ -128,6 +128,20 @@ function fixtureHtml() {
 </html>`;
 }
 
+test("directory geometry publishes its completion signal before Chrome can dump and exit", () => {
+  const source = fixtureHtml();
+  assert.doesNotMatch(
+    source,
+    /addEventListener\("load"|document\.fonts\.ready|requestAnimationFrame/,
+    "Geometry readiness must not wait behind asynchronous browser lifecycle work"
+  );
+  assert.ok(
+    source.indexOf('root.dataset.geometryReady = "true"') <
+      source.lastIndexOf("</script>"),
+    "The fixture must publish a synchronous geometry marker before parsing completes"
+  );
+});
+
 async function renderGeometry() {
   const { stdout } = await runChromeJourney({
     chromeArgs: async ({ tempDirectory }) => {

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { access } from "node:fs/promises";
+import { access, chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
@@ -110,4 +111,44 @@ test("successful and timed-out Chrome journeys use unique profiles and clean eve
     timedOut.chromeJourney.tempDirectory,
     "Each Chrome journey must receive a unique temporary directory"
   );
+});
+
+test("code-zero exit before the completion signal fails closed and cleans up", async () => {
+  const runChromeJourney = await loadJourneyHelper();
+  const fakeChromeDirectory = await mkdtemp(
+    path.join(os.tmpdir(), "info-early-exit-chrome-")
+  );
+  const fakeChromePath = path.join(fakeChromeDirectory, "chrome");
+  const previousChromePath = process.env.CHROME_PATH;
+  await writeFile(
+    fakeChromePath,
+    "#!/bin/sh\nprintf '%s' '<html><body>dumped-before-ready</body></html>'\n",
+    "utf8"
+  );
+  await chmod(fakeChromePath, 0o755);
+
+  let earlyExit;
+  try {
+    process.env.CHROME_PATH = fakeChromePath;
+    await runChromeJourney({
+      chromeArgs: ["--dump-dom", "about:blank"],
+      completeWhen: (stdout) => stdout.includes("data-geometry-ready"),
+      name: "controlled-early-exit",
+      timeoutMs: 10_000
+    });
+  } catch (error) {
+    earlyExit = error;
+  } finally {
+    if (previousChromePath === undefined) {
+      delete process.env.CHROME_PATH;
+    } else {
+      process.env.CHROME_PATH = previousChromePath;
+    }
+    await rm(fakeChromeDirectory, { force: true, recursive: true });
+  }
+
+  assert.ok(earlyExit instanceof Error, "Early code-zero exit must fail");
+  assert.equal(earlyExit.code, "CHROME_INCOMPLETE");
+  assert.match(earlyExit.chromeJourney.stdout, /dumped-before-ready/);
+  await assertJourneyCleaned(earlyExit.chromeJourney, "early-exit journey");
 });
