@@ -149,8 +149,10 @@ test("URLDecoder and ImageResizer render their exact localized proof and immutab
   const context = {
     document: {
       createDocumentFragment: () => new FakeElement("#document-fragment"),
-      createElement: (tagName) => new FakeElement(tagName)
+      createElement: (tagName) => new FakeElement(tagName),
+      documentElement: { classList: new FakeClassList() }
     },
+    PROJECT_RUNTIME_READY_CLASS: "projects-runtime-ready",
     projectPreviewDesktopMedia: "(min-width: 48rem)",
     projectPreviewMobileMedia: "(max-width: 47.999rem)",
     projectRevealObserver: null,

@@ -1033,11 +1033,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     projectFragmentFocusQueued = true;
-    queueMicrotask(() => {
+    const commitFocus = () => {
       const scheduledHash = pendingProjectFragmentHash;
       pendingProjectFragmentHash = null;
       projectFragmentFocusQueued = false;
       focusProjectFragment(scheduledHash);
+    };
+    if (typeof window.requestAnimationFrame !== "function") {
+      queueMicrotask(commitFocus);
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(commitFocus);
     });
   }
 
@@ -1088,7 +1095,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const isReady = state === "ready";
-    const isError = state === "error";
+    const hasFallbackOwnership = !isReady;
     const translatedStatus = window.siteI18n.t(translationKey);
     const statusMessage = isReady
       ? translatedStatus.replace("{count}", String(projects.length))
@@ -1100,8 +1107,8 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsStatus.classList.toggle("projects-list", !isReady);
     projectsStatus.classList.toggle("sr-only", isReady);
     projectsStatus.hidden = false;
-    projectsFallback.classList.toggle("is-visible", isError);
-    projectsFallback.setAttribute("aria-hidden", String(!isError));
+    projectsFallback.classList.toggle("is-visible", hasFallbackOwnership);
+    projectsFallback.setAttribute("aria-hidden", String(!hasFallbackOwnership));
     projectsStatus.dataset.i18n = translationKey;
 
     if (projectsStatus.textContent !== statusMessage) {
@@ -1321,6 +1328,7 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshScrollScenes();
     requestScrollMotionUpdate();
     updateProjectStatus("ready");
+    document.documentElement.classList.add(PROJECT_RUNTIME_READY_CLASS);
 
     if (animateReveal) {
       const rows = [...projectsContainer.querySelectorAll(".project-row")];
@@ -1345,7 +1353,6 @@ document.addEventListener("DOMContentLoaded", () => {
     clearProjectDirectory();
     projectsContainer.replaceChildren();
     updateProjectStatus("loading");
-    document.documentElement.classList.add(PROJECT_RUNTIME_READY_CLASS);
   }
 
   function renderProjectError() {

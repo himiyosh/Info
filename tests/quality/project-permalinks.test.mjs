@@ -254,13 +254,15 @@ test("project fragment focus handles cold render, click history, back-forward, a
     focusProjectFragment,
     handleProjectPermalinkClick,
     handleProjectHashChange,
-    handleProjectHistoryChange
+    handleProjectHistoryChange,
+    scheduleProjectFragmentFocus
   } = vm.runInNewContext(
     `(() => { ${fragmentSource}; return {
       focusProjectFragment,
       handleProjectPermalinkClick,
       handleProjectHashChange,
-      handleProjectHistoryChange
+      handleProjectHistoryChange,
+      scheduleProjectFragmentFocus
     }; })()`,
     context,
     { timeout: 1000 }
@@ -350,6 +352,21 @@ test("project fragment focus handles cold render, click history, back-forward, a
   const modifiedClick = makeClickEvent(techdbLink, { metaKey: true });
   handleProjectPermalinkClick(modifiedClick);
   assert.equal(modifiedClick.defaultPrevented, false);
+
+  const animationFrames = [];
+  context.window.requestAnimationFrame = (callback) => {
+    animationFrames.push(callback);
+    return animationFrames.length;
+  };
+  const settledFocusCount = techdbTarget.focusCalls.length;
+  scheduleProjectFragmentFocus("#project-techdb");
+  assert.equal(animationFrames.length, 1);
+  assert.equal(techdbTarget.focusCalls.length, settledFocusCount);
+  animationFrames.shift()();
+  assert.equal(animationFrames.length, 1);
+  assert.equal(techdbTarget.focusCalls.length, settledFocusCount);
+  animationFrames.shift()();
+  assert.equal(techdbTarget.focusCalls.length, settledFocusCount + 1);
 
   const renderSource = sourceBetween(
     scriptSource,
