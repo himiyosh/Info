@@ -404,3 +404,38 @@ test("quality wiring and documentation expose the full offline merge gate", asyn
     assert.match(source, /unresolved review findings/i);
   }
 });
+
+test("reviewer-facing docs explain safe verdict continuation authoring", async () => {
+  const [readme, agent] = await Promise.all([
+    readFile(path.join(repoRoot, "README.md"), "utf8"),
+    readFile(agentPath, "utf8")
+  ]);
+
+  for (const source of [readme, agent]) {
+    assert.match(
+      source,
+      /Treat the exact marker's `verdict=pass` or `verdict=fail` as the complete review outcome itself/,
+      "The marker verdict must communicate the complete review outcome"
+    );
+    assert.match(
+      source,
+      /Do not begin continuation prose after the marker.*spaces, tabs, or a new paragraph.*bare lowercase `pass` or `fail` token/,
+      "Bare verdict tokens must not begin same-line or multiline continuation prose"
+    );
+    assert.match(
+      source,
+      /potential second decision and returns missing \(exit 1\).*blocking `verdict=fail` result \(exit 3\).*operational deadlock/,
+      "The conservative parser behavior and fail-to-missing deadlock must remain explicit"
+    );
+    assert.match(
+      source,
+      /begin explanatory text with a descriptive phrase, label, punctuation, Markdown formatting, or a non-bare word/,
+      "Reviewers must receive safe alternatives for explanatory prose"
+    );
+    assert.match(
+      source,
+      /preserves parser safety without mis-clearing ambiguous evidence/,
+      "Safe authoring guidance must not weaken the parser contract"
+    );
+  }
+});
