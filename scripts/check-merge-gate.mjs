@@ -190,8 +190,9 @@ export function evaluateMergeGate(input, expectedHead) {
     );
   }
   if (independentReview.verdict === "fail") {
+    const reviewers = [...new Set(independentReview.failEvidence.map(({ by }) => by))].join(",");
     failures.push(
-      `independent review verdict=fail found for exact head ${expectedHead}: fail=${independentReview.failEvidence.length} pass=${independentReview.passEvidence.length}`
+      `independent review verdict=fail found for exact head ${expectedHead}: fail=${independentReview.failEvidence.length} pass=${independentReview.passEvidence.length} reviewers=${reviewers}`
     );
   }
 
@@ -233,8 +234,11 @@ export async function runMergeGateCheck(args = process.argv.slice(2)) {
     const locations = result.independentReview.passEvidence
       .map(({ surface, index }) => `${surface}[${index}].body`)
       .join(",");
+    const reviewers = [
+      ...new Set(result.independentReview.passEvidence.map(({ by }) => by))
+    ].join(",");
     console.log(
-      `Merge gate satisfied: head=${expectedHead} state=OPEN isDraft=false mergeable=MERGEABLE mergeStateStatus=CLEAN checks=${result.pullRequest.checks.length}/${result.pullRequest.checks.length} reviewVerdict=pass evidence=${locations}`
+      `Merge gate satisfied: head=${expectedHead} state=OPEN isDraft=false mergeable=MERGEABLE mergeStateStatus=CLEAN checks=${result.pullRequest.checks.length}/${result.pullRequest.checks.length} reviewVerdict=pass reviewers=${reviewers} evidence=${locations}`
     );
     return 0;
   } catch (error) {

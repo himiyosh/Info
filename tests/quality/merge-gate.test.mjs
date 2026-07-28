@@ -13,23 +13,25 @@ import {
 const repoRoot = process.cwd();
 const scriptPath = path.join(repoRoot, "scripts/check-merge-gate.mjs");
 const agentPath = path.join(repoRoot, ".github/agents/InfoAgent.agent.md");
+const workflowPath = path.join(repoRoot, ".github/workflows/quality-baseline.yml");
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 const OTHER_HEAD = "89abcdef0123456789abcdef0123456789abcdef";
+const REVIEWER_ID = "c9ebec47-3754-4a61-8588-16a743dafd60";
 const SECOND_VERDICT_CASES = [
-  ["whitespace", "pass fail"],
-  ["line break", "fail\npass"],
-  ["pipe", "pass | fail"],
-  ["slash", "fail/pass"],
-  ["English or", "pass or fail"],
-  ["ASCII comma", "fail, pass"],
-  ["Japanese comma", "pass、fail"],
-  ["semicolon", "fail; pass"],
-  ["fullwidth semicolon", "pass；fail"],
-  ["symbol plus English or", "fail, or pass"]
+  ["whitespace", "pass", " fail"],
+  ["line break", "fail", "\npass"],
+  ["pipe", "pass", " | fail"],
+  ["slash", "fail", "/pass"],
+  ["English or", "pass", " or fail"],
+  ["ASCII comma", "fail", ", pass"],
+  ["Japanese comma", "pass", "、fail"],
+  ["semicolon", "fail", "; pass"],
+  ["fullwidth semicolon", "pass", "；fail"],
+  ["symbol plus English or", "fail", ", or pass"]
 ];
 
-function marker(head = HEAD, verdict = "pass") {
-  return `independent-review head=${head} verdict=${verdict}`;
+function marker(head = HEAD, verdict = "pass", by = REVIEWER_ID) {
+  return `independent-review head=${head} verdict=${verdict} by=${by}`;
 }
 
 function legacyMarker(head = HEAD) {
@@ -85,7 +87,10 @@ test("comments-only exact-head evidence and multiple successful checks satisfy t
   assert.match(result.stdout, new RegExp(`head=${HEAD}`));
   assert.match(result.stdout, /state=OPEN isDraft=false mergeable=MERGEABLE/);
   assert.match(result.stdout, /mergeStateStatus=CLEAN checks=2\/2/);
-  assert.match(result.stdout, /reviewVerdict=pass evidence=comments\[0\]\.body/);
+  assert.match(
+    result.stdout,
+    new RegExp(`reviewVerdict=pass reviewers=${REVIEWER_ID} evidence=comments\\[0\\]\\.body`)
+  );
 });
 
 test("closed and draft pull requests are blocked", () => {
@@ -221,9 +226,9 @@ test("legacy review markers without a verdict remain blocked with exit 1", () =>
 });
 
 test("second-verdict separator forms propagate as missing through the aggregate gate", () => {
-  for (const [label, verdict] of SECOND_VERDICT_CASES) {
+  for (const [label, verdict, continuation] of SECOND_VERDICT_CASES) {
     const input = mergeGateInput({
-      comments: [{ body: marker(HEAD, verdict) }]
+      comments: [{ body: `${marker(HEAD, verdict)}${continuation}` }]
     });
     const evaluated = evaluateMergeGate(input, HEAD);
 
@@ -233,7 +238,7 @@ test("second-verdict separator forms propagate as missing through the aggregate 
 
   const result = runCli(
     mergeGateInput({
-      comments: [{ body: marker(HEAD, "pass;fail") }]
+      comments: [{ body: `${marker(HEAD, "pass")};fail` }]
     })
   );
   assert.equal(result.status, 1);
@@ -378,20 +383,36 @@ test("malformed input shapes fail strictly even after a valid marker", () => {
   }
 });
 
-test("quality wiring and documentation expose the full offline merge gate", async () => {
-  const [packageSource, readme, agent] = await Promise.all([
+test("quality wiring and documentation expose the executable review and offline merge gates", async () => {
+  const [packageSource, workflow, readme, agent] = await Promise.all([
     readFile(path.join(repoRoot, "package.json"), "utf8"),
+    readFile(workflowPath, "utf8"),
     readFile(path.join(repoRoot, "README.md"), "utf8"),
     readFile(agentPath, "utf8")
   ]);
   const packageJson = JSON.parse(packageSource);
 
   assert.match(packageJson.scripts["check:js"], /node --check scripts\/check-merge-gate\.mjs/);
+  assert.equal(
+    packageJson.scripts["check:independent-review"],
+    "node scripts/check-independent-review.mjs"
+  );
+  assert.match(workflow, /pull_request:/);
+  assert.match(workflow, /npm run check:independent-review --/);
+  assert.match(workflow, /permissions:\n  contents: read/);
+  assert.doesNotMatch(workflow, /^\s+(?:pull-requests|issues):/m);
+  assert.match(
+    workflow,
+    /if: github\.event_name == 'pull_request' && github\.event\.pull_request\.state == 'open'/
+  );
+  assert.match(workflow, /PR_NUMBER: \$\{\{ github\.event\.pull_request\.number \}\}/);
+  assert.match(workflow, /PR_HEAD_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
   for (const source of [readme, agent]) {
     assert.match(source, /check-merge-gate\.mjs --head/);
     assert.match(source, /state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments/);
     assert.match(source, /contiguous/i);
     assert.match(source, /verdict=pass/);
+    assert.match(source, /by=<full lowercase UUID>/);
     assert.match(source, /exactly one verdict/i);
     assert.match(source, /second standalone `pass` or `fail` introduced by whitespace/i);
     assert.match(source, /English `or`/);
