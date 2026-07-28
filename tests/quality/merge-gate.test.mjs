@@ -176,6 +176,23 @@ test("review fail returns exit 3 and overrides pass regardless of surface order"
   }
 });
 
+test("a retracted fail does not block a valid same-head pass", () => {
+  const input = mergeGateInput({
+    reviews: [
+      {
+        body: `RETRACTED-${marker(HEAD, "fail")}\nRetraction reason: superseded after correction.`
+      }
+    ],
+    comments: [{ body: marker(HEAD, "pass") }]
+  });
+  const evaluated = evaluateMergeGate(input, HEAD);
+
+  assert.equal(evaluated.ok, true);
+  assert.equal(evaluated.independentReview.verdict, "pass");
+  assert.equal(evaluated.independentReview.failEvidence.length, 0);
+  assert.equal(runCli(input).status, 0);
+});
+
 test("legacy review markers without a verdict remain blocked with exit 1", () => {
   const result = runCli(
     mergeGateInput({
@@ -317,6 +334,8 @@ test("quality wiring and documentation expose the full offline merge gate", asyn
     assert.match(source, /contiguous/i);
     assert.match(source, /verdict=pass/);
     assert.match(source, /fail wins/i);
+    assert.match(source, /RETRACTED-independent-review/);
+    assert.match(source, /retraction reason/i);
     assert.match(source, /immediately before merge/i);
     assert.match(source, /unresolved review findings/i);
   }

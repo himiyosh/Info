@@ -104,6 +104,27 @@ test("fail wins over pass regardless of evidence order or surface", () => {
   }
 });
 
+test("a retracted fail is ignored while a valid same-head pass succeeds", () => {
+  const input = {
+    reviews: [
+      {
+        body: `RETRACTED-${marker("fail")}\nRetraction reason: the original finding was incorrect.`
+      }
+    ],
+    comments: [{ body: marker("pass") }]
+  };
+  const evaluated = evaluateIndependentReviewEvidence(input, HEAD);
+
+  assert.equal(evaluated.verdict, "pass");
+  assert.equal(evaluated.passEvidence.length, 1);
+  assert.equal(evaluated.failEvidence.length, 0);
+  assert.equal(evaluated.evidence.length, 1);
+
+  const result = runCli(input);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /verdict passed/);
+});
+
 test("all verdict-bearing evidence is collected in source order", () => {
   const body = [marker("pass"), marker("fail"), marker("pass")].join("\n");
   const evidence = collectIndependentReviewEvidence(
