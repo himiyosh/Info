@@ -70,6 +70,8 @@ test("successful and timed-out Chrome journeys use unique profiles and clean eve
       "--dump-dom",
       `data:text/html,${encodeURIComponent(`<main id="${marker}">ready</main>`)}`
     ],
+    completeWhen: (stdout) =>
+      stdout.includes(`id="${marker}"`) && stdout.includes("</html>"),
     maxStdoutBytes,
     name: "cleanup-success",
     timeoutMs: 10_000

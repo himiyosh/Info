@@ -35,7 +35,6 @@ async function renderGeneratedRoute(language) {
     "The shared Chrome journey runner must be exported"
   );
   const route = routes[language];
-  assert.ok(route, `Missing generated route definition for ${language}`);
   const pageUrl = pathToFileURL(path.join(repoRoot, route.outputPath));
   const result = await runChromeJourney({
     chromeArgs: [
@@ -47,6 +46,11 @@ async function renderGeneratedRoute(language) {
       "--dump-dom",
       pageUrl.href
     ],
+    completeWhen: (stdout) =>
+      stdout.includes(`lang="${language}"`) &&
+      stdout.includes(route.titleLine1) &&
+      stdout.includes(route.titleLine2) &&
+      stdout.includes("</html>"),
     name: `generated-${language}`,
     timeoutMs: 20_000
   });
@@ -55,7 +59,6 @@ async function renderGeneratedRoute(language) {
 
 function assertLocalizedRender({ language, pageUrl, result, route }) {
   const context = `${language} ${route.route}`;
-  assert.equal(pageUrl.protocol, "file:", `${context} must render from checked-in files`);
   assert.ok(
     result.chromeArgs.includes(blockedNetworkArgument),
     `${context} did not run with host networking blocked`
@@ -108,13 +111,11 @@ test("JA / and EN /en/ generated pages render non-empty localized DOM without ne
 
   const en = await renderGeneratedRoute("en");
   assert.ok(en.result.stdout.trim().length > 0, "EN /en/ returned an empty Chrome DOM");
-
   const renderedRoutes = [ja, en];
-  assert.equal(renderedRoutes.length, 2, "Both generated locale routes must run");
-  assert.deepEqual(
-    renderedRoutes.map(({ language }) => language),
-    ["ja", "en"],
-    "The smoke journey must cover both locale routes"
+  assert.notEqual(
+    ja.result.stdout,
+    en.result.stdout,
+    "JA / and EN /en/ must not collapse to the same non-empty rendered DOM"
   );
   for (const rendered of renderedRoutes) {
     assertLocalizedRender(rendered);
