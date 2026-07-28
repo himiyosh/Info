@@ -457,11 +457,11 @@ test("project ownership waits for a ready runtime when scripts or initialization
   assert.equal(projectsFallback.classList.contains("is-visible"), true);
 });
 
-test("dynamic replacement preserves focused fallback controls without stealing outside focus", async () => {
+test("catalogue replacement preserves project controls without stealing outside focus", async () => {
   const scriptSource = await readUtf8("script.js");
   const focusSource = sourceBetween(
     scriptSource,
-    "function captureProjectFallbackFocus",
+    "function captureProjectCatalogueFocus",
     "function updateProjectStatus"
   );
   const document = {
@@ -493,6 +493,13 @@ test("dynamic replacement preserves focused fallback controls without stealing o
           child.parentElement = this;
           this.children.push(child);
         });
+      },
+      replaceChildren(...children) {
+        this.children.forEach((child) => {
+          child.parentElement = null;
+        });
+        this.children = [];
+        this.append(...children);
       },
       closest(selector) {
         const className = selector.startsWith(".") ? selector.slice(1) : null;
@@ -548,25 +555,26 @@ test("dynamic replacement preserves focused fallback controls without stealing o
   const projectsContainer = makeNode("projects-container");
   const dynamicCard = makeNode("project-techdb", ["project-row", "is-priming"]);
   const dynamicPermalink = makeNode("", ["project-permalink"]);
+  const dynamicShare = makeNode("", ["project-share-button"]);
   const dynamicLinks = Object.fromEntries(
     ["primary", "secondary", "evidence"].map((variant) => [
       variant,
       makeNode("", ["project-link", `project-link--${variant}`])
     ])
   );
-  dynamicCard.append(dynamicPermalink, ...Object.values(dynamicLinks));
+  dynamicCard.append(dynamicPermalink, dynamicShare, ...Object.values(dynamicLinks));
   projectsContainer.append(dynamicCard);
   const unobserved = [];
   document.getElementById = (id) => (id === dynamicCard.id ? dynamicCard : null);
 
   const {
-    captureProjectFallbackFocus,
-    restoreProjectFallbackFocus,
+    captureProjectCatalogueFocus,
+    restoreProjectCatalogueFocus,
     shouldScheduleProjectFragmentFocusAfterRender
   } = vm.runInNewContext(
     `(() => { ${focusSource}; return {
-      captureProjectFallbackFocus,
-      restoreProjectFallbackFocus,
+      captureProjectCatalogueFocus,
+      restoreProjectCatalogueFocus,
       shouldScheduleProjectFragmentFocusAfterRender
     }; })()`,
     {
@@ -589,14 +597,15 @@ test("dynamic replacement preserves focused fallback controls without stealing o
   ]) {
     document.activeElement = fallbackControl;
     dynamicCard.classList.add("is-priming");
-    const handoff = captureProjectFallbackFocus();
-    assert.equal(handoff.kind, "fallback");
+    const handoff = captureProjectCatalogueFocus();
+    assert.equal(handoff.kind, "catalogue");
     assert.equal(handoff.projectId, "project-techdb");
     assert.equal(handoff.scrollX, 17);
     assert.equal(handoff.scrollY, 29);
+    assert.equal(handoff.source, "fallback");
     assert.equal(handoff.targetSelector, expectedSelector);
     assert.equal(handoff.wasProjectTarget, false);
-    assert.equal(restoreProjectFallbackFocus(handoff), true);
+    assert.equal(restoreProjectCatalogueFocus(handoff), true);
     assert.equal(document.activeElement, dynamicControl);
     assert.equal(dynamicControl.focusCalls.at(-1).preventScroll, true);
     assert.equal(dynamicCard.classList.contains("is-priming"), false);
@@ -605,27 +614,72 @@ test("dynamic replacement preserves focused fallback controls without stealing o
   }
 
   document.activeElement = fallbackCard;
-  const fragmentHandoff = captureProjectFallbackFocus();
+  const fragmentHandoff = captureProjectCatalogueFocus();
   assert.equal(fragmentHandoff.wasProjectTarget, true);
-  assert.equal(restoreProjectFallbackFocus(fragmentHandoff), true);
+  assert.equal(restoreProjectCatalogueFocus(fragmentHandoff), true);
   assert.equal(document.activeElement, dynamicCard);
   assert.equal(dynamicCard.focusCalls.at(-1).preventScroll, true);
   assert.equal(shouldScheduleProjectFragmentFocusAfterRender(fragmentHandoff), true);
 
+  const oldDynamicCard = makeNode("project-techdb", ["project-row"]);
+  const oldDynamicPermalink = makeNode("", ["project-permalink"]);
+  const oldDynamicShare = makeNode("", ["project-share-button"]);
+  const oldDynamicLinks = Object.fromEntries(
+    ["primary", "secondary", "evidence"].map((variant) => [
+      variant,
+      makeNode("", ["project-link", `project-link--${variant}`])
+    ])
+  );
+  oldDynamicCard.append(
+    oldDynamicPermalink,
+    oldDynamicShare,
+    ...Object.values(oldDynamicLinks)
+  );
+  for (const [oldControl, newControl, expectedSelector] of [
+    [oldDynamicPermalink, dynamicPermalink, ".project-permalink"],
+    [oldDynamicShare, dynamicShare, ".project-share-button"],
+    [oldDynamicLinks.primary, dynamicLinks.primary, ".project-link--primary"],
+    [oldDynamicLinks.secondary, dynamicLinks.secondary, ".project-link--secondary"],
+    [oldDynamicLinks.evidence, dynamicLinks.evidence, ".project-link--evidence"]
+  ]) {
+    projectsContainer.replaceChildren(oldDynamicCard);
+    document.activeElement = oldControl;
+    const handoff = captureProjectCatalogueFocus();
+    assert.equal(handoff.kind, "catalogue");
+    assert.equal(handoff.source, "dynamic");
+    assert.equal(handoff.targetSelector, expectedSelector);
+    projectsContainer.replaceChildren(dynamicCard);
+    assert.equal(restoreProjectCatalogueFocus(handoff), true);
+    assert.equal(document.activeElement, newControl);
+    assert.equal(newControl.focusCalls.at(-1).preventScroll, true);
+    assert.equal(shouldScheduleProjectFragmentFocusAfterRender(handoff), false);
+  }
+
+  projectsContainer.replaceChildren(oldDynamicCard);
+  document.activeElement = oldDynamicCard;
+  const dynamicFragmentHandoff = captureProjectCatalogueFocus();
+  projectsContainer.replaceChildren(dynamicCard);
+  assert.equal(restoreProjectCatalogueFocus(dynamicFragmentHandoff), true);
+  assert.equal(document.activeElement, dynamicCard);
+  assert.equal(
+    shouldScheduleProjectFragmentFocusAfterRender(dynamicFragmentHandoff),
+    true
+  );
+
   const outsideControl = makeNode("outside-control");
   document.activeElement = outsideControl;
-  const outsideHandoff = captureProjectFallbackFocus();
+  const outsideHandoff = captureProjectCatalogueFocus();
   assert.equal(outsideHandoff.kind, "outside");
-  assert.equal(restoreProjectFallbackFocus(outsideHandoff), false);
+  assert.equal(restoreProjectCatalogueFocus(outsideHandoff), false);
   assert.equal(document.activeElement, outsideControl);
   assert.equal(shouldScheduleProjectFragmentFocusAfterRender(outsideHandoff), false);
 
   document.activeElement = document.body;
-  const neutralHandoff = captureProjectFallbackFocus();
+  const neutralHandoff = captureProjectCatalogueFocus();
   assert.equal(neutralHandoff.kind, "neutral");
   assert.equal(shouldScheduleProjectFragmentFocusAfterRender(neutralHandoff), true);
-  assert.equal(unobserved.length, 5);
-  assert.equal(scrollCalls.length, 4);
+  assert.equal(unobserved.length, 11);
+  assert.equal(scrollCalls.length, 9);
 });
 
 test("persistent failures reuse the fallback and retry recovery removes duplicate destinations", async () => {

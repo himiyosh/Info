@@ -1088,7 +1088,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function captureProjectFallbackFocus() {
+  function captureProjectCatalogueFocus() {
     const focusedElement = document.activeElement;
     if (
       !focusedElement ||
@@ -1097,18 +1097,24 @@ document.addEventListener("DOMContentLoaded", () => {
     ) {
       return { kind: "neutral" };
     }
-    if (!projectsFallback.contains(focusedElement)) {
+    const isFallbackFocus = projectsFallback.contains(focusedElement);
+    const isDynamicFocus = projectsContainer.contains(focusedElement);
+    if (!isFallbackFocus && !isDynamicFocus) {
       return { kind: "outside" };
     }
 
-    const projectCard = focusedElement.closest(".projects-fallback-card");
+    const projectCard = focusedElement.closest(
+      isFallbackFocus ? ".projects-fallback-card" : ".project-row"
+    );
     if (!projectCard) {
       return { kind: "outside" };
     }
 
     let targetSelector = null;
-    if (focusedElement.closest(".projects-fallback-permalink")) {
+    if (focusedElement.closest(".project-permalink")) {
       targetSelector = ".project-permalink";
+    } else if (focusedElement.closest(".project-share-button")) {
+      targetSelector = ".project-share-button";
     } else {
       const projectLink = focusedElement.closest(".project-link");
       const variant = ["primary", "secondary", "evidence"].find((name) =>
@@ -1120,17 +1126,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     return {
-      kind: "fallback",
+      kind: "catalogue",
       projectId: projectCard.id,
       scrollX: window.scrollX,
       scrollY: window.scrollY,
+      source: isFallbackFocus ? "fallback" : "dynamic",
       targetSelector,
       wasProjectTarget: focusedElement === projectCard
     };
   }
 
-  function restoreProjectFallbackFocus(focusHandoff) {
-    if (focusHandoff.kind !== "fallback") {
+  function restoreProjectCatalogueFocus(focusHandoff) {
+    if (focusHandoff.kind !== "catalogue") {
       return false;
     }
 
@@ -1161,7 +1168,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function shouldScheduleProjectFragmentFocusAfterRender(focusHandoff) {
     return (
       focusHandoff.kind === "neutral" ||
-      (focusHandoff.kind === "fallback" && focusHandoff.wasProjectTarget)
+      (focusHandoff.kind === "catalogue" && focusHandoff.wasProjectTarget)
     );
   }
 
@@ -1242,7 +1249,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const fallbackFocusHandoff = captureProjectFallbackFocus();
+    const projectFocusHandoff = captureProjectCatalogueFocus();
     resetProjectShareControllers({ discard: true });
     projectRevealObserver?.disconnect();
     const animateReveal = shouldAnimateProjectReveal();
@@ -1423,8 +1430,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 2500);
     }
 
-    restoreProjectFallbackFocus(fallbackFocusHandoff);
-    if (shouldScheduleProjectFragmentFocusAfterRender(fallbackFocusHandoff)) {
+    restoreProjectCatalogueFocus(projectFocusHandoff);
+    if (shouldScheduleProjectFragmentFocusAfterRender(projectFocusHandoff)) {
       scheduleProjectFragmentFocus();
     }
   }
