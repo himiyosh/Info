@@ -53,6 +53,7 @@
       projects: {
         title: "Projects",
         intro: "日々の不便を小さくするために作った、公開中のサイト、サービス、ツールです。",
+        skipToContact: "連絡先へスキップ",
         directoryLabel: "プロジェクト一覧",
         fallback: "JavaScript なしでも公開プロジェクトへ直接アクセスできます",
         loading: "プロジェクトを読み込んでいます。",
@@ -143,6 +144,7 @@
       projects: {
         title: "Projects",
         intro: "Public sites, services, and tools built to make small, everyday tasks a little easier.",
+        skipToContact: "Skip to Contact",
         directoryLabel: "Project directory",
         fallback: "Direct links to public projects:",
         loading: "Loading projects.",

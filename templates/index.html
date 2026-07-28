@@ -220,6 +220,9 @@
     </section>
 
     <section class="projects" id="projects" tabindex="-1" data-scene="projects">
+      <a class="skip-link projects-skip-link" href="#contact" data-i18n="projects.skipToContact">
+        {{t:projects.skipToContact}}
+      </a>
       <div class="section-shell">
         <div class="projects-intro">
           <h2 data-i18n="projects.title">{{t:projects.title}}</h2>
@@ -257,10 +260,10 @@
       </div>
     </section>
 
-    <section class="contact section-shell" id="contact" tabindex="-1" data-scene="contact">
+    <section class="contact section-shell" id="contact" tabindex="-1" aria-labelledby="contact-title" data-scene="contact">
       <div class="contact-panel">
         <div>
-          <h2 data-i18n="contact.title">{{t:contact.title}}</h2>
+          <h2 id="contact-title" data-i18n="contact.title">{{t:contact.title}}</h2>
           <p data-i18n="contact.intro">
             {{t:contact.intro}}
           </p>
