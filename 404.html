@@ -97,8 +97,19 @@
       position: fixed;
       inset-block-start: var(--space-sm);
       inset-inline-start: max(var(--space-sm), env(safe-area-inset-left));
+      inset-inline-end: max(var(--space-sm), env(safe-area-inset-right));
       z-index: var(--z-modal);
+      max-width: calc(
+        100% -
+        max(var(--space-sm), env(safe-area-inset-left)) -
+        max(var(--space-sm), env(safe-area-inset-right))
+      );
+      justify-content: center;
+      padding-block: var(--space-2xs);
       padding-inline: var(--space-sm);
+      overflow-wrap: anywhere;
+      text-align: center;
+      white-space: normal;
       transform: translateY(-200%);
       background: var(--color-focus);
       color: var(--color-accent-ink);

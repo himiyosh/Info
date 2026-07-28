@@ -117,9 +117,10 @@ test("404 links and assets resolve from arbitrarily deep missing project paths",
   }
 });
 
-test("404 styling keeps recovery controls accessible and contained at narrow widths", async () => {
+test("404 styling keeps recovery controls and the focused skip link contained at narrow widths", async () => {
   const css = stylesheet(await readUtf8("404.html"));
   const linkRule = css.match(/\.not-found-link\s*\{([^}]*)\}/s)?.[1] ?? "";
+  const skipRule = css.match(/\.skip-link\s*\{([^}]*)\}/s)?.[1] ?? "";
   const focusRule = css.match(/\.not-found-link:focus-visible\s*\{([^}]*)\}/s)?.[1] ?? "";
   const activeRule = css.match(/\.not-found-link:active\s*\{([^}]*)\}/s)?.[1] ?? "";
   const disabledRule =
@@ -132,6 +133,21 @@ test("404 styling keeps recovery controls accessible and contained at narrow wid
   assert.match(linkRule, /min-height:\s*44px/);
   assert.match(linkRule, /max-width:\s*100%/);
   assert.match(linkRule, /white-space:\s*nowrap/);
+  assert.match(
+    skipRule,
+    /inset-inline-start:\s*max\(var\(--space-sm\),\s*env\(safe-area-inset-left\)\)/
+  );
+  assert.match(
+    skipRule,
+    /inset-inline-end:\s*max\(var\(--space-sm\),\s*env\(safe-area-inset-right\)\)/
+  );
+  assert.match(
+    skipRule,
+    /max-width:\s*calc\(\s*100%\s*-\s*max\(var\(--space-sm\),\s*env\(safe-area-inset-left\)\)\s*-\s*max\(var\(--space-sm\),\s*env\(safe-area-inset-right\)\)\s*\)/s
+  );
+  assert.match(skipRule, /overflow-wrap:\s*anywhere/);
+  assert.match(skipRule, /white-space:\s*normal/);
+  assert.match(css, /\.skip-link:focus-visible\s*\{\s*transform:\s*none;/);
   assert.match(focusRule, /outline:\s*3px solid var\(--color-focus\)/);
   assert.match(activeRule, /transform:\s*translateY\(1px\)/);
   assert.match(disabledRule, /cursor:\s*not-allowed/);
