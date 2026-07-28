@@ -85,6 +85,10 @@ class FakeClassList {
     return this.values.has(className);
   }
 
+  remove(...classNames) {
+    classNames.forEach((className) => this.values.delete(className));
+  }
+
   toggle(className, force) {
     const shouldAdd = force ?? !this.values.has(className);
     if (shouldAdd) {
@@ -103,16 +107,34 @@ class FakeElement {
     this.children = [];
     this.classList = new FakeClassList();
     this.dataset = {};
+    this.focusCalls = [];
     this.listeners = new Map();
+    this.ownerDocument = null;
+    this.parentElement = null;
     this.textContent = "";
   }
 
   append(...children) {
-    this.children.push(...children);
+    children.forEach((child) => {
+      child.ownerDocument ??= this.ownerDocument;
+      child.parentElement = this;
+      this.children.push(child);
+    });
   }
 
   replaceChildren(...children) {
-    this.children = children;
+    const activeElement = this.ownerDocument?.activeElement;
+    if (
+      activeElement &&
+      this.children.some((child) => child.contains(activeElement))
+    ) {
+      this.ownerDocument.activeElement = this.ownerDocument.body;
+    }
+    this.children.forEach((child) => {
+      child.parentElement = null;
+    });
+    this.children = [];
+    this.append(...children);
   }
 
   setAttribute(name, value) {
@@ -123,12 +145,36 @@ class FakeElement {
     return this.attributes.get(name);
   }
 
+  removeAttribute(name) {
+    this.attributes.delete(name);
+  }
+
   addEventListener(type, listener) {
     this.listeners.set(type, listener);
   }
 
-  click() {
-    return this.listeners.get("click")?.();
+  click(event = {}) {
+    return this.listeners.get("click")?.({
+      detail: 0,
+      currentTarget: this,
+      ...event
+    });
+  }
+
+  contains(element) {
+    for (let current = element; current; current = current.parentElement) {
+      if (current === this) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  focus(options) {
+    this.focusCalls.push(options);
+    if (this.ownerDocument) {
+      this.ownerDocument.activeElement = this;
+    }
   }
 }
 
@@ -384,7 +430,7 @@ test("project ownership waits for a ready runtime when scripts or initialization
 
   const statusSource = sourceBetween(
     scriptSource,
-    "function updateProjectStatus",
+    "function createProjectRetryFocusHandoff",
     "function clearProjectDirectory"
   );
   const initialLoadingSource = sourceBetween(
@@ -740,6 +786,142 @@ test("catalogue replacement preserves project controls without stealing outside 
   assert.equal(scrollCalls.length, 15);
 });
 
+test("retry focus handoff is keyboard-only and yields to deliberate focus movement", async () => {
+  const scriptSource = await readUtf8("script.js");
+  const retryFocusSource = sourceBetween(
+    scriptSource,
+    "function createProjectRetryFocusHandoff",
+    "function updateProjectStatus"
+  );
+  const errorSource = sourceBetween(
+    scriptSource,
+    "function handleProjectRetry",
+    "async function loadProjects"
+  );
+  const document = {
+    activeElement: null,
+    body: new FakeElement("body"),
+    createElement: (tagName) => {
+      const element = new FakeElement(tagName);
+      element.ownerDocument = document;
+      return element;
+    }
+  };
+  document.body.ownerDocument = document;
+  document.activeElement = document.body;
+
+  const projectsStatus = new FakeElement("p");
+  const projectsContainer = new FakeElement("div");
+  const projectsDirectory = new FakeElement("nav");
+  const projectsFallback = new FakeElement("div");
+  for (const element of [
+    projectsStatus,
+    projectsContainer,
+    projectsDirectory,
+    projectsFallback
+  ]) {
+    element.ownerDocument = document;
+  }
+
+  const retry = new FakeElement("button");
+  retry.ownerDocument = document;
+  projectsContainer.append(retry);
+  let fragmentFocusCalls = 0;
+  const unobserved = [];
+  const context = {
+    clearProjectDirectory: () => {},
+    document,
+    projectRevealObserver: {
+      unobserve: (target) => unobserved.push(target)
+    },
+    projectsContainer,
+    projectsFallback,
+    projectsStatus,
+    resetProjectShareControllers: () => {},
+    scheduleProjectFragmentFocus: () => {
+      fragmentFocusCalls += 1;
+    },
+    updateProjectStatus: () => {},
+    window: {
+      siteI18n: {
+        t: () => "Try again"
+      }
+    }
+  };
+  const {
+    completeProjectRetryFocus,
+    createProjectRetryFocusHandoff,
+    focusProjectRetryPendingState,
+    renderProjectError
+  } = vm.runInNewContext(
+    `(() => {
+      ${retryFocusSource}
+      ${errorSource}
+      return {
+        completeProjectRetryFocus,
+        createProjectRetryFocusHandoff,
+        focusProjectRetryPendingState,
+        renderProjectError
+      };
+    })()`,
+    context,
+    { timeout: 1000 }
+  );
+
+  retry.focus();
+  assert.equal(
+    createProjectRetryFocusHandoff({ detail: 1, currentTarget: retry }),
+    null,
+    "Pointer activation must not redirect focus"
+  );
+  assert.equal(document.activeElement, retry);
+
+  const abandonedHandoff = createProjectRetryFocusHandoff({
+    detail: 0,
+    currentTarget: retry
+  });
+  assert.ok(abandonedHandoff);
+  assert.equal(focusProjectRetryPendingState(abandonedHandoff), true);
+  assert.equal(document.activeElement, projectsStatus);
+  assert.equal(projectsStatus.getAttribute("tabindex"), "-1");
+  assert.equal(projectsStatus.focusCalls.at(-1).preventScroll, true);
+
+  const outsideControl = new FakeElement("button");
+  outsideControl.ownerDocument = document;
+  outsideControl.focus();
+  renderProjectError(abandonedHandoff);
+  assert.equal(document.activeElement, outsideControl);
+  assert.equal(projectsStatus.getAttribute("tabindex"), undefined);
+  assert.equal(fragmentFocusCalls, 0);
+
+  const replacementRetry = projectsContainer.children[0].children[0];
+  replacementRetry.focus();
+  const ownedHandoff = createProjectRetryFocusHandoff({
+    detail: 0,
+    currentTarget: replacementRetry
+  });
+  assert.ok(ownedHandoff);
+  assert.equal(focusProjectRetryPendingState(ownedHandoff), true);
+  renderProjectError(ownedHandoff);
+  const finalRetry = projectsContainer.children[0].children[0];
+  assert.equal(document.activeElement, finalRetry);
+  assert.equal(finalRetry.focusCalls.at(-1).preventScroll, true);
+  assert.equal(fragmentFocusCalls, 1);
+
+  const readyTarget = new FakeElement("article");
+  readyTarget.ownerDocument = document;
+  readyTarget.classList.add("project-row", "is-priming");
+  const successHandoff = { pendingTarget: projectsStatus };
+  projectsStatus.setAttribute("tabindex", "-1");
+  projectsStatus.focus();
+  assert.equal(completeProjectRetryFocus(successHandoff, readyTarget), true);
+  assert.equal(document.activeElement, readyTarget);
+  assert.equal(readyTarget.focusCalls.at(-1).preventScroll, true);
+  assert.equal(readyTarget.classList.contains("is-priming"), false);
+  assert.deepEqual(unobserved, [readyTarget]);
+  assert.equal(projectsStatus.getAttribute("tabindex"), undefined);
+});
+
 test("stalled and failed project loads preserve the fallback until retry recovery is validated", async () => {
   const [scriptSource, projects, siteI18n] = await Promise.all([
     readUtf8("script.js"),
@@ -748,7 +930,7 @@ test("stalled and failed project loads preserve the fallback until retry recover
   ]);
   const statusSource = sourceBetween(
     scriptSource,
-    "function updateProjectStatus",
+    "function createProjectRetryFocusHandoff",
     "function renderProjects"
   );
   const loadingSource = sourceBetween(
@@ -762,6 +944,26 @@ test("stalled and failed project loads preserve the fallback until retry recover
   const projectsContainer = new FakeElement("div");
   const projectsFallback = new FakeElement("div");
   const documentElement = { classList: new FakeClassList() };
+  const document = {
+    activeElement: null,
+    body: new FakeElement("body"),
+    createElement: (tagName) => {
+      const element = new FakeElement(tagName);
+      element.ownerDocument = document;
+      return element;
+    },
+    documentElement
+  };
+  document.body.ownerDocument = document;
+  document.activeElement = document.body;
+  for (const element of [
+    projectsStatus,
+    projectsDirectory,
+    projectsContainer,
+    projectsFallback
+  ]) {
+    element.ownerDocument = document;
+  }
   projectsFallback.replaceChildren(
     ...projects.map((project) => Object.assign(new FakeElement("article"), {
       id: `project-${project.slug}`
@@ -803,10 +1005,7 @@ test("stalled and failed project loads preserve the fallback until retry recover
     PROJECT_REQUEST_TIMEOUT_MS: 8_000,
     PROJECT_RUNTIME_READY_CLASS: "projects-runtime-ready",
     console: { error: (...args) => consoleErrors.push(args) },
-    document: {
-      createElement: (tagName) => new FakeElement(tagName),
-      documentElement
-    },
+    document,
     fetch: async (_url, options) => {
       const response = responses.shift();
       if (typeof response === "function") {
@@ -857,7 +1056,7 @@ test("stalled and failed project loads preserve the fallback until retry recover
       siteI18n
     }
   };
-  context.renderProjects = () => {
+  context.renderProjects = (retryFocusHandoff) => {
     context.projectsFallback.replaceChildren();
     const cards = context.projects.map((project) => {
       const card = new FakeElement("article");
@@ -868,6 +1067,11 @@ test("stalled and failed project loads preserve the fallback until retry recover
     context.renderProjectDirectory();
     context.updateProjectStatus("ready");
     documentElement.classList.add(context.PROJECT_RUNTIME_READY_CLASS);
+    if (
+      context.completeProjectRetryFocus(retryFocusHandoff, cards[0])
+    ) {
+      context.scheduleProjectFragmentFocus();
+    }
   };
 
   vm.runInNewContext(`${statusSource}\n${loadingSource}`, context, { timeout: 1000 });
@@ -898,7 +1102,11 @@ test("stalled and failed project loads preserve the fallback until retry recover
   assert.equal(firstRetry.getAttribute("aria-describedby"), "projects-status");
 
   siteI18n.setLanguage("en", { persist: false });
+  firstRetry.focus();
   const httpFailure = firstRetry.click();
+  assert.equal(document.activeElement, projectsStatus);
+  assert.equal(projectsStatus.getAttribute("tabindex"), "-1");
+  assert.equal(projectsStatus.focusCalls.at(-1).preventScroll, true);
   assert.equal(projectsStatus.textContent, "Loading projects.");
   assert.equal(projectsFallback.classList.contains("is-visible"), true);
   assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
@@ -912,6 +1120,9 @@ test("stalled and failed project loads preserve the fallback until retry recover
   assert.equal(projectsDirectory.children.length, 0);
   const recoveryRetry = projectsContainer.children[0].children[0];
   assert.equal(recoveryRetry.textContent, "Try again");
+  assert.equal(document.activeElement, recoveryRetry);
+  assert.equal(recoveryRetry.focusCalls.at(-1).preventScroll, true);
+  assert.equal(projectsStatus.getAttribute("tabindex"), undefined);
 
   const networkFailure = recoveryRetry.click();
   assert.equal(projectsStatus.textContent, "Loading projects.");
@@ -946,6 +1157,8 @@ test("stalled and failed project loads preserve the fallback until retry recover
   assert.equal(projectsContainer.children.length, 1);
 
   const recovery = projectsContainer.children[0].children[0].click();
+  assert.equal(document.activeElement, projectsStatus);
+  assert.equal(projectsStatus.getAttribute("tabindex"), "-1");
   assert.equal(projectsStatus.textContent, "Loading projects.");
   assert.equal(projectsFallback.classList.contains("is-visible"), true);
   assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
@@ -955,6 +1168,9 @@ test("stalled and failed project loads preserve the fallback until retry recover
   assert.equal(documentElement.classList.contains("projects-runtime-ready"), true);
   assert.equal(projectsStatus.textContent, "9 projects loaded.");
   assert.equal(projectsStatus.classList.contains("sr-only"), true);
+  assert.equal(document.activeElement, projectsContainer.children[0]);
+  assert.equal(projectsContainer.children[0].focusCalls.at(-1).preventScroll, true);
+  assert.equal(projectsStatus.getAttribute("tabindex"), undefined);
   assert.equal(projectsFallback.classList.contains("is-visible"), false);
   assert.equal(projectsFallback.getAttribute("aria-hidden"), "true");
   assert.equal(projectsFallback.children.length, 0);
@@ -974,7 +1190,7 @@ test("stalled and failed project loads preserve the fallback until retry recover
   );
   assert.equal(new Set(projectsContainer.children.map((card) => card.destination)).size, 9);
   assert.equal(consoleErrors.length, 5);
-  assert.equal(fragmentFocusCalls, 5);
+  assert.equal(fragmentFocusCalls, 6);
   assert.equal(timers.size, 0);
 
   const renderSource = sourceBetween(
@@ -1026,6 +1242,7 @@ test("only the latest overlapping project request may commit its catalogue", asy
         json: async () => [{ slug: "current" }]
       });
     },
+    focusProjectRetryPendingState: () => false,
     projectLoadController: null,
     projectLoadSequence: 0,
     projects: null,

@@ -163,6 +163,7 @@ test("URLDecoder and ImageResizer render their exact localized proof and immutab
     projectsFallback,
     projectTargetId: (slug) => `project-${slug}`,
     captureProjectCatalogueFocus: () => ({ kind: "neutral" }),
+    completeProjectRetryFocus: () => false,
     createProjectShareController: () => ({ reset() {} }),
     resetProjectShareControllers: () => {},
     refreshScrollScenes: () => {},

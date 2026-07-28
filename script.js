@@ -1214,6 +1214,47 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
+  function createProjectRetryFocusHandoff(event) {
+    if (
+      event.detail !== 0 ||
+      event.currentTarget !== document.activeElement ||
+      !projectsContainer.contains(event.currentTarget)
+    ) {
+      return null;
+    }
+
+    return { pendingTarget: projectsStatus };
+  }
+
+  function focusProjectRetryPendingState(focusHandoff) {
+    if (!focusHandoff) {
+      return false;
+    }
+
+    focusHandoff.pendingTarget.setAttribute("tabindex", "-1");
+    focusHandoff.pendingTarget.focus({ preventScroll: true });
+    return document.activeElement === focusHandoff.pendingTarget;
+  }
+
+  function completeProjectRetryFocus(focusHandoff, target) {
+    if (!focusHandoff) {
+      return false;
+    }
+
+    const ownsFocus = document.activeElement === focusHandoff.pendingTarget;
+    focusHandoff.pendingTarget.removeAttribute("tabindex");
+    if (!ownsFocus || !target) {
+      return false;
+    }
+
+    if (target.classList.contains("project-row")) {
+      target.classList.remove("is-priming");
+      projectRevealObserver?.unobserve(target);
+    }
+    target.focus({ preventScroll: true });
+    return document.activeElement === target;
+  }
+
   function updateProjectStatus(state) {
     const translationKey = projectStatusKeys[state];
     if (!translationKey) {
@@ -1286,7 +1327,7 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsDirectory.hidden = false;
   }
 
-  function renderProjects() {
+  function renderProjects(retryFocusHandoff = null) {
     if (!projects) {
       return;
     }
@@ -1472,6 +1513,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 2500);
     }
 
+    const restoredRetryFocus = completeProjectRetryFocus(
+      retryFocusHandoff,
+      projectRows[0]
+    );
+    if (restoredRetryFocus) {
+      scheduleProjectFragmentFocus();
+      return;
+    }
+
     restoreProjectCatalogueFocus(projectFocusHandoff);
     if (shouldScheduleProjectFragmentFocusAfterRender(projectFocusHandoff)) {
       scheduleProjectFragmentFocus();
@@ -1485,7 +1535,11 @@ document.addEventListener("DOMContentLoaded", () => {
     updateProjectStatus("loading");
   }
 
-  function renderProjectError() {
+  function handleProjectRetry(event) {
+    return loadProjects(createProjectRetryFocusHandoff(event));
+  }
+
+  function renderProjectError(retryFocusHandoff = null) {
     resetProjectShareControllers({ discard: true });
     clearProjectDirectory();
     const wrapper = document.createElement("div");
@@ -1495,17 +1549,21 @@ document.addEventListener("DOMContentLoaded", () => {
     retry.type = "button";
     retry.setAttribute("aria-describedby", "projects-status");
     retry.textContent = window.siteI18n.t("projects.retry");
-    retry.addEventListener("click", loadProjects);
+    retry.addEventListener("click", handleProjectRetry);
     wrapper.append(retry);
     projectsContainer.replaceChildren(wrapper);
     updateProjectStatus("error");
-    scheduleProjectFragmentFocus();
+    const restoredRetryFocus = completeProjectRetryFocus(retryFocusHandoff, retry);
+    if (!retryFocusHandoff || restoredRetryFocus) {
+      scheduleProjectFragmentFocus();
+    }
   }
 
-  async function loadProjects() {
+  async function loadProjects(retryFocusHandoff = null) {
     const requestSequence = ++projectLoadSequence;
     projectLoadController?.abort();
     renderProjectLoading();
+    focusProjectRetryPendingState(retryFocusHandoff);
 
     const controller = new AbortController();
     projectLoadController = controller;
@@ -1548,13 +1606,13 @@ document.addEventListener("DOMContentLoaded", () => {
         )
       );
       projects = data;
-      renderProjects();
+      renderProjects(retryFocusHandoff);
     } catch (error) {
       if (requestSequence !== projectLoadSequence) {
         return;
       }
       console.error("Unable to load projects:", error);
-      renderProjectError();
+      renderProjectError(retryFocusHandoff);
     } finally {
       window.clearTimeout(timeoutId);
       if (projectLoadController === controller) {
