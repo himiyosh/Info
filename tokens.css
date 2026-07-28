@@ -28,6 +28,10 @@
   --color-scene-contact: oklch(21% 0.026 247);
   --color-project-a: oklch(23% 0.038 236);
   --color-project-b: oklch(19% 0.028 248);
+  --color-print-paper: oklch(100% 0 0);
+  --color-print-ink: oklch(20% 0.012 250);
+  --color-print-muted: oklch(42% 0.018 245);
+  --color-print-rule: oklch(78% 0.012 245);
   --color-transparent: transparent;
   --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --font-display-ja: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;

@@ -44,6 +44,15 @@ Apple's public MacBook Pro page informed broad design DNA only: quiet hierarchy,
 
 Bans: no bounce/elastic easing, no scroll hijacking, no pinned horizontal rail, no infinite decorative motion, no Lottie/GSAP/Lenis or other motion dependency, no per-element scroll listener, no CLS.
 
+## Print/PDF system
+
+- Chromium print media uses a light, ink-efficient document treatment without changing the Graphite Blue screen experience.
+- Identity, the complete About narrative, all nine localized project titles and descriptions, available stack/source/proof context, email, GitHub, copyright, and the personal-site disclaimer remain printable in both languages.
+- Fixed and sticky positioning, viewport-height chapters, scroll-derived opacity/depth transforms, animation, and clipped scene containers reset to normal document flow.
+- Navigation, progress and layered-stage decoration, hero and project media, project directory and permalinks, share/copy/retry/status controls, the duplicated footer marquee, and back-to-top action do not consume print space.
+- External project, source, proof, and GitHub destinations print beside their labels with unrestricted wrapping; project summaries avoid internal page breaks when they fit on one page.
+- The generated no-JavaScript project summaries receive the same compact print treatment, while every no-JavaScript and fallback screen behavior remains unchanged.
+
 ## Exports
 
 This static site uses `tokens.css` directly. `assets/fonts/OFL.txt` contains the SIL Open Font License 1.1 for the locally bundled display font.
