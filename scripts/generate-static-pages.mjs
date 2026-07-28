@@ -9,6 +9,7 @@ const require = createRequire(import.meta.url);
 const { translations } = require("../i18n.js");
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const templatePath = path.join(repoRoot, "templates/index.html");
+const notFoundTemplatePath = path.join(repoRoot, "templates/404.html");
 const projectsPath = path.join(repoRoot, "projects.json");
 const canonicalProjects = JSON.parse(await readFile(projectsPath, "utf8"));
 const checkOnly = process.argv.includes("--check");
@@ -33,6 +34,9 @@ export const pages = [
     siteRoot: "../"
   }
 ];
+export const notFoundPage = {
+  outputPath: "404.html"
+};
 
 function escapeHtml(value) {
   return String(value)
@@ -98,6 +102,16 @@ function localizedTranslation(language, key, replacements = {}) {
   }
   for (const [placeholder, replacement] of Object.entries(replacements)) {
     value = value.replaceAll(`{${placeholder}}`, replacement);
+  }
+  return value;
+}
+
+function templateTranslation(language, key, templateName) {
+  const value = key
+    .split(".")
+    .reduce((result, part) => result?.[part], translations[language]);
+  if (typeof value !== "string") {
+    throw new TypeError(`Missing ${language} translation for ${templateName} key: ${key}`);
   }
   return value;
 }
@@ -216,13 +230,7 @@ export function renderProjectFallbackSummaries(projects, language, indentation =
 
 export function renderPage(template, page, projects = canonicalProjects) {
   let output = template.replace(/\{\{t:([a-zA-Z0-9.]+)\}\}/g, (_match, key) => {
-    const value = key
-      .split(".")
-      .reduce((result, part) => result?.[part], translations[page.language]);
-    if (typeof value !== "string") {
-      throw new Error(`Missing ${page.language} translation for template key: ${key}`);
-    }
-    return escapeHtml(value);
+    return escapeHtml(templateTranslation(page.language, key, "home template"));
   });
 
   output = output.replace(
@@ -248,17 +256,49 @@ export function renderPage(template, page, projects = canonicalProjects) {
   );
 }
 
+export function renderNotFoundPage(template) {
+  let output = template.replace(
+    /\{\{t:(ja|en):([a-zA-Z0-9.]+)\}\}/g,
+    (_match, language, key) =>
+      escapeHtml(templateTranslation(language, key, "404 template"))
+  );
+
+  const unresolved = [...output.matchAll(/\{\{([^}]+)\}\}/g)].map((match) => match[1]);
+  if (unresolved.length > 0) {
+    throw new Error(
+      `Unresolved template values for ${notFoundPage.outputPath}: ${[...new Set(unresolved)].join(", ")}`
+    );
+  }
+
+  return output.replace(
+    "<!DOCTYPE html>",
+    "<!DOCTYPE html>\n<!-- Generated from templates/404.html and i18n.js. Run npm run generate:pages. -->"
+  );
+}
+
 export async function main() {
   if (!translations?.ja || !translations?.en) {
     throw new Error("i18n.js must export Japanese and English translations.");
   }
 
-  const template = await readFile(templatePath, "utf8");
+  const [template, notFoundTemplate] = await Promise.all([
+    readFile(templatePath, "utf8"),
+    readFile(notFoundTemplatePath, "utf8")
+  ]);
   const staleOutputs = [];
+  const outputs = [
+    ...pages.map((page) => ({
+      outputPath: page.outputPath,
+      expected: renderPage(template, page)
+    })),
+    {
+      outputPath: notFoundPage.outputPath,
+      expected: renderNotFoundPage(notFoundTemplate)
+    }
+  ];
 
-  for (const page of pages) {
-    const outputPath = path.join(repoRoot, page.outputPath);
-    const expected = renderPage(template, page);
+  for (const output of outputs) {
+    const outputPath = path.join(repoRoot, output.outputPath);
 
     if (checkOnly) {
       const actual = await readFile(outputPath, "utf8").catch((error) => {
@@ -267,14 +307,14 @@ export async function main() {
         }
         throw error;
       });
-      if (actual !== expected) {
-        staleOutputs.push(page.outputPath);
+      if (actual !== output.expected) {
+        staleOutputs.push(output.outputPath);
       }
       continue;
     }
 
     await mkdir(path.dirname(outputPath), { recursive: true });
-    await writeFile(outputPath, expected, "utf8");
+    await writeFile(outputPath, output.expected, "utf8");
   }
 
   if (staleOutputs.length > 0) {
