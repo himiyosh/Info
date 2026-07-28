@@ -1572,9 +1572,11 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
   }
 }
 
-@media (min-width: 60rem) {
+/* The localized max-content minima first fit three tracks at 1071px.
+   The next whole-rem boundary keeps the desktop transition clip-free. */
+@media (min-width: 67rem) {
   .project-directory-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(max-content, 1fr));
   }
 }
 
