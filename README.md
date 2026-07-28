@@ -36,13 +36,21 @@
 ## Quality checks
 - `npm run generate:pages`: deterministically render both checked-in language routes and the bilingual root `404.html` from canonical templates and the shared locale catalogue.
 - `npm run check:generated`: fail when either generated route differs from the canonical inputs.
-- `npm run check:js`: parse validation for `i18n.js`, `script.js`, the static-page generator, and the dependency-free external link checker.
+- `npm run check:js`: parse validation for `i18n.js`, `script.js`, the static-page generator, and the dependency-free command-line checkers.
 - `npm run check:links`: live validation of every `link`, `sourceLink`, and `proofLink` in `projects.json`, with bounded concurrency, timeouts, fallback requests, and one transient retry.
 - `npm run test:quality`: dependency-free regression suite for production content integrity.
 - `npm test`: offline full quality baseline (`check:js` + `test:quality`) including workflow pinning, least-privilege permissions, external link workflow wiring, and artifact whitelist coverage checks; it never runs the live network check.
+- `node scripts/check-independent-review.mjs --head <40-character-head>`: validate piped `gh pr view --json reviews,comments` JSON for a standalone independent-review marker matching that exact full head SHA.
 
 ## Copilot
 - Primary project agent: `InfoAgent`
 - Session workflow: [InfoAgent policy](.github/agents/InfoAgent.agent.md) defines coordinator, task-session, recovery, and cleanup practices.
+- Coordinator independent-review gate (set `PR` to the pull request number; any nonzero exit blocks merge):
+  ```sh
+  PR=46
+  head_sha=$(gh pr view "$PR" --json headRefOid --jq .headRefOid) &&
+    gh pr view "$PR" --json reviews,comments |
+    node scripts/check-independent-review.mjs --head "$head_sha"
+  ```
 - UI work uses the vendored [Hallmark 1.1.0 skill](.github/skills/hallmark/SKILL.md).
 - Upstream pin, parity scope, and license: [UPSTREAM.md](.github/skills/hallmark/UPSTREAM.md)

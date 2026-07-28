@@ -47,6 +47,13 @@ Hallmark guides taste, not business logic. Never let it invent product claims, w
 - Never delete unmerged work, force-push, rewrite history, or use destructive reset or clean operations.
 - Finish with a clean worktree and enough branch and PR information for the coordinator to delete the merged branch and archive the completed session.
 
+## Merge evidence
+
+- Never use `reviews.length == 0` as evidence that independent review is absent. GitHub rejects self-approval, so valid exact-head evidence may exist only in a pull request comment.
+- Before every merge, query both evidence surfaces with `gh pr view <N> --json reviews,comments`; neither reviews nor comments alone is sufficient input.
+- Require a standalone `independent-review head=<40-character current head SHA>` marker in a non-null review or comment body. Short, stale, wrong-head, and substring matches do not satisfy the gate.
+- Run the documented `scripts/check-independent-review.mjs` command against the pull request's current full head SHA and treat every nonzero exit as a blocked merge.
+
 ## Delivery
 
 Trace affected behavior and data flow, reuse existing patterns, handle errors explicitly, and keep changes scoped. Run every relevant existing test, lint, build, and customization check; when none exists, use focused syntax, data, link, and browser checks appropriate to the changed files. Confirm the requested outcome before concluding.
