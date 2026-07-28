@@ -1351,6 +1351,11 @@ test("project catalogue status stays concise, atomic, and separate from rendered
   assert.equal(readHtmlAttribute(statusTag.tag, "role"), "status");
   assert.equal(readHtmlAttribute(statusTag.tag, "aria-atomic"), "true");
   assert.equal(readHtmlAttribute(statusTag.tag, "data-i18n"), "projects.loading");
+  assert.match(
+    statusTag.tag,
+    /\shidden(?:\s|>)/i,
+    "The loading announcement must stay hidden when scripts do not run"
+  );
   assert.notEqual(
     readHtmlAttribute(statusTag.tag, "data-i18n-dynamic"),
     undefined,
@@ -1362,7 +1367,11 @@ test("project catalogue status stays concise, atomic, and separate from rendered
   );
   assert.equal(readHtmlAttribute(resultsTag.tag, "aria-live"), undefined);
   assert.equal(readHtmlAttribute(resultsTag.tag, "role"), undefined);
-  assert.equal(readHtmlAttribute(resultsTag.tag, "aria-busy"), "true");
+  assert.equal(
+    readHtmlAttribute(resultsTag.tag, "aria-busy"),
+    "false",
+    "Static summaries are complete, so the no-JavaScript results surface must not remain busy"
+  );
 
   const statusMarkup = indexHtml.slice(
     statusTag.index,
@@ -1411,6 +1420,7 @@ test("project catalogue status stays concise, atomic, and separate from rendered
     /projectsContainer\.setAttribute\("aria-busy", String\(state === "loading"\)\)/
   );
   assert.match(updateStatusBody, /projectsStatus\.classList\.toggle\("sr-only", isReady\)/);
+  assert.match(updateStatusBody, /projectsStatus\.hidden = false/);
   assert.match(updateStatusBody, /projectsContainer\.classList\.toggle\("projects-list", isReady\)/);
 
   const renderProjectsBody = extractObjectLiteral(scriptSource, "function renderProjects");
@@ -1638,7 +1648,7 @@ test("required SEO and social metadata exist and are consistent", async () => {
   );
 });
 
-test("static project fallback provides direct access to every listed project", async () => {
+test("static project summaries preserve canonical primary, source, proof, and fragment access", async () => {
   const indexHtml = await readUtf8("index.html");
   const projects = JSON.parse(await readUtf8("projects.json"));
   const fallbackContent = indexHtml.match(
@@ -1646,15 +1656,32 @@ test("static project fallback provides direct access to every listed project", a
   )?.[1];
   assert.ok(fallbackContent, "index.html must include one reusable project fallback");
 
-  const fallbackLinks = [...fallbackContent.matchAll(/\bhref="([^"]+)"/g)].map(
-    (match) => match[1]
+  const linksForClass = (className) =>
+    [...fallbackContent.matchAll(
+      new RegExp(
+        `<a\\b[^>]*\\bclass="[^"]*\\b${className}\\b[^"]*"[^>]*\\bhref="([^"]+)"`,
+        "gi"
+      )
+    )].map((match) => match[1]);
+  const primaryLinks = linksForClass("project-link--primary");
+  assert.deepEqual(
+    primaryLinks,
+    projects.map((project) => project.link),
+    "Static summary primary actions must exactly match the canonical project destinations"
   );
   assert.deepEqual(
-    fallbackLinks,
-    projects.map((project) => project.link),
-    "The static fallback must exactly match the canonical project destinations"
+    linksForClass("projects-fallback-permalink"),
+    projects.map((project) => `#project-${project.slug}`)
   );
-  assert.equal(new Set(fallbackLinks).size, projects.length);
+  assert.deepEqual(
+    linksForClass("project-link--secondary"),
+    projects.flatMap((project) => project.sourceLink ?? [])
+  );
+  assert.deepEqual(
+    linksForClass("project-link--evidence"),
+    projects.flatMap((project) => project.proofLink ?? [])
+  );
+  assert.equal(new Set(primaryLinks).size, projects.length);
 });
 
 test("JoJo deck entries stay distinct and aligned with live deck routes", async () => {

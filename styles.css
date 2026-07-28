@@ -233,6 +233,7 @@ button {
 }
 
 html:not(.js-enabled) .site-header {
+  position: static;
   flex-wrap: wrap;
 }
 
@@ -989,49 +990,107 @@ html:lang(ja) .hero h1 span {
   color: var(--color-on-dark);
 }
 
+.projects-status[hidden] {
+  display: none;
+}
+
 .js-enabled .projects-fallback:not(.is-visible) {
   display: none;
 }
 
 .projects-fallback-list {
-  margin: var(--space-sm) 0 0;
-  padding-inline-start: var(--space-md);
+  margin: var(--space-md) 0 0;
+  padding: 0;
   display: grid;
-  gap: var(--space-xs);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-md);
+  list-style: none;
 }
 
 .projects-fallback-list > li {
   min-width: 0;
 }
 
-.projects-fallback a {
-  width: 100%;
+.projects-fallback-card {
   min-width: 0;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
+  padding: var(--space-md);
+  display: grid;
+  gap: var(--space-sm);
+  scroll-margin-block-start: calc(
+    var(--header-height) + var(--space-lg) + var(--space-sm)
+  );
+  background: var(--color-paper-2);
   color: var(--color-on-dark);
-  white-space: nowrap;
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-md);
+}
+
+.projects-fallback-card:target,
+.projects-fallback-card:focus {
+  outline: 3px solid var(--color-focus);
+  outline-offset: -3px;
+}
+
+html:not(.js-enabled) .projects-fallback-card {
+  scroll-margin-block-start: var(--space-lg);
+}
+
+.projects-fallback-heading {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2xs) var(--space-sm);
 }
 
 .projects-fallback-title {
   min-width: 0;
-  flex: 1 1 0;
-  overflow: hidden;
-  font-weight: 700;
-  text-overflow: ellipsis;
+  flex: 1 1 12rem;
+  margin: 0;
+  color: inherit;
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  font-variation-settings: "wght" 800;
+  letter-spacing: -0.01em;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+  text-transform: none;
+  text-wrap: balance;
 }
 
 .projects-fallback-kind {
   min-width: 0;
-  max-width: 70%;
-  flex: 0 1 auto;
-  overflow: hidden;
-  color: var(--color-muted);
-  font-weight: 400;
-  text-align: end;
-  text-overflow: ellipsis;
+  max-width: none;
+  margin: 0;
+  flex: 1 0 100%;
+}
+
+.projects-fallback-description,
+.projects-fallback-stack {
+  margin: 0;
+}
+
+.projects-fallback-description {
+  font-size: var(--text-sm);
+  line-height: 1.65;
+}
+
+.projects-fallback-stack {
+  overflow-wrap: anywhere;
+}
+
+.projects-fallback-actions {
+  margin-block-start: var(--space-2xs);
+}
+
+.projects-fallback-action,
+.projects-fallback-permalink {
+  max-width: 100%;
+}
+
+.projects-fallback-proof {
+  margin-block-start: var(--space-2xs);
 }
 
 .retry-button {
@@ -1470,6 +1529,10 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
   }
 
   .project-directory-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .projects-fallback-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

@@ -122,6 +122,8 @@ test("URLDecoder and ImageResizer render their exact localized proof and immutab
   ].join("\n");
   const currentLanguage = { value: "ja" };
   const projectsContainer = new FakeElement("div");
+  const projectsFallback = new FakeElement("div");
+  projectsFallback.append(new FakeElement("article"));
   const labels = {
     ja: {
       "accessibility.opensInNewTab": "（新しいタブで開きます）",
@@ -156,6 +158,7 @@ test("URLDecoder and ImageResizer render their exact localized proof and immutab
     projectShareControllers: [],
     projects,
     projectsContainer,
+    projectsFallback,
     projectTargetId: (slug) => `project-${slug}`,
     createProjectShareController: () => ({ reset() {} }),
     resetProjectShareControllers: () => {},
@@ -187,6 +190,7 @@ test("URLDecoder and ImageResizer render their exact localized proof and immutab
     currentLanguage.value = language;
     renderProjects();
     assert.equal(projectsContainer.children.length, projects.length);
+    assert.equal(projectsFallback.children.length, 0);
 
     for (const project of projects) {
       const article = findById(projectsContainer, `project-${project.slug}`);

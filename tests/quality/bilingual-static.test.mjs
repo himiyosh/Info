@@ -8,7 +8,7 @@ import { test } from "node:test";
 import {
   pages,
   renderPage,
-  renderProjectFallbackLinks
+  renderProjectFallbackSummaries
 } from "../../scripts/generate-static-pages.mjs";
 
 const require = createRequire(import.meta.url);
@@ -62,14 +62,64 @@ function normalizeText(value) {
   return decodeHtml(value.replace(/<[^>]*>/g, "")).replace(/\s+/g, " ").trim();
 }
 
-function fallbackEntries(source) {
+function elementContent(source, tagName, className) {
+  return source.match(
+    new RegExp(
+      `<${tagName}\\b[^>]*\\bclass="[^"]*\\b${className}\\b[^"]*"[^>]*>([\\s\\S]*?)<\\/${tagName}>`,
+      "i"
+    )
+  )?.[1];
+}
+
+function actionEntry(source, variant) {
+  const anchor = source.match(
+    new RegExp(
+      `(<a\\b[^>]*\\bclass="[^"]*\\bproject-link--${variant}\\b[^"]*"[^>]*>)([\\s\\S]*?)<\\/a>`,
+      "i"
+    )
+  );
+  if (!anchor) {
+    return null;
+  }
+  return {
+    label: normalizeText(anchor[2].match(/<span>([\s\S]*?)<\/span>/i)?.[1] ?? ""),
+    link: decodeHtml(attributeValue(anchor[1], "href") ?? "")
+  };
+}
+
+function fallbackSummaries(source) {
   return [...source.matchAll(
-    /<li>\s*<a\b[^>]*\bhref="([^"]+)"[^>]*>\s*<span class="projects-fallback-title">([\s\S]*?)<\/span>\s*<span class="projects-fallback-kind">([\s\S]*?)<\/span>\s*<\/a>\s*<\/li>/gi
-  )].map(([, link, title, kind]) => ({
-    kind: normalizeText(kind),
-    link: decodeHtml(link),
-    title: normalizeText(title)
-  }));
+    /(<article\b[^>]*\bclass="[^"]*\bprojects-fallback-card\b[^"]*"[^>]*>)([\s\S]*?)<\/article>/gi
+  )].map(([, openingTag, body]) => {
+    const permalink = body.match(
+      /<a\b[^>]*\bclass="[^"]*\bprojects-fallback-permalink\b[^"]*"[^>]*>/i
+    )?.[0];
+    const proofText = elementContent(body, "p", "project-proof-text") ?? "";
+    return {
+      description: normalizeText(
+        elementContent(body, "p", "projects-fallback-description") ?? ""
+      ),
+      kind: normalizeText(elementContent(body, "p", "projects-fallback-kind") ?? ""),
+      permalink: decodeHtml(attributeValue(permalink ?? "", "href") ?? ""),
+      primary: actionEntry(body, "primary"),
+      proof: actionEntry(body, "evidence")
+        ? {
+            link: actionEntry(body, "evidence").link,
+            statement: normalizeText(
+              proofText.match(
+                /<span\b[^>]*\bclass="project-proof-label"[^>]*>[\s\S]*?<\/span>\s*<span>([\s\S]*?)<\/span>/i
+              )?.[1] ?? ""
+            )
+          }
+        : null,
+      source: actionEntry(body, "secondary"),
+      stack: elementContent(body, "p", "projects-fallback-stack")
+        ? normalizeText(elementContent(body, "p", "projects-fallback-stack")).split(" · ")
+        : null,
+      targetId: attributeValue(openingTag, "id"),
+      title: normalizeText(elementContent(body, "h3", "projects-fallback-title") ?? "")
+    };
+  });
 }
 
 function translationAt(language, key) {
@@ -127,7 +177,7 @@ test("checked-in language pages are deterministic outputs of one template and lo
   );
   assert.match(template, /\{\{language\}\}/);
   assert.match(template, /\{\{t:hero\.titleLine1\}\}/);
-  assert.match(template, /^\s*\{\{projectFallbackLinks\}\}\s*$/m);
+  assert.match(template, /^\s*\{\{projectFallbackSummaries\}\}\s*$/m);
   assert.equal(
     [...generatorSource.matchAll(/readFile\(projectsPath,\s*"utf8"\)/g)].length,
     1,
@@ -163,12 +213,20 @@ test("checked-in language pages are deterministic outputs of one template and lo
   assert.match(packageJson.scripts["check:quality"], /npm run check:generated/);
 });
 
-test("fallback generation escapes every inserted project value", () => {
-  const rendered = renderProjectFallbackLinks([
+test("fallback generation validates fragments and escapes every inserted project value", () => {
+  const rendered = renderProjectFallbackSummaries([
     {
+      slug: "unsafe-looking-project",
       link: `https://example.test/?query="<tag>"&mode='safe'`,
       title: { en: `A <title> & "label"` },
-      kind: { en: "Tool 'type' & <kind>" }
+      kind: { en: "Tool 'type' & <kind>" },
+      description: { en: `A <description> & "detail"` },
+      action: { en: `Open <primary> & "inspect"` },
+      stack: [`Stack <one>`, `Stack & "two"`],
+      sourceAction: { en: `View <source> & "code"` },
+      sourceLink: `https://example.test/source?query="<source>"&mode='safe'`,
+      proof: { en: `Proof <statement> & "detail"` },
+      proofLink: `https://example.test/proof?query="<proof>"&mode='safe'`
     }
   ], "en");
 
@@ -176,9 +234,30 @@ test("fallback generation escapes every inserted project value", () => {
     rendered,
     /href="https:\/\/example\.test\/\?query=&quot;&lt;tag&gt;&quot;&amp;mode=&#39;safe&#39;"/
   );
-  assert.match(rendered, />A &lt;title&gt; &amp; &quot;label&quot;<\/span>/);
-  assert.match(rendered, />Tool &#39;type&#39; &amp; &lt;kind&gt;<\/span>/);
-  assert.doesNotMatch(rendered, /<tag>|<title>|<kind>/);
+  assert.match(rendered, />A &lt;title&gt; &amp; &quot;label&quot;<\/h3>/);
+  assert.match(rendered, />Tool &#39;type&#39; &amp; &lt;kind&gt;<\/p>/);
+  assert.match(rendered, />A &lt;description&gt; &amp; &quot;detail&quot;<\/p>/);
+  assert.match(rendered, />Stack &lt;one&gt; · Stack &amp; &quot;two&quot;<\/p>/);
+  assert.match(rendered, />Open &lt;primary&gt; &amp; &quot;inspect&quot;<\/span>/);
+  assert.match(rendered, />View &lt;source&gt; &amp; &quot;code&quot;<\/span>/);
+  assert.match(rendered, />Proof &lt;statement&gt; &amp; &quot;detail&quot;<\/span>/);
+  assert.doesNotMatch(
+    rendered,
+    /<tag>|<title>|<kind>|<description>|<primary>|<source>|<proof>|<one>/
+  );
+  assert.throws(
+    () => renderProjectFallbackSummaries([
+      {
+        slug: `"bad"><slug`,
+        link: "https://example.test/",
+        title: { en: "Title" },
+        kind: { en: "Kind" },
+        description: { en: "Description" },
+        action: { en: "Open" }
+      }
+    ], "en"),
+    /lowercase kebab-case/
+  );
 });
 
 test("both routes provide complete localized initial HTML and no-JavaScript project context", async () => {
@@ -263,11 +342,23 @@ test("both routes provide complete localized initial HTML and no-JavaScript proj
       normalizeText(fallback).startsWith(translations[language].projects.fallback),
       `${page.outputPath} must localize fallback context`
     );
-    const entries = fallbackEntries(fallback);
-    assert.equal(entries.length, 9, `${page.outputPath} must render all nine fallback links`);
+    const entries = fallbackSummaries(fallback);
+    assert.equal(entries.length, 9, `${page.outputPath} must render all nine fallback summaries`);
     assert.deepEqual(
-      entries.map(({ link }) => link),
+      entries.map(({ targetId }) => targetId),
+      projects.map((project) => `project-${project.slug}`)
+    );
+    assert.deepEqual(
+      entries.map(({ permalink }) => permalink),
+      projects.map((project) => `#project-${project.slug}`)
+    );
+    assert.deepEqual(
+      entries.map(({ primary }) => primary.link),
       projects.map((project) => project.link)
+    );
+    assert.deepEqual(
+      entries.map(({ primary }) => primary.label),
+      projects.map((project) => project.action[language])
     );
     assert.deepEqual(
       entries.map(({ title }) => title),
@@ -276,6 +367,30 @@ test("both routes provide complete localized initial HTML and no-JavaScript proj
     assert.deepEqual(
       entries.map(({ kind }) => kind),
       projects.map((project) => project.kind[language])
+    );
+    assert.deepEqual(
+      entries.map(({ description }) => description),
+      projects.map((project) => project.description[language])
+    );
+    assert.deepEqual(
+      entries.map(({ stack }) => stack),
+      projects.map((project) => project.stack ?? null)
+    );
+    assert.deepEqual(
+      entries.map(({ source }) => source),
+      projects.map((project) =>
+        project.sourceAction
+          ? { label: project.sourceAction[language], link: project.sourceLink }
+          : null
+      )
+    );
+    assert.deepEqual(
+      entries.map(({ proof }) => proof),
+      projects.map((project) =>
+        project.proof
+          ? { link: project.proofLink, statement: project.proof[language] }
+          : null
+      )
     );
   }
 });

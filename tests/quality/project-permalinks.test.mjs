@@ -27,8 +27,11 @@ function sourceBetween(sourceText, startMarker, endMarker) {
   return sourceText.slice(start, end);
 }
 
-function makeTarget(id) {
-  const classes = new Set(["project-row", "is-priming"]);
+function makeTarget(id, className = "project-row") {
+  const classes = new Set([className]);
+  if (className === "project-row") {
+    classes.add("is-priming");
+  }
   return {
     id,
     classes,
@@ -68,7 +71,10 @@ test("project catalogue exposes the exact nine stable slug and fragment IDs", as
   const indexHtml = await readUtf8("index.html");
   const slugs = projects.map((project) => project.slug);
   const fragmentIds = slugs.map((slug) => `project-${slug}`);
-  const staticIds = new Set([...indexHtml.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
+  const staticIdCounts = new Map();
+  for (const match of indexHtml.matchAll(/\bid="([^"]+)"/g)) {
+    staticIdCounts.set(match[1], (staticIdCounts.get(match[1]) ?? 0) + 1);
+  }
 
   assert.deepEqual(slugs, expectedSlugs);
   assert.equal(new Set(slugs).size, expectedSlugs.length);
@@ -76,7 +82,11 @@ test("project catalogue exposes the exact nine stable slug and fragment IDs", as
   for (const [index, slug] of slugs.entries()) {
     assert.match(slug, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
     assert.ok(!topLevelIds.has(slug), `Slug must not reuse top-level ID: ${slug}`);
-    assert.ok(!staticIds.has(fragmentIds[index]), `Fragment ID must not collide: ${fragmentIds[index]}`);
+    assert.equal(
+      staticIdCounts.get(fragmentIds[index]),
+      1,
+      `Initial HTML must expose one unique fallback target: ${fragmentIds[index]}`
+    );
   }
 });
 
@@ -193,13 +203,20 @@ test("project fragment focus handles cold render, click history, back-forward, a
   );
   const portfolioTarget = makeTarget("project-portfolio");
   const techdbTarget = makeTarget("project-techdb");
+  const fallbackTarget = makeTarget("project-image-resizer", "projects-fallback-card");
   const targets = new Map([
     [portfolioTarget.id, portfolioTarget],
-    [techdbTarget.id, techdbTarget]
+    [techdbTarget.id, techdbTarget],
+    [fallbackTarget.id, fallbackTarget]
   ]);
   const links = new Set();
   const projectsContainer = {
-    contains: (element) => targets.has(element.id) || links.has(element)
+    contains: (element) =>
+      element === portfolioTarget || element === techdbTarget || links.has(element)
+  };
+  const projectsFallback = {
+    classList: { contains: (className) => className === "is-visible" },
+    contains: (element) => element === fallbackTarget
   };
   const location = { hash: "#project-portfolio" };
   const historyEntries = [""];
@@ -211,6 +228,7 @@ test("project fragment focus handles cold render, click history, back-forward, a
       getElementById: (id) => targets.get(id) ?? null
     },
     projectsContainer,
+    projectsFallback,
     projectRevealObserver: {
       unobserve: (target) => observedTargets.push(target.id)
     },
@@ -256,6 +274,15 @@ test("project fragment focus handles cold render, click history, back-forward, a
   assert.equal(portfolioTarget.scrollCalls[0].block, "start");
   assert.ok(!portfolioTarget.classes.has("is-priming"));
   assert.deepEqual(observedTargets, ["project-portfolio"]);
+
+  assert.equal(focusProjectFragment("#project-image-resizer"), true);
+  assert.equal(fallbackTarget.focusCalls.length, 1);
+  assert.equal(fallbackTarget.scrollCalls.length, 1);
+  assert.deepEqual(
+    observedTargets,
+    ["project-portfolio"],
+    "Fallback targets must not enter the enhanced reveal observer"
+  );
 
   const portfolioLink = {
     closest: () => portfolioLink,
@@ -338,6 +365,11 @@ test("project fragment focus handles cold render, click history, back-forward, a
     [...scriptSource.matchAll(/projectsContainer\.addEventListener\("click"/g)].length,
     1,
     "Permalinks must use one delegated click listener"
+  );
+  assert.equal(
+    [...scriptSource.matchAll(/projectsFallback\.addEventListener\("click"/g)].length,
+    1,
+    "Persistent-failure permalinks must use one delegated fallback listener"
   );
   assert.equal(
     [...scriptSource.matchAll(/window\.addEventListener\("hashchange"/g)].length,
