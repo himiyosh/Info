@@ -71,11 +71,16 @@ button {
   inset-block-start: var(--space-sm);
   inset-inline-start: var(--space-sm);
   z-index: var(--z-toast);
+  max-inline-size: calc(100% - var(--space-lg));
+  min-height: 44px;
   padding: var(--space-xs) var(--space-sm);
+  display: flex;
+  align-items: center;
   background: var(--color-paper-3);
   color: var(--color-on-dark);
   border: 2px solid var(--color-on-dark);
   font-weight: 700;
+  line-height: 1.2;
   text-decoration: none;
   transform: translateY(-180%);
   transition: transform var(--dur-short) var(--ease-out);
@@ -1121,6 +1126,11 @@ html:not(.js-enabled) .projects-fallback-card {
   box-shadow: var(--shadow-hard);
 }
 
+.contact:focus .contact-panel {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
 .contact-panel h2 {
   color: var(--color-accent-ink);
 }
@@ -1591,6 +1601,10 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
 
   .project-permalink {
     transform: none !important;
+  }
+
+  .skip-link {
+    transition: none !important;
   }
 
   .project-share-button {
