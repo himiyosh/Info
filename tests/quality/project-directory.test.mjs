@@ -93,6 +93,37 @@ test("localized project title uniqueness reports the language, value, and entrie
   );
 });
 
+test("the directory advances to content-sized three-column tracks at 67rem", async () => {
+  const [stylesSource, readmeSource] = await Promise.all([
+    readUtf8("styles.css"),
+    readUtf8("README.md")
+  ]);
+  const threeColumnRule = stylesSource.match(
+    /@media \(min-width:\s*([0-9.]+)rem\)\s*\{\s*\.project-directory-list\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(max-content,\s*1fr\)\);/
+  );
+  const threeColumnDeclarations = [
+    ...stylesSource.matchAll(
+      /\.project-directory-list\s*\{[^}]*grid-template-columns:\s*repeat\(3,/g
+    )
+  ];
+
+  assert.ok(threeColumnRule, "Expected content-sized three-column directory tracks");
+  assert.equal(
+    threeColumnDeclarations.length,
+    1,
+    "The measured content-sized rule must remain the only three-column directory transition"
+  );
+  assert.equal(
+    threeColumnRule[1],
+    "67",
+    "Three columns must wait for the first measured whole-rem boundary where both locales fit"
+  );
+  assert.match(
+    readmeSource,
+    /keeps two columns from 48rem until 67rem, then advances to three content-sized columns/
+  );
+});
+
 test("the enhanced directory stays empty without data and renders canonical localized links", async () => {
   const [indexHtml, scriptSource, i18nSource, stylesSource, modernSource, projects] =
     await Promise.all([
@@ -145,11 +176,6 @@ test("the enhanced directory stays empty without data and renders canonical loca
     stylesSource,
     /@media \(min-width:\s*48rem\)[\s\S]*?\.project-directory-kind\s*\{[^}]*display:\s*block;/
   );
-  assert.match(
-    stylesSource,
-    /@media \(min-width:\s*60rem\)[\s\S]*?\.project-directory-list\s*\{[^}]*repeat\(3,\s*minmax\(0,\s*1fr\)\);/
-  );
-
   const projectsDirectory = new FakeElement("nav");
   projectsDirectory.hidden = true;
   const language = { current: "ja" };
