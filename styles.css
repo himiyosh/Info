@@ -648,6 +648,7 @@ html:lang(ja) .hero h1 span {
 }
 
 .project-directory-kind {
+  display: none;
   min-width: 0;
   max-width: 70%;
   flex: 0 1 auto;
@@ -1540,6 +1541,10 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
 
   .project-directory-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-directory-kind {
+    display: block;
   }
 
   .projects-fallback-list {
