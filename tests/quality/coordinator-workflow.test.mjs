@@ -95,7 +95,7 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
-    /query both evidence surfaces with `gh pr view <N> --json reviews,comments`/,
+    /Always query both `reviews` and `comments`/,
     "The merge gate must query review and comment bodies"
   );
   assert.match(
@@ -105,8 +105,39 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
+    /state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments \| node scripts\/check-merge-gate\.mjs --head/,
+    "The merge gate must validate the complete machine-readable PR snapshot"
+  );
+  assert.match(
+    source,
     /treat every nonzero exit as a blocked merge/,
     "Verifier errors and missing evidence must block merge"
+  );
+  assert.match(
+    source,
+    /marker presence is not review approval/,
+    "Marker presence must not be represented as review clearance"
+  );
+  for (const limitation of [
+    "production deployment",
+    "secrets",
+    "permissions",
+    "billing",
+    "public-scope suitability",
+    "documentation completeness",
+    "unresolved review findings",
+  ]) {
+    assert.match(source, new RegExp(limitation), `The coordinator must still evaluate ${limitation}`);
+  }
+  assert.match(
+    source,
+    /Re-fetch the full pull-request snapshot and rerun the gate immediately before merge/,
+    "Merge decisions must use a freshly fetched snapshot"
+  );
+  assert.match(
+    source,
+    /Never merge from cached JSON or an earlier successful invocation/,
+    "Cached merge-gate evidence must not authorize merge"
   );
   assert.match(
     source,

@@ -52,14 +52,10 @@ function hasStandaloneMarker(body, marker) {
   return false;
 }
 
-export function findIndependentReviewEvidence(input, head) {
-  validateHeadSha(head);
-
+export function validateReviewEvidenceInput(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new TypeError("Review evidence input must be a JSON object");
   }
-
-  const marker = `${MARKER_PREFIX}${head}`;
 
   for (const surface of SURFACES) {
     const entries = input[surface];
@@ -78,7 +74,21 @@ export function findIndependentReviewEvidence(input, head) {
       if (typeof entry.body !== "string") {
         throw new TypeError(`Review evidence ${surface}[${index}].body must be a string or null`);
       }
-      if (hasStandaloneMarker(entry.body, marker)) {
+    }
+  }
+
+  return input;
+}
+
+export function findIndependentReviewEvidence(input, head) {
+  validateHeadSha(head);
+  validateReviewEvidenceInput(input);
+
+  const marker = `${MARKER_PREFIX}${head}`;
+
+  for (const surface of SURFACES) {
+    for (const [index, entry] of input[surface].entries()) {
+      if (typeof entry.body === "string" && hasStandaloneMarker(entry.body, marker)) {
         return { surface, index };
       }
     }

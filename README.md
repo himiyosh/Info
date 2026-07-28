@@ -41,16 +41,19 @@
 - `npm run test:quality`: dependency-free regression suite for production content integrity.
 - `npm test`: offline full quality baseline (`check:js` + `test:quality`) including workflow pinning, least-privilege permissions, external link workflow wiring, and artifact whitelist coverage checks; it never runs the live network check.
 - `node scripts/check-independent-review.mjs --head <40-character-head>`: validate piped `gh pr view --json reviews,comments` JSON for a standalone independent-review marker matching that exact full head SHA.
+- `node scripts/check-merge-gate.mjs --head <40-character-head>`: validate a piped pull-request snapshot for OPEN/non-draft state, exact head identity, MERGEABLE/CLEAN state, at least one reported check, successful terminal status for every reported check, and an exact-head independent-review marker across reviews and comments.
 
 ## Copilot
 - Primary project agent: `InfoAgent`
 - Session workflow: [InfoAgent policy](.github/agents/InfoAgent.agent.md) defines coordinator, task-session, recovery, and cleanup practices.
-- Coordinator independent-review gate (set `PR` to the pull request number; any nonzero exit blocks merge):
+- Coordinator machine-verifiable merge gate (set `PR` to the pull request number; any nonzero exit blocks merge):
   ```sh
-  PR=46
+  PR=49
   head_sha=$(gh pr view "$PR" --json headRefOid --jq .headRefOid) &&
-    gh pr view "$PR" --json reviews,comments |
-    node scripts/check-independent-review.mjs --head "$head_sha"
+    gh pr view "$PR" --json state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments |
+    node scripts/check-merge-gate.mjs --head "$head_sha"
   ```
+- The merge-gate helper is dependency-free, offline, and snapshot-only: it does not call GitHub or merge anything. A successful exit verifies only the supplied machine-readable state and marker presence; marker presence is not review approval.
+- The coordinator still evaluates production deployment, secrets, permissions, billing, public-scope suitability, documentation completeness, and unresolved review findings. Re-fetch the full snapshot and rerun the command immediately before merge; never authorize a merge from cached output.
 - UI work uses the vendored [Hallmark 1.1.0 skill](.github/skills/hallmark/SKILL.md).
 - Upstream pin, parity scope, and license: [UPSTREAM.md](.github/skills/hallmark/UPSTREAM.md)
