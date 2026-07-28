@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 const FULL_HEAD_PATTERN = /^[0-9a-f]{40}$/;
 const MARKER_PREFIX = "independent-review head=";
 const TOKEN_CHARACTER_PATTERN = /[A-Za-z0-9_-]/;
+const VERDICT_SUFFIX_PATTERN = /^ verdict=(pass|fail)(?![A-Za-z0-9_-])/;
 const SURFACES = ["reviews", "comments"];
 const USAGE =
   "Usage: gh pr view <N> --json reviews,comments | node scripts/check-independent-review.mjs --head <40-character-head>";
@@ -31,35 +32,31 @@ export function parseReviewEvidenceJson(source) {
   }
 }
 
-function hasStandaloneMarker(body, marker) {
+function collectStandaloneVerdicts(body, head) {
+  const marker = `${MARKER_PREFIX}${head}`;
+  const matches = [];
   let index = body.indexOf(marker);
 
   while (index !== -1) {
     const precedingCharacter = body[index - 1];
-    const followingCharacter = body[index + marker.length];
     const hasValidStart =
       precedingCharacter === undefined || !TOKEN_CHARACTER_PATTERN.test(precedingCharacter);
-    const hasValidEnd =
-      followingCharacter === undefined || !TOKEN_CHARACTER_PATTERN.test(followingCharacter);
+    const suffixMatch = body.slice(index + marker.length).match(VERDICT_SUFFIX_PATTERN);
 
-    if (hasValidStart && hasValidEnd) {
-      return true;
+    if (hasValidStart && suffixMatch) {
+      matches.push({ verdict: suffixMatch[1], offset: index });
     }
 
     index = body.indexOf(marker, index + 1);
   }
 
-  return false;
+  return matches;
 }
 
-export function findIndependentReviewEvidence(input, head) {
-  validateHeadSha(head);
-
+export function validateReviewEvidenceInput(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new TypeError("Review evidence input must be a JSON object");
   }
-
-  const marker = `${MARKER_PREFIX}${head}`;
 
   for (const surface of SURFACES) {
     const entries = input[surface];
@@ -78,17 +75,61 @@ export function findIndependentReviewEvidence(input, head) {
       if (typeof entry.body !== "string") {
         throw new TypeError(`Review evidence ${surface}[${index}].body must be a string or null`);
       }
-      if (hasStandaloneMarker(entry.body, marker)) {
-        return { surface, index };
+    }
+  }
+
+  return input;
+}
+
+export function collectIndependentReviewEvidence(input, head) {
+  validateHeadSha(head);
+  validateReviewEvidenceInput(input);
+
+  const evidence = [];
+
+  for (const surface of SURFACES) {
+    for (const [index, entry] of input[surface].entries()) {
+      if (typeof entry.body !== "string") {
+        continue;
+      }
+
+      for (const match of collectStandaloneVerdicts(entry.body, head)) {
+        evidence.push({
+          surface,
+          index,
+          verdict: match.verdict,
+          offset: match.offset
+        });
       }
     }
   }
 
-  return null;
+  return evidence;
+}
+
+export function evaluateIndependentReviewEvidence(input, head) {
+  const evidence = collectIndependentReviewEvidence(input, head);
+  const passEvidence = evidence.filter(({ verdict }) => verdict === "pass");
+  const failEvidence = evidence.filter(({ verdict }) => verdict === "fail");
+  const verdict = failEvidence.length > 0 ? "fail" : passEvidence.length > 0 ? "pass" : "missing";
+
+  return {
+    verdict,
+    evidence,
+    passEvidence,
+    failEvidence
+  };
+}
+
+export function findIndependentReviewEvidence(input, head) {
+  const result = evaluateIndependentReviewEvidence(input, head);
+  const evidence = result.failEvidence[0] ?? result.passEvidence[0];
+
+  return evidence ? { surface: evidence.surface, index: evidence.index } : null;
 }
 
 export function hasIndependentReviewEvidence(input, head) {
-  return findIndependentReviewEvidence(input, head) !== null;
+  return collectIndependentReviewEvidence(input, head).length > 0;
 }
 
 function parseHeadArgument(args) {
@@ -114,17 +155,27 @@ export async function runIndependentReviewCheck(args = process.argv.slice(2)) {
   try {
     const head = parseHeadArgument(args);
     const input = parseReviewEvidenceJson(await readStandardInput());
-    const evidence = findIndependentReviewEvidence(input, head);
+    const result = evaluateIndependentReviewEvidence(input, head);
 
-    if (!evidence) {
+    if (result.verdict === "missing") {
       console.error(
-        `Independent review marker not found for head ${head} in review or comment bodies`
+        `Independent review pass verdict not found for head ${head} in review or comment bodies`
       );
       return 1;
     }
 
+    if (result.verdict === "fail") {
+      console.error(
+        `Independent review verdict failed for head ${head}: fail=${result.failEvidence.length} pass=${result.passEvidence.length}`
+      );
+      return 3;
+    }
+
+    const locations = result.passEvidence
+      .map(({ surface, index }) => `${surface}[${index}].body`)
+      .join(",");
     console.log(
-      `Independent review marker found for head ${head} in ${evidence.surface}[${evidence.index}].body`
+      `Independent review verdict passed for head ${head}: pass=${result.passEvidence.length} evidence=${locations}`
     );
     return 0;
   } catch (error) {

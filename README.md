@@ -40,17 +40,23 @@
 - `npm run check:links`: live validation of every `link`, `sourceLink`, and `proofLink` in `projects.json`, with bounded concurrency, timeouts, fallback requests, and one transient retry.
 - `npm run test:quality`: dependency-free regression suite for production content integrity.
 - `npm test`: offline full quality baseline (`check:js` + `test:quality`) including workflow pinning, least-privilege permissions, external link workflow wiring, and artifact whitelist coverage checks; it never runs the live network check.
-- `node scripts/check-independent-review.mjs --head <40-character-head>`: validate piped `gh pr view --json reviews,comments` JSON for a standalone independent-review marker matching that exact full head SHA.
+- `node scripts/check-independent-review.mjs --head <40-character-head>`: collect every standalone `independent-review head=<40-character-head> verdict=pass|fail` marker across piped reviews and comments. Pass-only evidence exits 0, missing/legacy evidence exits 1, malformed input exits 2, and any fail evidence exits 3.
+- `node scripts/check-merge-gate.mjs --head <40-character-head>`: validate a piped pull-request snapshot for OPEN/non-draft state, exact head identity, MERGEABLE/CLEAN state, at least one reported check, successful terminal status for every reported check, and a pass-only exact-head independent-review verdict across reviews and comments.
 
 ## Copilot
 - Primary project agent: `InfoAgent`
 - Session workflow: [InfoAgent policy](.github/agents/InfoAgent.agent.md) defines coordinator, task-session, recovery, and cleanup practices.
-- Coordinator independent-review gate (set `PR` to the pull request number; any nonzero exit blocks merge):
+- Coordinator machine-verifiable merge gate (set `PR` to the pull request number; any nonzero exit blocks merge):
   ```sh
-  PR=46
+  PR=49
   head_sha=$(gh pr view "$PR" --json headRefOid --jq .headRefOid) &&
-    gh pr view "$PR" --json reviews,comments |
-    node scripts/check-independent-review.mjs --head "$head_sha"
+    gh pr view "$PR" --json state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments |
+    node scripts/check-merge-gate.mjs --head "$head_sha"
   ```
+- Review evidence must use a contiguous standalone marker: `independent-review head=<40-character-head> verdict=pass` is the only clearance form, while the same marker with `verdict=fail` records a blocker. Detached prose or code that mentions verdict syntax cannot complete a legacy exact-head marker. Both helpers collect all exact-head matches across reviews and comments; fail wins over pass regardless of order or surface, and the aggregate merge gate also returns exit 3 when fail evidence is present.
+- To retract an incorrect verdict, edit its original comment marker to `RETRACTED-independent-review head=<40-character-head> verdict=<pass|fail>` and retain a retraction reason in that comment. Do not merely add an opposite verdict because an active fail marker still wins.
+- Reviewers pin the full head SHA at review start and re-fetch `headRefOid` immediately before posting; it must still equal the pinned head. If it changed, do not post the stale verdict: inspect the compare delta and review the new head. Only a compare-proven generated-only delta with identical relevant implementation blob SHAs may reuse the earlier implementation analysis, and the marker must name the new head.
+- The merge-gate helper is dependency-free, offline, and snapshot-only: it does not call GitHub or merge anything. A successful exit verifies only the supplied machine-readable state and a pass-only verdict set; it does not inspect the review's reasoning or scope.
+- The coordinator still evaluates production deployment, secrets, permissions, billing, public-scope suitability, documentation completeness, and unresolved review findings. Re-fetch the full snapshot and rerun the command immediately before merge; never authorize a merge from cached output.
 - UI work uses the vendored [Hallmark 1.1.0 skill](.github/skills/hallmark/SKILL.md).
 - Upstream pin, parity scope, and license: [UPSTREAM.md](.github/skills/hallmark/UPSTREAM.md)

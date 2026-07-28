@@ -50,9 +50,15 @@ Hallmark guides taste, not business logic. Never let it invent product claims, w
 ## Merge evidence
 
 - Never use `reviews.length == 0` as evidence that independent review is absent. GitHub rejects self-approval, so valid exact-head evidence may exist only in a pull request comment.
-- Before every merge, query both evidence surfaces with `gh pr view <N> --json reviews,comments`; neither reviews nor comments alone is sufficient input.
-- Require a standalone `independent-review head=<40-character current head SHA>` marker in a non-null review or comment body. Short, stale, wrong-head, and substring matches do not satisfy the gate.
-- Run the documented `scripts/check-independent-review.mjs` command against the pull request's current full head SHA and treat every nonzero exit as a blocked merge.
+- Always query both `reviews` and `comments`; neither evidence surface alone is sufficient input.
+- Require a contiguous standalone marker in a non-null review or comment body: `independent-review head=<40-character current head SHA> verdict=pass` is the only clearance form, while the same contiguous marker with `verdict=fail` records a blocker. Short, stale, wrong-head, legacy verdict-less, detached verdict prose, and substring matches do not satisfy the gate.
+- Collect every matching marker across both evidence surfaces. Any fail wins over any pass regardless of order or surface; pass-only evidence satisfies the review verdict, no valid verdict exits 1, malformed input exits 2, and any fail exits 3.
+- If a posted verdict is wrong, edit the original comment marker to `RETRACTED-independent-review head=<40-character reviewed head SHA> verdict=<pass|fail>` and retain a retraction reason in that comment. Do not merely add an opposite verdict: an active fail marker still wins.
+- Pin the pull request's full head SHA at review start. Immediately before posting a verdict, re-fetch `headRefOid` and require exact equality with the pinned head. If it changed, do not post the stale verdict; inspect the compare delta and review the new head. The sole exception to repeating implementation analysis is a generated-only delta, and only after the compare proves that scope and the relevant implementation blob SHAs are identical; any posted marker must still name the new head.
+- Run the documented `gh pr view <N> --json state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments | node scripts/check-merge-gate.mjs --head <40-character current head SHA>` pipeline and treat every nonzero exit as a blocked merge.
+- The helper is dependency-free, offline, and snapshot-only. Exit zero means only that the supplied JSON reports OPEN, non-draft, exact-head, MERGEABLE, CLEAN, at least one check, successful terminal state for every reported check, and pass-only review evidence; it does not inspect the review's reasoning or scope.
+- The coordinator still evaluates production deployment, secrets, permissions, billing, public-scope suitability, documentation completeness, and unresolved review findings. The helper does not evaluate or authorize those conditions.
+- Re-fetch the full pull-request snapshot and rerun the gate immediately before merge. Never merge from cached JSON or an earlier successful invocation.
 
 ## Delivery
 

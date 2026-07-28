@@ -95,18 +95,100 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
-    /query both evidence surfaces with `gh pr view <N> --json reviews,comments`/,
+    /Always query both `reviews` and `comments`/,
     "The merge gate must query review and comment bodies"
   );
   assert.match(
     source,
-    /Require a standalone `independent-review head=<40-character current head SHA>` marker/,
-    "The merge gate must require an exact full-head marker"
+    /Require a contiguous standalone marker/,
+    "The merge gate must require a contiguous exact full-head verdict marker"
+  );
+  assert.match(
+    source,
+    /`independent-review head=<40-character current head SHA> verdict=pass` is the only clearance form/,
+    "Only the contiguous pass marker may provide clearance"
+  );
+  assert.match(
+    source,
+    /detached verdict prose/,
+    "Detached verdict syntax must not complete a legacy marker"
+  );
+  assert.match(source, /Any fail wins over any pass regardless of order or surface/, "Fail evidence must dominate pass evidence");
+  assert.match(
+    source,
+    /edit the original comment marker to `RETRACTED-independent-review head=<40-character reviewed head SHA> verdict=<pass\|fail>`/,
+    "Incorrect verdicts must be retracted in their original comment"
+  );
+  assert.match(
+    source,
+    /retain a retraction reason in that comment/,
+    "Verdict retractions must preserve their reason"
+  );
+  assert.match(
+    source,
+    /Do not merely add an opposite verdict: an active fail marker still wins/,
+    "An opposite verdict must not masquerade as retraction"
+  );
+  assert.match(
+    source,
+    /Pin the pull request's full head SHA at review start/,
+    "Independent review must pin its starting head"
+  );
+  assert.match(
+    source,
+    /Immediately before posting a verdict, re-fetch `headRefOid` and require exact equality with the pinned head/,
+    "Review posting must close the head-change race"
+  );
+  assert.match(
+    source,
+    /If it changed, do not post the stale verdict; inspect the compare delta and review the new head/,
+    "A changed head must be compared and reviewed before posting"
+  );
+  assert.match(
+    source,
+    /generated-only delta, and only after the compare proves that scope and the relevant implementation blob SHAs are identical/,
+    "Generated-only reuse requires compare and implementation blob equality proof"
+  );
+  assert.match(
+    source,
+    /pass-only evidence satisfies the review verdict, no valid verdict exits 1, malformed input exits 2, and any fail exits 3/,
+    "The review verifier exit contract must remain explicit"
+  );
+  assert.match(
+    source,
+    /state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments \| node scripts\/check-merge-gate\.mjs --head/,
+    "The merge gate must validate the complete machine-readable PR snapshot"
   );
   assert.match(
     source,
     /treat every nonzero exit as a blocked merge/,
     "Verifier errors and missing evidence must block merge"
+  );
+  assert.match(
+    source,
+    /it does not inspect the review's reasoning or scope/,
+    "The machine gate must not represent a pass marker as complete review analysis"
+  );
+  for (const limitation of [
+    "production deployment",
+    "secrets",
+    "permissions",
+    "billing",
+    "public-scope suitability",
+    "documentation completeness",
+    "unresolved review findings",
+  ]) {
+    assert.match(source, new RegExp(limitation), `The coordinator must still evaluate ${limitation}`);
+  }
+  assert.match(
+    source,
+    /Re-fetch the full pull-request snapshot and rerun the gate immediately before merge/,
+    "Merge decisions must use a freshly fetched snapshot"
+  );
+  assert.match(
+    source,
+    /Never merge from cached JSON or an earlier successful invocation/,
+    "Cached merge-gate evidence must not authorize merge"
   );
   assert.match(
     source,
