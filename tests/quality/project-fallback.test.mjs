@@ -404,10 +404,14 @@ test("project ownership waits for a ready runtime when scripts or initialization
   projectsContainer.setAttribute("aria-busy", "false");
   const projectsFallback = new FakeElement("div");
   const context = {
+    AbortController,
+    PROJECT_REQUEST_TIMEOUT_MS: 8_000,
     PROJECT_RUNTIME_READY_CLASS: "projects-runtime-ready",
     clearProjectDirectory: () => {},
     document: { documentElement },
     fetch: () => new Promise(() => {}),
+    projectLoadController: null,
+    projectLoadSequence: 0,
     projectState: "loading",
     projectStatusKeys: {
       loading: "projects.loading",
@@ -420,6 +424,8 @@ test("project ownership waits for a ready runtime when scripts or initialization
     projectsStatus,
     resetProjectShareControllers: () => {},
     window: {
+      clearTimeout: () => {},
+      setTimeout: () => 1,
       siteI18n: {
         resolveSitePath: (value) => value,
         t: () => "Loading projects."
@@ -734,7 +740,7 @@ test("catalogue replacement preserves project controls without stealing outside 
   assert.equal(scrollCalls.length, 15);
 });
 
-test("persistent failures reuse the fallback and retry recovery removes duplicate destinations", async () => {
+test("stalled and failed project loads preserve the fallback until retry recovery is validated", async () => {
   const [scriptSource, projects, siteI18n] = await Promise.all([
     readUtf8("script.js"),
     readUtf8("projects.json").then(JSON.parse),
@@ -763,7 +769,24 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   );
   const consoleErrors = [];
   let fragmentFocusCalls = 0;
+  let nextTimerId = 0;
+  let stalledSignal = null;
+  const timers = new Map();
   const responses = [
+    ({ signal }) => {
+      stalledSignal = signal;
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener(
+          "abort",
+          () => {
+            const error = new Error("The operation was aborted.");
+            error.name = "AbortError";
+            reject(error);
+          },
+          { once: true }
+        );
+      });
+    },
     { ok: false, status: 503 },
     new TypeError("offline"),
     {
@@ -776,19 +799,26 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
     { ok: true, json: async () => projects }
   ];
   const context = {
+    AbortController,
+    PROJECT_REQUEST_TIMEOUT_MS: 8_000,
     PROJECT_RUNTIME_READY_CLASS: "projects-runtime-ready",
     console: { error: (...args) => consoleErrors.push(args) },
     document: {
       createElement: (tagName) => new FakeElement(tagName),
       documentElement
     },
-    fetch: async () => {
+    fetch: async (_url, options) => {
       const response = responses.shift();
+      if (typeof response === "function") {
+        return response(options);
+      }
       if (response instanceof Error) {
         throw response;
       }
       return response;
     },
+    projectLoadController: null,
+    projectLoadSequence: 0,
     projectState: "loading",
     projectShareControllers: [],
     projectStatusKeys: {
@@ -811,7 +841,21 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
         throw new TypeError("Invalid project record");
       }
     },
-    window: { siteI18n }
+    window: {
+      clearTimeout: (timerId) => timers.delete(timerId),
+      setTimeout(callback, delay) {
+        const timerId = ++nextTimerId;
+        timers.set(timerId, {
+          delay,
+          run() {
+            timers.delete(timerId);
+            callback();
+          }
+        });
+        return timerId;
+      },
+      siteI18n
+    }
   };
   context.renderProjects = () => {
     context.projectsFallback.replaceChildren();
@@ -829,7 +873,17 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   vm.runInNewContext(`${statusSource}\n${loadingSource}`, context, { timeout: 1000 });
 
   assert.equal(documentElement.classList.contains("projects-runtime-ready"), false);
-  await context.loadProjects();
+  const stalledLoad = context.loadProjects();
+  assert.equal(projectsContainer.getAttribute("aria-busy"), "true");
+  assert.equal(projectsFallback.classList.contains("is-visible"), true);
+  assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
+  assert.equal(timers.size, 1);
+  const [requestTimeout] = timers.values();
+  assert.equal(requestTimeout.delay, 8_000);
+  requestTimeout.run();
+  await stalledLoad;
+  assert.equal(stalledSignal.aborted, true);
+  assert.equal(timers.size, 0);
   assert.equal(documentElement.classList.contains("projects-runtime-ready"), false);
   assert.equal(projectsStatus.textContent, "プロジェクトを読み込めませんでした。通信状況を確認して、もう一度お試しください。");
   assert.equal(projectsFallback.classList.contains("is-visible"), true);
@@ -844,12 +898,12 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   assert.equal(firstRetry.getAttribute("aria-describedby"), "projects-status");
 
   siteI18n.setLanguage("en", { persist: false });
-  const repeatedFailure = firstRetry.click();
+  const httpFailure = firstRetry.click();
   assert.equal(projectsStatus.textContent, "Loading projects.");
   assert.equal(projectsFallback.classList.contains("is-visible"), true);
   assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
   assert.equal(projectsContainer.children.length, 0);
-  await repeatedFailure;
+  await httpFailure;
   assert.equal(projectsStatus.textContent, "Projects could not be loaded. Check your connection and try again.");
   assert.equal(projectsFallback.classList.contains("is-visible"), true);
   assert.equal(projectsContainer.children.length, 1);
@@ -859,7 +913,18 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   const recoveryRetry = projectsContainer.children[0].children[0];
   assert.equal(recoveryRetry.textContent, "Try again");
 
-  const malformedJson = recoveryRetry.click();
+  const networkFailure = recoveryRetry.click();
+  assert.equal(projectsStatus.textContent, "Loading projects.");
+  assert.equal(projectsFallback.classList.contains("is-visible"), true);
+  assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
+  assert.equal(projectsContainer.children.length, 0);
+  await networkFailure;
+  assert.equal(projectsStatus.textContent, "Projects could not be loaded. Check your connection and try again.");
+  assert.equal(projectsFallback.children.length, 9);
+  assert.equal(projectsContainer.children.length, 1);
+
+  const malformedRetry = projectsContainer.children[0].children[0];
+  const malformedJson = malformedRetry.click();
   assert.equal(projectsStatus.textContent, "Loading projects.");
   assert.equal(projectsFallback.classList.contains("is-visible"), true);
   assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
@@ -908,8 +973,9 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
     projects.map((project) => project.link)
   );
   assert.equal(new Set(projectsContainer.children.map((card) => card.destination)).size, 9);
-  assert.equal(consoleErrors.length, 4);
-  assert.equal(fragmentFocusCalls, 4);
+  assert.equal(consoleErrors.length, 5);
+  assert.equal(fragmentFocusCalls, 5);
+  assert.equal(timers.size, 0);
 
   const renderSource = sourceBetween(
     scriptSource,
@@ -926,4 +992,84 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
       renderSource.indexOf("classList.add(PROJECT_RUNTIME_READY_CLASS)"),
     "Runtime ownership must begin only after enhanced targets enter the DOM"
   );
+});
+
+test("only the latest overlapping project request may commit its catalogue", async () => {
+  const scriptSource = await readUtf8("script.js");
+  const loadSource = sourceBetween(
+    scriptSource,
+    "async function loadProjects",
+    'document.addEventListener("site-languagechange"'
+  );
+  const timers = new Map();
+  const renderedSlugs = [];
+  const consoleErrors = [];
+  let fetchCalls = 0;
+  let nextTimerId = 0;
+  let resolveFirstRequest;
+  let firstSignal;
+  let staleJsonCalls = 0;
+  const context = {
+    AbortController,
+    PROJECT_REQUEST_TIMEOUT_MS: 8_000,
+    console: { error: (...args) => consoleErrors.push(args) },
+    fetch: (_url, { signal }) => {
+      fetchCalls += 1;
+      if (fetchCalls === 1) {
+        firstSignal = signal;
+        return new Promise((resolve) => {
+          resolveFirstRequest = resolve;
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => [{ slug: "current" }]
+      });
+    },
+    projectLoadController: null,
+    projectLoadSequence: 0,
+    projects: null,
+    renderProjectError: () => {
+      throw new Error("A stale request must not render an error.");
+    },
+    renderProjectLoading: () => {},
+    renderProjects: () => renderedSlugs.push(context.projects[0].slug),
+    validateProject: () => {},
+    window: {
+      clearTimeout: (timerId) => timers.delete(timerId),
+      setTimeout(callback, delay) {
+        const timerId = ++nextTimerId;
+        timers.set(timerId, { callback, delay });
+        return timerId;
+      },
+      siteI18n: {
+        resolveSitePath: (value) => value
+      }
+    }
+  };
+  vm.runInNewContext(loadSource, context, { timeout: 1000 });
+
+  const staleLoad = context.loadProjects();
+  const currentLoad = context.loadProjects();
+  await currentLoad;
+
+  assert.equal(firstSignal.aborted, true);
+  assert.equal(context.projects[0].slug, "current");
+  assert.deepEqual(renderedSlugs, ["current"]);
+  assert.equal(timers.size, 1, "Only the ignored first request timer should remain");
+
+  resolveFirstRequest({
+    ok: true,
+    json: async () => {
+      staleJsonCalls += 1;
+      return [{ slug: "stale" }];
+    }
+  });
+  await staleLoad;
+
+  assert.equal(staleJsonCalls, 0, "Stale data must not reach parsing or validation");
+  assert.equal(context.projects[0].slug, "current");
+  assert.deepEqual(renderedSlugs, ["current"]);
+  assert.equal(consoleErrors.length, 0);
+  assert.equal(timers.size, 0);
 });

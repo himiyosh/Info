@@ -12,6 +12,7 @@ const PROJECT_SHARE_STATUS_KEYS = Object.freeze({
   failure: "projects.shareFailure"
 });
 const PROJECT_RUNTIME_READY_CLASS = "projects-runtime-ready";
+const PROJECT_REQUEST_TIMEOUT_MS = 8_000;
 
 async function writeTextToClipboard(value) {
   if (
@@ -293,6 +294,8 @@ document.addEventListener("DOMContentLoaded", () => {
   ].join(", ");
   let projects = null;
   let projectState = "loading";
+  let projectLoadController = null;
+  let projectLoadSequence = 0;
   let projectShareControllers = [];
   const projectStatusKeys = {
     loading: "projects.loading",
@@ -1500,18 +1503,33 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function loadProjects() {
-    projectState = "loading";
+    const requestSequence = ++projectLoadSequence;
+    projectLoadController?.abort();
     renderProjectLoading();
+
+    const controller = new AbortController();
+    projectLoadController = controller;
+    const timeoutId = window.setTimeout(
+      () => controller.abort(),
+      PROJECT_REQUEST_TIMEOUT_MS
+    );
 
     try {
       const response = await fetch(window.siteI18n.resolveSitePath("projects.json"), {
-        headers: { Accept: "application/json" }
+        headers: { Accept: "application/json" },
+        signal: controller.signal
       });
+      if (requestSequence !== projectLoadSequence) {
+        return;
+      }
       if (!response.ok) {
         throw new Error(`projects.json returned HTTP ${response.status}.`);
       }
 
       const data = await response.json();
+      if (requestSequence !== projectLoadSequence) {
+        return;
+      }
       if (!Array.isArray(data) || data.length === 0) {
         throw new TypeError("projects.json must contain a non-empty array.");
       }
@@ -1532,8 +1550,16 @@ document.addEventListener("DOMContentLoaded", () => {
       projects = data;
       renderProjects();
     } catch (error) {
+      if (requestSequence !== projectLoadSequence) {
+        return;
+      }
       console.error("Unable to load projects:", error);
       renderProjectError();
+    } finally {
+      window.clearTimeout(timeoutId);
+      if (projectLoadController === controller) {
+        projectLoadController = null;
+      }
     }
   }
 
