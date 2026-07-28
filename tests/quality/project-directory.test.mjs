@@ -80,7 +80,7 @@ test("the enhanced directory stays empty without data and renders canonical loca
   );
   assert.match(
     stylesSource,
-    /\.project-directory-kind\s*\{[^}]*min-width:\s*0;[^}]*max-width:\s*70%;[^}]*flex:\s*0 1 auto;[^}]*overflow:\s*hidden;[^}]*font-weight:\s*400;[^}]*text-align:\s*end;[^}]*text-overflow:\s*ellipsis;/s
+    /\.project-directory-kind\s*\{[^}]*display:\s*none;[^}]*min-width:\s*0;[^}]*max-width:\s*70%;[^}]*flex:\s*0 1 auto;[^}]*overflow:\s*hidden;[^}]*font-weight:\s*400;[^}]*text-align:\s*end;[^}]*text-overflow:\s*ellipsis;/s
   );
   assert.match(
     modernSource,
@@ -89,6 +89,10 @@ test("the enhanced directory stays empty without data and renders canonical loca
   assert.match(
     stylesSource,
     /@media \(min-width:\s*48rem\)[\s\S]*?\.project-directory-list\s*\{[^}]*repeat\(2,\s*minmax\(0,\s*1fr\)\);/
+  );
+  assert.match(
+    stylesSource,
+    /@media \(min-width:\s*48rem\)[\s\S]*?\.project-directory-kind\s*\{[^}]*display:\s*block;/
   );
   assert.match(
     stylesSource,
