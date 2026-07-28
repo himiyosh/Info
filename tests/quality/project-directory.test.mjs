@@ -93,13 +93,13 @@ test("localized project title uniqueness reports the language, value, and entrie
   );
 });
 
-test("the directory advances to content-sized three-column tracks at 67rem", async () => {
+test("the directory advances to shrinkable three-column tracks at 67rem", async () => {
   const [stylesSource, readmeSource] = await Promise.all([
     readUtf8("styles.css"),
     readUtf8("README.md")
   ]);
   const threeColumnRule = stylesSource.match(
-    /@media \(min-width:\s*([0-9.]+)rem\)\s*\{\s*\.project-directory-list\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(max-content,\s*1fr\)\);/
+    /@media \(min-width:\s*([0-9.]+)rem\)\s*\{\s*\.project-directory-list\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/
   );
   const threeColumnDeclarations = [
     ...stylesSource.matchAll(
@@ -107,11 +107,11 @@ test("the directory advances to content-sized three-column tracks at 67rem", asy
     )
   ];
 
-  assert.ok(threeColumnRule, "Expected content-sized three-column directory tracks");
+  assert.ok(threeColumnRule, "Expected shrinkable three-column directory tracks");
   assert.equal(
     threeColumnDeclarations.length,
     1,
-    "The measured content-sized rule must remain the only three-column directory transition"
+    "The shrinkable rule must remain the only three-column directory transition"
   );
   assert.equal(
     threeColumnRule[1],
@@ -120,7 +120,7 @@ test("the directory advances to content-sized three-column tracks at 67rem", asy
   );
   assert.match(
     readmeSource,
-    /keeps two columns from 48rem until 67rem, then advances to three content-sized columns/
+    /keeps two columns from 48rem until 67rem, then advances to three shrinkable columns/
   );
 });
 
