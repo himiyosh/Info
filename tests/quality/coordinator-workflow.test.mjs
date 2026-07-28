@@ -90,6 +90,26 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
+    /Never use `reviews\.length == 0` as evidence that independent review is absent/,
+    "An empty reviews array must not erase comment-based review evidence"
+  );
+  assert.match(
+    source,
+    /query both evidence surfaces with `gh pr view <N> --json reviews,comments`/,
+    "The merge gate must query review and comment bodies"
+  );
+  assert.match(
+    source,
+    /Require a standalone `independent-review head=<40-character current head SHA>` marker/,
+    "The merge gate must require an exact full-head marker"
+  );
+  assert.match(
+    source,
+    /treat every nonzero exit as a blocked merge/,
+    "Verifier errors and missing evidence must block merge"
+  );
+  assert.match(
+    source,
     /archive only terminal children owned by the current coordinator after their compact reports are durably recorded/,
     "Only owned terminal children with durable reports may be archived"
   );
