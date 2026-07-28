@@ -15,6 +15,18 @@ const scriptPath = path.join(repoRoot, "scripts/check-merge-gate.mjs");
 const agentPath = path.join(repoRoot, ".github/agents/InfoAgent.agent.md");
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 const OTHER_HEAD = "89abcdef0123456789abcdef0123456789abcdef";
+const SECOND_VERDICT_CASES = [
+  ["whitespace", "pass fail"],
+  ["line break", "fail\npass"],
+  ["pipe", "pass | fail"],
+  ["slash", "fail/pass"],
+  ["English or", "pass or fail"],
+  ["ASCII comma", "fail, pass"],
+  ["Japanese comma", "pass、fail"],
+  ["semicolon", "fail; pass"],
+  ["fullwidth semicolon", "pass；fail"],
+  ["symbol plus English or", "fail, or pass"]
+];
 
 function marker(head = HEAD, verdict = "pass") {
   return `independent-review head=${head} verdict=${verdict}`;
@@ -208,54 +220,51 @@ test("legacy review markers without a verdict remain blocked with exit 1", () =>
   assert.match(result.stderr, /verdict=pass not found/);
 });
 
-test("ambiguous enumerated verdicts cannot satisfy the aggregate gate", () => {
-  for (const verdict of ["pass|fail", "pass/fail", "pass or fail"]) {
+test("second-verdict separator forms propagate as missing through the aggregate gate", () => {
+  for (const [label, verdict] of SECOND_VERDICT_CASES) {
     const input = mergeGateInput({
       comments: [{ body: marker(HEAD, verdict) }]
     });
     const evaluated = evaluateMergeGate(input, HEAD);
 
-    assert.equal(evaluated.ok, false, verdict);
-    assert.equal(evaluated.independentReview.verdict, "missing", verdict);
-
-    const result = runCli(input);
-    assert.equal(result.status, 1, verdict);
-    assert.match(result.stderr, /verdict=pass not found/, verdict);
+    assert.equal(evaluated.ok, false, label);
+    assert.equal(evaluated.independentReview.verdict, "missing", label);
   }
+
+  const result = runCli(
+    mergeGateInput({
+      comments: [{ body: marker(HEAD, "pass;fail") }]
+    })
+  );
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /verdict=pass not found/);
 });
 
-test("comma-separated verdict alternatives cannot satisfy the aggregate gate", () => {
-  for (const verdict of ["pass, fail", "fail, pass", "pass、fail", "fail、pass"]) {
-    const input = mergeGateInput({
-      comments: [{ body: marker(HEAD, verdict) }]
-    });
-    const evaluated = evaluateMergeGate(input, HEAD);
-
-    assert.equal(evaluated.ok, false, verdict);
-    assert.equal(evaluated.independentReview.verdict, "missing", verdict);
-
-    const result = runCli(input);
-    assert.equal(result.status, 1, verdict);
-    assert.match(result.stderr, /verdict=pass not found/, verdict);
-  }
-});
-
-test("explanatory commas and Markdown table cells preserve aggregate pass clearance", () => {
+test("non-verdict delimiters and Markdown table cells preserve aggregate pass clearance", () => {
   const bodies = [
     `${marker()}, review complete.`,
-    `${marker()}、review complete.`,
+    `${marker()}、レビュー完了。`,
+    `${marker()}; review complete.`,
+    `${marker()} | Review complete |`,
+    `${marker()} / review complete.`,
+    `${marker()} or continue with the merge gate.`,
+    `(${marker()}).`,
     `| Result | ${marker()} | Review complete |`
   ];
 
-  // Delimiters remain valid unless they introduce a second verdict token.
+  // A delimiter is blocked only when it begins a second valid verdict token, preserving prose and Markdown cells.
   for (const body of bodies) {
     const input = mergeGateInput({ comments: [{ body }] });
     const evaluated = evaluateMergeGate(input, HEAD);
 
     assert.equal(evaluated.ok, true, body);
     assert.equal(evaluated.independentReview.verdict, "pass", body);
-    assert.equal(runCli(input).status, 0, body);
   }
+
+  assert.equal(
+    runCli(mergeGateInput({ comments: [{ body: bodies.at(-1) }] })).status,
+    0
+  );
 });
 
 test("legacy successful and unsuccessful status contexts are handled explicitly", () => {
@@ -384,9 +393,10 @@ test("quality wiring and documentation expose the full offline merge gate", asyn
     assert.match(source, /contiguous/i);
     assert.match(source, /verdict=pass/);
     assert.match(source, /exactly one verdict/i);
-    assert.match(source, /pass\|fail.*pass\/fail.*pass or fail.*pass, fail.*fail, pass/i);
-    assert.match(source, /Japanese-comma equivalents/i);
-    assert.match(source, /Markdown table delimiter.*explanatory prose/i);
+    assert.match(source, /second standalone `pass` or `fail` introduced by whitespace/i);
+    assert.match(source, /English `or`/);
+    assert.match(source, /symbolic separators `\|`, `\/`, `,`, `、`, `;`, and `；`/);
+    assert.match(source, /delimiter remains valid.*non-verdict explanatory prose.*Markdown table cell/i);
     assert.match(source, /fail wins/i);
     assert.match(source, /RETRACTED-independent-review/);
     assert.match(source, /retraction reason/i);
