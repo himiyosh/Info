@@ -182,6 +182,19 @@ test("detached verdict syntax in explanation prose or code cannot satisfy a lega
   assert.equal(runCli(input).status, 1);
 });
 
+test("enumerated verdict alternatives cannot provide exact-head pass clearance", () => {
+  for (const verdict of ["pass|fail", "pass/fail", "pass or fail"]) {
+    const input = {
+      reviews: [],
+      comments: [{ body: marker(verdict) }]
+    };
+
+    assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "missing", verdict);
+    assert.equal(collectIndependentReviewEvidence(input, HEAD).length, 0, verdict);
+    assert.equal(runCli(input).status, 1, verdict);
+  }
+});
+
 test("wrong-head verdict evidence remains unsatisfied", () => {
   const input = {
     reviews: [{ body: marker("pass", OTHER_HEAD) }],
@@ -244,10 +257,16 @@ test("short, legacy, malformed-verdict, and substring markers do not produce fal
 });
 
 test("punctuation-delimited verdict markers retain standalone boundary support", () => {
-  const input = {
-    reviews: [{ body: `(${marker("pass")})` }],
-    comments: []
-  };
+  const bodies = [
+    `(${marker("pass")})`,
+    `${marker("pass")}: no blocking findings.`,
+    `${marker("pass")}| review complete.`,
+    `${marker("pass")}/ review complete.`,
+    `${marker("pass")} or continue with the merge gate.`
+  ];
 
-  assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "pass");
+  for (const body of bodies) {
+    const input = { reviews: [{ body }], comments: [] };
+    assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "pass", body);
+  }
 });
