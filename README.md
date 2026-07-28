@@ -53,7 +53,7 @@
     gh pr view "$PR" --json state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments |
     node scripts/check-merge-gate.mjs --head "$head_sha"
   ```
-- Review evidence must use the standalone `independent-review head=<40-character-head> verdict=pass|fail` format. Both helpers collect all exact-head matches across reviews and comments; fail wins over pass regardless of order or surface, and the aggregate merge gate also returns exit 3 when fail evidence is present.
+- Review evidence must use a contiguous standalone marker: `independent-review head=<40-character-head> verdict=pass` is the only clearance form, while the same marker with `verdict=fail` records a blocker. Detached prose or code that mentions verdict syntax cannot complete a legacy exact-head marker. Both helpers collect all exact-head matches across reviews and comments; fail wins over pass regardless of order or surface, and the aggregate merge gate also returns exit 3 when fail evidence is present.
 - The merge-gate helper is dependency-free, offline, and snapshot-only: it does not call GitHub or merge anything. A successful exit verifies only the supplied machine-readable state and a pass-only verdict set; it does not inspect the review's reasoning or scope.
 - The coordinator still evaluates production deployment, secrets, permissions, billing, public-scope suitability, documentation completeness, and unresolved review findings. Re-fetch the full snapshot and rerun the command immediately before merge; never authorize a merge from cached output.
 - UI work uses the vendored [Hallmark 1.1.0 skill](.github/skills/hallmark/SKILL.md).

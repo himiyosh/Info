@@ -100,8 +100,18 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
-    /Require the standalone `independent-review head=<40-character current head SHA> verdict=pass\|fail` format/,
-    "The merge gate must require an exact full-head verdict marker"
+    /Require a contiguous standalone marker/,
+    "The merge gate must require a contiguous exact full-head verdict marker"
+  );
+  assert.match(
+    source,
+    /`independent-review head=<40-character current head SHA> verdict=pass` is the only clearance form/,
+    "Only the contiguous pass marker may provide clearance"
+  );
+  assert.match(
+    source,
+    /detached verdict prose/,
+    "Detached verdict syntax must not complete a legacy marker"
   );
   assert.match(source, /Any fail wins over any pass regardless of order or surface/, "Fail evidence must dominate pass evidence");
   assert.match(

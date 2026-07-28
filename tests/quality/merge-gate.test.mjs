@@ -179,7 +179,11 @@ test("review fail returns exit 3 and overrides pass regardless of surface order"
 test("legacy review markers without a verdict remain blocked with exit 1", () => {
   const result = runCli(
     mergeGateInput({
-      comments: [{ body: legacyMarker() }]
+      comments: [
+        {
+          body: `${legacyMarker()}\nExample syntax elsewhere: \`verdict=pass\` or \`verdict=fail\`.`
+        }
+      ]
     })
   );
 
@@ -310,7 +314,8 @@ test("quality wiring and documentation expose the full offline merge gate", asyn
   for (const source of [readme, agent]) {
     assert.match(source, /check-merge-gate\.mjs --head/);
     assert.match(source, /state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments/);
-    assert.match(source, /verdict=pass\|fail/);
+    assert.match(source, /contiguous/i);
+    assert.match(source, /verdict=pass/);
     assert.match(source, /fail wins/i);
     assert.match(source, /immediately before merge/i);
     assert.match(source, /unresolved review findings/i);

@@ -3,8 +3,8 @@ import { pathToFileURL } from "node:url";
 const FULL_HEAD_PATTERN = /^[0-9a-f]{40}$/;
 const MARKER_PREFIX = "independent-review head=";
 const TOKEN_CHARACTER_PATTERN = /[A-Za-z0-9_-]/;
+const VERDICT_SUFFIX_PATTERN = /^ verdict=(pass|fail)(?![A-Za-z0-9_-])/;
 const SURFACES = ["reviews", "comments"];
-const VERDICTS = ["pass", "fail"];
 const USAGE =
   "Usage: gh pr view <N> --json reviews,comments | node scripts/check-independent-review.mjs --head <40-character-head>";
 
@@ -33,26 +33,21 @@ export function parseReviewEvidenceJson(source) {
 }
 
 function collectStandaloneVerdicts(body, head) {
-  const markerPrefix = `${MARKER_PREFIX}${head} verdict=`;
+  const marker = `${MARKER_PREFIX}${head}`;
   const matches = [];
-  let index = body.indexOf(markerPrefix);
+  let index = body.indexOf(marker);
 
   while (index !== -1) {
-    const verdictStart = index + markerPrefix.length;
-    const verdict = VERDICTS.find((candidate) => body.startsWith(candidate, verdictStart));
-    const markerLength = verdict ? markerPrefix.length + verdict.length : markerPrefix.length;
     const precedingCharacter = body[index - 1];
-    const followingCharacter = body[index + markerLength];
     const hasValidStart =
       precedingCharacter === undefined || !TOKEN_CHARACTER_PATTERN.test(precedingCharacter);
-    const hasValidEnd =
-      followingCharacter === undefined || !TOKEN_CHARACTER_PATTERN.test(followingCharacter);
+    const suffixMatch = body.slice(index + marker.length).match(VERDICT_SUFFIX_PATTERN);
 
-    if (verdict && hasValidStart && hasValidEnd) {
-      matches.push({ verdict, offset: index });
+    if (hasValidStart && suffixMatch) {
+      matches.push({ verdict: suffixMatch[1], offset: index });
     }
 
-    index = body.indexOf(markerPrefix, index + 1);
+    index = body.indexOf(marker, index + 1);
   }
 
   return matches;

@@ -139,6 +139,28 @@ test("legacy markers without a verdict remain unsatisfied", () => {
   assert.match(result.stderr, /pass verdict not found/);
 });
 
+test("detached verdict syntax in explanation prose or code cannot satisfy a legacy marker", () => {
+  const input = {
+    reviews: [
+      {
+        body: `${legacyMarker()}\nExplanation: use \`verdict=pass\` or \`verdict=fail\` after review.`
+      },
+      {
+        body: `${legacyMarker()} -- example code elsewhere: verdict=pass`
+      }
+    ],
+    comments: [
+      {
+        body: `Documented syntax: verdict=pass|fail\n${legacyMarker()}`
+      }
+    ]
+  };
+
+  assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "missing");
+  assert.equal(collectIndependentReviewEvidence(input, HEAD).length, 0);
+  assert.equal(runCli(input).status, 1);
+});
+
 test("wrong-head verdict evidence remains unsatisfied", () => {
   const input = {
     reviews: [{ body: marker("pass", OTHER_HEAD) }],
