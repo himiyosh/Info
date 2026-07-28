@@ -3112,6 +3112,109 @@ test("focus-ring / backdrop token pairings meet WCAG 1.4.11 non-text contrast (>
   }
 });
 
+test("increased contrast strengthens muted roles and UI boundaries without changing the base theme", async () => {
+  const [tokensSource, modernSource] = await Promise.all([
+    readUtf8("tokens.css"),
+    readUtf8("modern.css")
+  ]);
+  const mediaMarker = "@media screen and (prefers-contrast: more)";
+  const mediaIndex = tokensSource.indexOf(mediaMarker);
+  assert.notEqual(
+    mediaIndex,
+    -1,
+    "tokens.css must define a screen-only prefers-contrast: more contract"
+  );
+
+  const normalTokens = parseOklchTokens(tokensSource.slice(0, mediaIndex));
+  const contrastTokens = parseOklchTokens(tokensSource.slice(mediaIndex));
+  for (const name of [
+    "--color-ink-2",
+    "--color-muted",
+    "--color-rule",
+    "--color-focus"
+  ]) {
+    assert.ok(normalTokens.has(name), `Expected base token ${name}`);
+    assert.ok(contrastTokens.has(name), `Expected contrast override ${name}`);
+  }
+
+  const pairings = [
+    {
+      label: "directory kinds",
+      foreground: "--color-muted",
+      background: "--color-scene-projects",
+      minimum: 4.5
+    },
+    {
+      label: "captions",
+      foreground: "--color-ink-2",
+      background: "--color-surface",
+      minimum: 4.5
+    },
+    {
+      label: "proof labels and evidence links",
+      foreground: "--color-ink-2",
+      background: "--color-project-a",
+      minimum: 4.5
+    },
+    {
+      label: "secondary project links",
+      foreground: "--color-ink-2",
+      background: "--color-project-b",
+      minimum: 4.5
+    },
+    {
+      label: "rules and control boundaries",
+      foreground: "--color-rule",
+      background: "--color-surface",
+      minimum: 3
+    },
+    {
+      label: "directory rules",
+      foreground: "--color-rule",
+      background: "--color-scene-projects",
+      minimum: 3
+    },
+    {
+      label: "focus boundaries",
+      foreground: "--color-focus",
+      background: "--color-scene-projects",
+      minimum: 3
+    }
+  ];
+
+  for (const { label, foreground, background, minimum } of pairings) {
+    const normal = oklchContrastRatio(
+      normalTokens.get(foreground),
+      normalTokens.get(background)
+    );
+    const increased = oklchContrastRatio(
+      contrastTokens.get(foreground),
+      normalTokens.get(background)
+    );
+    assert.ok(
+      increased >= minimum,
+      `${label} must reach ${minimum}:1, got ${increased.toFixed(2)}:1`
+    );
+    assert.ok(
+      increased >= normal + 0.25,
+      `${label} must improve by at least 0.25, got ${normal.toFixed(2)}:1 -> ${increased.toFixed(2)}:1`
+    );
+  }
+
+  assert.match(
+    modernSource,
+    /\.project-directory-kind\s*\{[^}]*color:\s*var\(--color-muted\)/s
+  );
+  assert.match(
+    modernSource,
+    /\.project-proof-label,\s*\.project-link--evidence\s*\{[^}]*color:\s*var\(--color-ink-2\)/s
+  );
+  assert.match(
+    modernSource,
+    /\.projects-list \.project-row :where\(a, button\):focus-visible,[^}]*outline-color:\s*var\(--color-focus\)/s
+  );
+});
+
 test("color-scheme metadata matches the shipped dark-only theme", async () => {
   const indexHtml = await readUtf8("index.html");
 

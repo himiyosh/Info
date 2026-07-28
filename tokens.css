@@ -94,3 +94,12 @@
   --reveal-stagger-step: 50ms;
   --reveal-stagger-cap: 450ms;
 }
+
+@media screen and (prefers-contrast: more) {
+  :root {
+    --color-ink-2: oklch(90% 0.014 245);
+    --color-muted: oklch(84% 0.016 245);
+    --color-rule: oklch(70% 0.03 240);
+    --color-focus: oklch(98% 0.02 230);
+  }
+}
