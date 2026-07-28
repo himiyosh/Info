@@ -195,6 +195,19 @@ test("enumerated verdict alternatives cannot provide exact-head pass clearance",
   }
 });
 
+test("comma-separated verdict alternatives cannot provide exact-head clearance", () => {
+  for (const verdict of ["pass, fail", "fail, pass", "pass、fail", "fail、pass"]) {
+    const input = {
+      reviews: [],
+      comments: [{ body: marker(verdict) }]
+    };
+
+    assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "missing", verdict);
+    assert.equal(collectIndependentReviewEvidence(input, HEAD).length, 0, verdict);
+    assert.equal(runCli(input).status, 1, verdict);
+  }
+});
+
 test("wrong-head verdict evidence remains unsatisfied", () => {
   const input = {
     reviews: [{ body: marker("pass", OTHER_HEAD) }],
@@ -256,13 +269,30 @@ test("short, legacy, malformed-verdict, and substring markers do not produce fal
   assert.equal(hasIndependentReviewEvidence(input, HEAD), false);
 });
 
-test("punctuation-delimited verdict markers retain standalone boundary support", () => {
+test("explanatory commas preserve single pass and fail verdicts", () => {
+  const cases = [
+    { body: `${marker("pass")}, review complete.`, verdict: "pass", exit: 0 },
+    { body: `${marker("pass")}、review complete.`, verdict: "pass", exit: 0 },
+    { body: `${marker("fail")}, blocking issue remains.`, verdict: "fail", exit: 3 },
+    { body: `${marker("fail")}、blocking issue remains.`, verdict: "fail", exit: 3 }
+  ];
+
+  // Punctuation stays compatible with prose; only a following verdict token is ambiguous.
+  for (const { body, verdict, exit } of cases) {
+    const input = { reviews: [{ body }], comments: [] };
+    assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, verdict, body);
+    assert.equal(runCli(input).status, exit, body);
+  }
+});
+
+test("punctuation-delimited verdict markers retain standalone and Markdown table support", () => {
   const bodies = [
     `(${marker("pass")})`,
     `${marker("pass")}: no blocking findings.`,
     `${marker("pass")}| review complete.`,
     `${marker("pass")}/ review complete.`,
-    `${marker("pass")} or continue with the merge gate.`
+    `${marker("pass")} or continue with the merge gate.`,
+    `| Result | ${marker("pass")} | Review complete |`
   ];
 
   for (const body of bodies) {
