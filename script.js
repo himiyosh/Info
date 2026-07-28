@@ -1088,6 +1088,83 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function captureProjectFallbackFocus() {
+    const focusedElement = document.activeElement;
+    if (
+      !focusedElement ||
+      focusedElement === document.body ||
+      focusedElement === document.documentElement
+    ) {
+      return { kind: "neutral" };
+    }
+    if (!projectsFallback.contains(focusedElement)) {
+      return { kind: "outside" };
+    }
+
+    const projectCard = focusedElement.closest(".projects-fallback-card");
+    if (!projectCard) {
+      return { kind: "outside" };
+    }
+
+    let targetSelector = null;
+    if (focusedElement.closest(".projects-fallback-permalink")) {
+      targetSelector = ".project-permalink";
+    } else {
+      const projectLink = focusedElement.closest(".project-link");
+      const variant = ["primary", "secondary", "evidence"].find((name) =>
+        projectLink?.classList.contains(`project-link--${name}`)
+      );
+      if (variant) {
+        targetSelector = `.project-link--${variant}`;
+      }
+    }
+
+    return {
+      kind: "fallback",
+      projectId: projectCard.id,
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      targetSelector,
+      wasProjectTarget: focusedElement === projectCard
+    };
+  }
+
+  function restoreProjectFallbackFocus(focusHandoff) {
+    if (focusHandoff.kind !== "fallback") {
+      return false;
+    }
+
+    const projectCard = document.getElementById(focusHandoff.projectId);
+    if (
+      !projectCard ||
+      !projectsContainer.contains(projectCard) ||
+      !projectCard.classList.contains("project-row")
+    ) {
+      return false;
+    }
+
+    projectCard.classList.remove("is-priming");
+    projectRevealObserver?.unobserve(projectCard);
+    const target = focusHandoff.targetSelector
+      ? projectCard.querySelector(focusHandoff.targetSelector) ?? projectCard
+      : projectCard;
+    target.focus({ preventScroll: true });
+    if (!focusHandoff.wasProjectTarget) {
+      const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+      document.documentElement.style.scrollBehavior = "auto";
+      window.scrollTo(focusHandoff.scrollX, focusHandoff.scrollY);
+      document.documentElement.style.scrollBehavior = previousScrollBehavior;
+    }
+    return true;
+  }
+
+  function shouldScheduleProjectFragmentFocusAfterRender(focusHandoff) {
+    return (
+      focusHandoff.kind === "neutral" ||
+      (focusHandoff.kind === "fallback" && focusHandoff.wasProjectTarget)
+    );
+  }
+
   function updateProjectStatus(state) {
     const translationKey = projectStatusKeys[state];
     if (!translationKey) {
@@ -1165,6 +1242,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const fallbackFocusHandoff = captureProjectFallbackFocus();
     resetProjectShareControllers({ discard: true });
     projectRevealObserver?.disconnect();
     const animateReveal = shouldAnimateProjectReveal();
@@ -1345,7 +1423,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 2500);
     }
 
-    scheduleProjectFragmentFocus();
+    restoreProjectFallbackFocus(fallbackFocusHandoff);
+    if (shouldScheduleProjectFragmentFocusAfterRender(fallbackFocusHandoff)) {
+      scheduleProjectFragmentFocus();
+    }
   }
 
   function renderProjectLoading() {
