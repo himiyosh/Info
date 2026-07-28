@@ -407,6 +407,39 @@ html:lang(ja) .project-directory-link {
   outline-color: var(--color-focus);
 }
 
+.projects-status,
+.projects-fallback {
+  width: 100%;
+  max-width: var(--content-width);
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+  color: var(--color-ink);
+}
+
+.projects-fallback {
+  padding-block-end: var(--space-2xl);
+}
+
+.projects-fallback-card {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border-color: var(--color-rule);
+}
+
+.projects-fallback-title {
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 600;
+  font-variation-settings: "wght" 600;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+}
+
+html:lang(ja) .projects-fallback-title {
+  font-family: var(--font-heading-ja);
+  font-weight: 700;
+}
+
 .projects-list {
   margin-block-start: var(--space-2xl);
   gap: 0;

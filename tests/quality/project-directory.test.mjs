@@ -220,6 +220,10 @@ test("one directory activation focuses the ninth card through the stable fragmen
     },
     prefersReducedMotion: false,
     projectRevealObserver: null,
+    projectsFallback: {
+      classList: { contains: () => false },
+      contains: () => false
+    },
     projectsContainer: {
       contains: (element) => element === target
     },

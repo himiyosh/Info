@@ -235,22 +235,23 @@
           ></nav>
         </div>
         <p
-          class="projects-list projects-status"
+          class="projects-status"
           id="projects-status"
           role="status"
           aria-atomic="true"
           data-i18n="projects.loading"
           data-i18n-dynamic=""
+          hidden
         >
           {{t:projects.loading}}
         </p>
-        <div id="projects-container" aria-busy="true"></div>
+        <div id="projects-container" aria-busy="false"></div>
         <div class="projects-fallback" id="projects-fallback" role="note">
           <p data-i18n="projects.fallback">
             {{t:projects.fallback}}
           </p>
           <ul class="projects-fallback-list">
-            {{projectFallbackLinks}}
+            {{projectFallbackSummaries}}
           </ul>
         </div>
       </div>

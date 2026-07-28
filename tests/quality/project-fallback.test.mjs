@@ -15,14 +15,61 @@ function sourceBetween(sourceText, startMarker, endMarker) {
   return sourceText.slice(start, end);
 }
 
+function attributeValue(tag, name) {
+  const match = tag.match(
+    new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i")
+  );
+  return match ? match[1] ?? match[2] : undefined;
+}
+
+function elementContent(source, tagName, className) {
+  return source.match(
+    new RegExp(
+      `<${tagName}\\b[^>]*\\bclass="[^"]*\\b${className}\\b[^"]*"[^>]*>([\\s\\S]*?)<\\/${tagName}>`,
+      "i"
+    )
+  )?.[1];
+}
+
+function actionEntry(source, variant) {
+  const anchor = source.match(
+    new RegExp(
+      `(<a\\b[^>]*\\bclass="[^"]*\\bproject-link--${variant}\\b[^"]*"[^>]*>)([\\s\\S]*?)<\\/a>`,
+      "i"
+    )
+  );
+  return anchor
+    ? {
+        label: anchor[2].match(/<span>([\s\S]*?)<\/span>/i)?.[1].trim(),
+        link: attributeValue(anchor[1], "href")
+      }
+    : null;
+}
+
 function fallbackEntries(source) {
   const fallback = source.match(
     /<div\b[^>]*\bid="projects-fallback"[^>]*>([\s\S]*?)<\/div>/i
   )?.[1];
   assert.ok(fallback, "The document must contain one shared fallback surface");
   return [...fallback.matchAll(
-    /<li>\s*<a\b[^>]*\bhref="([^"]+)"[^>]*>\s*<span class="projects-fallback-title">([\s\S]*?)<\/span>\s*<span class="projects-fallback-kind">([\s\S]*?)<\/span>\s*<\/a>\s*<\/li>/gi
-  )].map(([, link, title, kind]) => ({ kind: kind.trim(), link, title: title.trim() }));
+    /(<article\b[^>]*\bclass="[^"]*\bprojects-fallback-card\b[^"]*"[^>]*>)([\s\S]*?)<\/article>/gi
+  )].map(([, openingTag, body]) => ({
+    description: elementContent(body, "p", "projects-fallback-description")?.trim(),
+    kind: elementContent(body, "p", "projects-fallback-kind")?.trim(),
+    permalink: attributeValue(
+      body.match(
+        /<a\b[^>]*\bclass="[^"]*\bprojects-fallback-permalink\b[^"]*"[^>]*>/i
+      )?.[0] ?? "",
+      "href"
+    ),
+    primary: actionEntry(body, "primary"),
+    proof: actionEntry(body, "evidence"),
+    source: actionEntry(body, "secondary"),
+    stack: elementContent(body, "p", "projects-fallback-stack")?.trim() ?? null,
+    tabIndex: attributeValue(openingTag, "tabindex"),
+    targetId: attributeValue(openingTag, "id"),
+    title: elementContent(body, "h3", "projects-fallback-title")?.trim()
+  }));
 }
 
 class FakeClassList {
@@ -146,9 +193,34 @@ test("each static fallback exposes canonical localized decision cues without Jav
       /\b(?:hidden|aria-hidden)=/i,
       "The fallback must remain exposed when scripts do not run"
     );
+    assert.match(
+      source,
+      /<p\b[^>]*\bid="projects-status"[^>]*\bhidden\b[^>]*>/i,
+      "The loading status must not claim indefinite work when scripts do not run"
+    );
+    assert.match(
+      source,
+      /<div\b[^>]*\bid="projects-container"[^>]*\baria-busy="false"[^>]*>/i
+    );
     const entries = fallbackEntries(source);
     assert.equal(entries.length, 9);
-    assert.deepEqual(entries.map(({ link }) => link), projects.map((project) => project.link));
+    assert.deepEqual(
+      entries.map(({ targetId }) => targetId),
+      projects.map((project) => `project-${project.slug}`)
+    );
+    assert.deepEqual(
+      entries.map(({ permalink }) => permalink),
+      projects.map((project) => `#project-${project.slug}`)
+    );
+    assert.deepEqual(entries.map(({ tabIndex }) => tabIndex), Array(9).fill("-1"));
+    assert.deepEqual(
+      entries.map(({ primary }) => primary.link),
+      projects.map((project) => project.link)
+    );
+    assert.deepEqual(
+      entries.map(({ primary }) => primary.label),
+      projects.map((project) => project.action[language])
+    );
     assert.deepEqual(
       entries.map(({ title }) => title),
       projects.map((project) => project.title[language])
@@ -157,7 +229,28 @@ test("each static fallback exposes canonical localized decision cues without Jav
       entries.map(({ kind }) => kind),
       projects.map((project) => project.kind[language])
     );
-    assert.equal(new Set(entries.map(({ link }) => link)).size, 9);
+    assert.deepEqual(
+      entries.map(({ description }) => description),
+      projects.map((project) => project.description[language])
+    );
+    assert.deepEqual(
+      entries.map(({ stack }) => stack),
+      projects.map((project) => project.stack?.join(" · ") ?? null)
+    );
+    assert.deepEqual(
+      entries.map(({ source }) => source),
+      projects.map((project) =>
+        project.sourceAction
+          ? { label: project.sourceAction[language], link: project.sourceLink }
+          : null
+      )
+    );
+    assert.deepEqual(
+      entries.map(({ proof }) => proof?.link ?? null),
+      projects.map((project) => project.proofLink ?? null)
+    );
+    assert.equal(new Set(entries.map(({ targetId }) => targetId)).size, 9);
+    assert.equal(new Set(entries.map(({ primary }) => primary.link)).size, 9);
     assert.doesNotMatch(
       source,
       /<noscript>[\s\S]*?projects-fallback[\s\S]*?<\/noscript>/i,
@@ -172,16 +265,43 @@ test("each static fallback exposes canonical localized decision cues without Jav
   );
   assert.match(
     stylesSource,
-    /\.projects-fallback a\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*min-height:\s*44px;[^}]*display:\s*flex;[^}]*gap:\s*var\(--space-xs\);[^}]*white-space:\s*nowrap;/s,
-    "Fallback links must remain 44px, single-line, and shrink-safe"
+    /\.projects-fallback-list\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s,
+    "Fallback summary tracks must remain shrink-safe"
   );
   assert.match(
     stylesSource,
-    /\.projects-fallback-title\s*\{[^}]*min-width:\s*0;[^}]*flex:\s*1 1 0;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s
+    /\.projects-fallback-card\s*\{[^}]*min-width:\s*0;[^}]*display:\s*grid;/s,
+    "Fallback summaries must remain shrink-safe"
   );
   assert.match(
     stylesSource,
-    /\.projects-fallback-kind\s*\{[^}]*min-width:\s*0;[^}]*max-width:\s*70%;[^}]*flex:\s*0 1 auto;[^}]*overflow:\s*hidden;[^}]*text-align:\s*end;[^}]*text-overflow:\s*ellipsis;/s
+    /html:not\(\.js-enabled\)\s+\.site-header\s*\{[^}]*position:\s*static;/s,
+    "The expanded no-JavaScript navigation must not cover native fragment arrivals"
+  );
+  assert.match(
+    stylesSource,
+    /html:not\(\.js-enabled\)\s+\.projects-fallback-card\s*\{[^}]*scroll-margin-block-start:\s*var\(--space-lg\);/s
+  );
+  assert.match(
+    stylesSource,
+    /\.projects-fallback-title\s*\{[^}]*min-width:\s*0;[^}]*flex:\s*1 1 12rem;[^}]*overflow-wrap:\s*anywhere;/s
+  );
+  assert.match(
+    stylesSource,
+    /\.projects-fallback-actions\s*\{[^}]*margin-block-start:\s*var\(--space-2xs\);/s
+  );
+  assert.match(
+    stylesSource,
+    /\.project-link\s*\{[^}]*max-width:\s*100%;[^}]*min-height:\s*44px;[^}]*display:\s*inline-flex;[^}]*white-space:\s*nowrap;/s,
+    "Fallback actions must remain 44px, single-line, and shrink-safe"
+  );
+  assert.match(
+    stylesSource,
+    /\.project-permalink\s*\{[^}]*max-width:\s*100%;[^}]*min-width:\s*44px;[^}]*min-height:\s*44px;[^}]*white-space:\s*nowrap;/s
+  );
+  assert.match(
+    stylesSource,
+    /@media \(min-width:\s*48rem\)[\s\S]*?\.projects-fallback-list\s*\{[^}]*repeat\(2,\s*minmax\(0,\s*1fr\)\);/
   );
   assert.match(
     stylesSource,
@@ -211,7 +331,13 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   projectsDirectory.hidden = true;
   const projectsContainer = new FakeElement("div");
   const projectsFallback = new FakeElement("div");
+  projectsFallback.replaceChildren(
+    ...projects.map((project) => Object.assign(new FakeElement("article"), {
+      id: `project-${project.slug}`
+    }))
+  );
   const consoleErrors = [];
+  let fragmentFocusCalls = 0;
   const responses = [
     { ok: false, status: 503 },
     new TypeError("offline"),
@@ -240,11 +366,15 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
     projectsFallback,
     projectsStatus,
     projectTargetId: (slug) => `project-${slug}`,
+    scheduleProjectFragmentFocus: () => {
+      fragmentFocusCalls += 1;
+    },
     localizedValue: (value) => value[siteI18n.language],
     validateProject: () => {},
     window: { siteI18n }
   };
   context.renderProjects = () => {
+    context.projectsFallback.replaceChildren();
     const cards = context.projects.map((project) => {
       const card = new FakeElement("article");
       card.destination = project.link;
@@ -263,6 +393,7 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
   assert.equal(projectsContainer.getAttribute("aria-busy"), "false");
   assert.equal(projectsContainer.children.length, 1);
+  assert.equal(projectsFallback.children.length, 9);
   assert.equal(projectsDirectory.hidden, true);
   assert.equal(projectsDirectory.children.length, 0);
   const firstRetry = projectsContainer.children[0].children[0];
@@ -279,6 +410,7 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   assert.equal(projectsStatus.textContent, "Projects could not be loaded. Check your connection and try again.");
   assert.equal(projectsFallback.classList.contains("is-visible"), true);
   assert.equal(projectsContainer.children.length, 1);
+  assert.equal(projectsFallback.children.length, 9);
   assert.equal(projectsDirectory.hidden, true);
   assert.equal(projectsDirectory.children.length, 0);
   const recoveryRetry = projectsContainer.children[0].children[0];
@@ -294,6 +426,7 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   assert.equal(projectsStatus.classList.contains("sr-only"), true);
   assert.equal(projectsFallback.classList.contains("is-visible"), false);
   assert.equal(projectsFallback.getAttribute("aria-hidden"), "true");
+  assert.equal(projectsFallback.children.length, 0);
   assert.equal(projectsDirectory.hidden, false);
   assert.equal(projectsDirectory.children.length, 1);
   const directoryLinks = projectsDirectory.children[0].children.map(
@@ -310,4 +443,16 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   );
   assert.equal(new Set(projectsContainer.children.map((card) => card.destination)).size, 9);
   assert.equal(consoleErrors.length, 2);
+  assert.equal(fragmentFocusCalls, 2);
+
+  const renderSource = sourceBetween(
+    scriptSource,
+    "function renderProjects",
+    "function renderProjectLoading"
+  );
+  assert.ok(
+    renderSource.indexOf("projectsFallback.replaceChildren()") <
+      renderSource.indexOf("projectsContainer.replaceChildren(fragment)"),
+    "Static targets must leave the DOM before enhanced targets enter it"
+  );
 });

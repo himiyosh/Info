@@ -13,6 +13,8 @@ const projectsPath = path.join(repoRoot, "projects.json");
 const canonicalProjects = JSON.parse(await readFile(projectsPath, "utf8"));
 const checkOnly = process.argv.includes("--check");
 const canonicalRoot = "https://himiyosh.github.io/Info/";
+const projectSlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const reservedProjectSlugs = new Set(["top", "about", "projects", "contact", "main-content"]);
 export const pages = [
   {
     language: "ja",
@@ -41,32 +43,173 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function escapedProjectValue(project, index, field, language) {
-  const value = field === "link" ? project?.link : project?.[field]?.[language];
-  if (typeof value !== "string" || value.length === 0) {
-    throw new TypeError(`Missing ${language} project ${field} at index ${index}.`);
+function projectString(project, index, field) {
+  const value = project?.[field];
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new TypeError(`Missing project ${field} at index ${index}.`);
   }
-  return escapeHtml(value);
+  return value;
 }
 
-export function renderProjectFallbackLinks(projects, language, indentation = "") {
+function localizedProjectString(project, index, field, language) {
+  const value = project?.[field]?.[language];
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new TypeError(`Missing ${language} project ${field} at index ${index}.`);
+  }
+  return value;
+}
+
+function projectUrl(project, index, field, { httpsOnly = false } = {}) {
+  const value = projectString(project, index, field);
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new TypeError(`Project ${field} at index ${index} must be an absolute URL.`);
+  }
+  const allowedProtocols = httpsOnly ? ["https:"] : ["http:", "https:"];
+  if (!allowedProtocols.includes(url.protocol)) {
+    throw new TypeError(`Project ${field} at index ${index} uses an unsupported protocol.`);
+  }
+  return value;
+}
+
+function projectTargetId(project, index, seenSlugs) {
+  const slug = projectString(project, index, "slug");
+  if (!projectSlugPattern.test(slug)) {
+    throw new TypeError(`Project slug at index ${index} must use lowercase kebab-case.`);
+  }
+  if (reservedProjectSlugs.has(slug)) {
+    throw new TypeError(`Project slug at index ${index} is reserved.`);
+  }
+  if (seenSlugs.has(slug)) {
+    throw new TypeError(`Duplicate project slug: ${slug}`);
+  }
+  seenSlugs.add(slug);
+  return `project-${slug}`;
+}
+
+function localizedTranslation(language, key, replacements = {}) {
+  let value = key
+    .split(".")
+    .reduce((result, part) => result?.[part], translations[language]);
+  if (typeof value !== "string") {
+    throw new TypeError(`Missing ${language} translation for project fallback key: ${key}`);
+  }
+  for (const [placeholder, replacement] of Object.entries(replacements)) {
+    value = value.replaceAll(`{${placeholder}}`, replacement);
+  }
+  return value;
+}
+
+function fallbackActionMarkup(href, label, variant, language, indentation) {
+  return [
+    `${indentation}<a class="project-link project-link--${variant} projects-fallback-action" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">`,
+    `${indentation}  <span>${escapeHtml(label)}</span>`,
+    `${indentation}  <span class="sr-only">${escapeHtml(localizedTranslation(language, "accessibility.opensInNewTab"))}</span>`,
+    `${indentation}  <span class="project-link-arrow" aria-hidden="true">↗</span>`,
+    `${indentation}</a>`
+  ].join("\n");
+}
+
+export function renderProjectFallbackSummaries(projects, language, indentation = "") {
   if (!Array.isArray(projects) || projects.length === 0) {
     throw new TypeError("projects.json must contain a non-empty array.");
   }
 
+  const seenSlugs = new Set();
   return projects
     .map((project, index) => {
-      const link = escapedProjectValue(project, index, "link", language);
-      const title = escapedProjectValue(project, index, "title", language);
-      const kind = escapedProjectValue(project, index, "kind", language);
-      return [
+      const targetId = projectTargetId(project, index, seenSlugs);
+      const titleId = `${targetId}-fallback-title`;
+      const title = localizedProjectString(project, index, "title", language);
+      const kind = localizedProjectString(project, index, "kind", language);
+      const description = localizedProjectString(project, index, "description", language);
+      const action = localizedProjectString(project, index, "action", language);
+      const link = projectUrl(project, index, "link");
+      const hasSourceAction = Object.hasOwn(project, "sourceAction");
+      const hasSourceLink = Object.hasOwn(project, "sourceLink");
+      const hasProof = Object.hasOwn(project, "proof");
+      const hasProofLink = Object.hasOwn(project, "proofLink");
+      if (hasSourceAction !== hasSourceLink) {
+        throw new TypeError(
+          `Project sourceAction and sourceLink at index ${index} must be provided together.`
+        );
+      }
+      if (hasProof !== hasProofLink) {
+        throw new TypeError(
+          `Project proof and proofLink at index ${index} must be provided together.`
+        );
+      }
+
+      const summary = [
         `${indentation}<li>`,
-        `${indentation}  <a href="${link}">`,
-        `${indentation}    <span class="projects-fallback-title">${title}</span>`,
-        `${indentation}    <span class="projects-fallback-kind">${kind}</span>`,
-        `${indentation}  </a>`,
+        `${indentation}  <article class="projects-fallback-card" id="${targetId}" tabindex="-1" aria-labelledby="${titleId}">`,
+        `${indentation}    <header class="projects-fallback-heading">`,
+        `${indentation}      <h3 class="projects-fallback-title" id="${titleId}">${escapeHtml(title)}</h3>`,
+        `${indentation}      <a class="project-permalink projects-fallback-permalink" href="#${targetId}" aria-label="${escapeHtml(localizedTranslation(language, "projects.permalinkLabel", { title }))}">${escapeHtml(localizedTranslation(language, "projects.permalinkAction"))}</a>`,
+        `${indentation}      <p class="project-kind projects-fallback-kind">${escapeHtml(kind)}</p>`,
+        `${indentation}    </header>`,
+        `${indentation}    <p class="project-description projects-fallback-description">${escapeHtml(description)}</p>`
+      ];
+
+      if (Object.hasOwn(project, "stack")) {
+        if (!Array.isArray(project.stack) || project.stack.length === 0) {
+          throw new TypeError(`Project stack at index ${index} must be a non-empty array.`);
+        }
+        const stack = project.stack.map((item, stackIndex) => {
+          if (typeof item !== "string" || item.trim().length === 0) {
+            throw new TypeError(
+              `Project stack item ${stackIndex} at index ${index} must be a non-empty string.`
+            );
+          }
+          return item;
+        });
+        summary.push(
+          `${indentation}    <p class="project-stack projects-fallback-stack">${stack.map(escapeHtml).join(" · ")}</p>`
+        );
+      }
+
+      summary.push(
+        `${indentation}    <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="${titleId}">`,
+        fallbackActionMarkup(link, action, "primary", language, `${indentation}      `)
+      );
+      if (hasSourceAction) {
+        summary.push(
+          fallbackActionMarkup(
+            projectUrl(project, index, "sourceLink", { httpsOnly: true }),
+            localizedProjectString(project, index, "sourceAction", language),
+            "secondary",
+            language,
+            `${indentation}      `
+          )
+        );
+      }
+      summary.push(`${indentation}    </p>`);
+
+      if (hasProof) {
+        summary.push(
+          `${indentation}    <section class="project-proof projects-fallback-proof">`,
+          `${indentation}      <p class="project-proof-text">`,
+          `${indentation}        <span class="project-proof-label">${escapeHtml(localizedTranslation(language, "projects.proofLabel"))}</span>`,
+          `${indentation}        <span>${escapeHtml(localizedProjectString(project, index, "proof", language))}</span>`,
+          `${indentation}      </p>`,
+          fallbackActionMarkup(
+            projectUrl(project, index, "proofLink", { httpsOnly: true }),
+            localizedTranslation(language, "projects.proofAction"),
+            "evidence",
+            language,
+            `${indentation}      `
+          ),
+          `${indentation}    </section>`
+        );
+      }
+
+      summary.push(
+        `${indentation}  </article>`,
         `${indentation}</li>`
-      ].join("\n");
+      );
+      return summary.join("\n");
     })
     .join("\n");
 }
@@ -83,9 +226,9 @@ export function renderPage(template, page, projects = canonicalProjects) {
   });
 
   output = output.replace(
-    /^([ \t]*)\{\{projectFallbackLinks\}\}[ \t]*$/m,
+    /^([ \t]*)\{\{projectFallbackSummaries\}\}[ \t]*$/m,
     (_match, indentation) =>
-      renderProjectFallbackLinks(projects, page.language, indentation)
+      renderProjectFallbackSummaries(projects, page.language, indentation)
   );
 
   for (const [key, value] of Object.entries(page)) {

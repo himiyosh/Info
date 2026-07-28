@@ -991,11 +991,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const target = document.getElementById(targetId);
-    return target &&
-      projectsContainer.contains(target) &&
-      target.classList.contains("project-row")
-      ? target
-      : null;
+    if (!target) {
+      return null;
+    }
+
+    const isEnhancedTarget =
+      projectsContainer.contains(target) && target.classList.contains("project-row");
+    const isVisibleFallbackTarget =
+      projectsFallback.classList.contains("is-visible") &&
+      projectsFallback.contains(target) &&
+      target.classList.contains("projects-fallback-card");
+    return isEnhancedTarget || isVisibleFallbackTarget ? target : null;
   }
 
   function focusProjectFragment(hash = window.location.hash) {
@@ -1004,8 +1010,10 @@ document.addEventListener("DOMContentLoaded", () => {
       return false;
     }
 
-    target.classList.remove("is-priming");
-    projectRevealObserver?.unobserve(target);
+    if (target.classList.contains("project-row")) {
+      target.classList.remove("is-priming");
+      projectRevealObserver?.unobserve(target);
+    }
     target.focus({ preventScroll: true });
     target.scrollIntoView({
       behavior: prefersReducedMotion ? "auto" : "smooth",
@@ -1034,7 +1042,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function handleProjectPermalinkClick(event) {
     const permalink = event.target?.closest?.(
-      "a.project-permalink, a.project-directory-link"
+      "a.project-permalink, a.project-directory-link, a.projects-fallback-permalink"
     );
     if (
       !permalink ||
@@ -1085,6 +1093,7 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsContainer.classList.toggle("projects-list", isReady);
     projectsStatus.classList.toggle("projects-list", !isReady);
     projectsStatus.classList.toggle("sr-only", isReady);
+    projectsStatus.hidden = false;
     projectsFallback.classList.toggle("is-visible", isError);
     projectsFallback.setAttribute("aria-hidden", String(!isError));
     projectsStatus.dataset.i18n = translationKey;
@@ -1303,6 +1312,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fragment.append(article);
     });
 
+    projectsFallback.replaceChildren();
     projectsContainer.replaceChildren(fragment);
     renderProjectDirectory();
     projectRows = [...projectsContainer.querySelectorAll(".project-row")];
@@ -1349,6 +1359,7 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapper.append(retry);
     projectsContainer.replaceChildren(wrapper);
     updateProjectStatus("error");
+    scheduleProjectFragmentFocus();
   }
 
   async function loadProjects() {
@@ -1401,6 +1412,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
   projectsDirectory.addEventListener("click", handleProjectPermalinkClick);
+  projectsFallback.addEventListener("click", handleProjectPermalinkClick);
   projectsContainer.addEventListener("click", handleProjectPermalinkClick);
   window.addEventListener("hashchange", handleProjectHashChange);
   window.addEventListener("popstate", handleProjectHistoryChange);
