@@ -908,6 +908,7 @@ html:lang(ja) .hero h1 span {
   color: inherit;
   font-size: var(--text-base);
   line-height: 1.75;
+  overflow-wrap: anywhere;
   text-wrap: pretty;
 }
 
