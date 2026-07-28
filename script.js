@@ -1099,8 +1099,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const isFallbackFocus = projectsFallback.contains(focusedElement);
     const isDynamicFocus = projectsContainer.contains(focusedElement);
-    if (!isFallbackFocus && !isDynamicFocus) {
+    const isDirectoryFocus = projectsDirectory.contains(focusedElement);
+    if (!isFallbackFocus && !isDynamicFocus && !isDirectoryFocus) {
       return { kind: "outside" };
+    }
+
+    if (isDirectoryFocus) {
+      const directoryLink = focusedElement.closest(".project-directory-link");
+      const projectId = directoryLink?.getAttribute("href")?.slice(1);
+      if (!/^project-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(projectId ?? "")) {
+        return { kind: "outside" };
+      }
+      return {
+        kind: "catalogue",
+        projectId,
+        scrollX: window.scrollX,
+        scrollY: window.scrollY,
+        source: "directory",
+        targetSelector: null,
+        wasProjectTarget: false
+      };
     }
 
     const projectCard = focusedElement.closest(
@@ -1141,26 +1159,47 @@ document.addEventListener("DOMContentLoaded", () => {
       return false;
     }
 
-    const projectCard = document.getElementById(focusHandoff.projectId);
-    if (
-      !projectCard ||
-      !projectsContainer.contains(projectCard) ||
-      !projectCard.classList.contains("project-row")
-    ) {
-      return false;
+    let target;
+    if (focusHandoff.source === "directory") {
+      target = projectsDirectory.querySelector(
+        `.project-directory-link[href="#${focusHandoff.projectId}"]`
+      );
+      if (!target) {
+        return false;
+      }
+    } else {
+      const projectCard = document.getElementById(focusHandoff.projectId);
+      if (
+        !projectCard ||
+        !projectsContainer.contains(projectCard) ||
+        !projectCard.classList.contains("project-row")
+      ) {
+        return false;
+      }
+
+      projectCard.classList.remove("is-priming");
+      projectRevealObserver?.unobserve(projectCard);
+      target = focusHandoff.targetSelector
+        ? projectCard.querySelector(focusHandoff.targetSelector) ?? projectCard
+        : projectCard;
     }
 
-    projectCard.classList.remove("is-priming");
-    projectRevealObserver?.unobserve(projectCard);
-    const target = focusHandoff.targetSelector
-      ? projectCard.querySelector(focusHandoff.targetSelector) ?? projectCard
-      : projectCard;
     target.focus({ preventScroll: true });
-    if (!focusHandoff.wasProjectTarget) {
+    const restoreViewport = () => {
       const previousScrollBehavior = document.documentElement.style.scrollBehavior;
       document.documentElement.style.scrollBehavior = "auto";
       window.scrollTo(focusHandoff.scrollX, focusHandoff.scrollY);
       document.documentElement.style.scrollBehavior = previousScrollBehavior;
+    };
+    restoreViewport();
+    if (typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(() => {
+        window.setTimeout(() => {
+          if (document.activeElement === target) {
+            restoreViewport();
+          }
+        }, 0);
+      });
     }
     return true;
   }

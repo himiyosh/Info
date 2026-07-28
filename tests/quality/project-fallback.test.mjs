@@ -470,10 +470,15 @@ test("catalogue replacement preserves project controls without stealing outside 
     documentElement: { style: { scrollBehavior: "" } }
   };
   const scrollCalls = [];
+  const timers = [];
   const window = {
     scrollX: 17,
     scrollY: 29,
-    scrollTo: (...coordinates) => scrollCalls.push(coordinates)
+    scrollTo: (...coordinates) => scrollCalls.push(coordinates),
+    setTimeout: (callback) => {
+      timers.push(callback);
+      return timers.length;
+    }
   };
 
   function makeNode(id, classNames = []) {
@@ -553,6 +558,7 @@ test("catalogue replacement preserves project controls without stealing outside 
   projectsFallback.append(fallbackCard);
 
   const projectsContainer = makeNode("projects-container");
+  const projectsDirectory = makeNode("projects-directory");
   const dynamicCard = makeNode("project-techdb", ["project-row", "is-priming"]);
   const dynamicPermalink = makeNode("", ["project-permalink"]);
   const dynamicShare = makeNode("", ["project-share-button"]);
@@ -583,6 +589,7 @@ test("catalogue replacement preserves project controls without stealing outside 
         unobserve: (target) => unobserved.push(target.id)
       },
       projectsContainer,
+      projectsDirectory,
       projectsFallback,
       window
     },
@@ -619,6 +626,7 @@ test("catalogue replacement preserves project controls without stealing outside 
   assert.equal(restoreProjectCatalogueFocus(fragmentHandoff), true);
   assert.equal(document.activeElement, dynamicCard);
   assert.equal(dynamicCard.focusCalls.at(-1).preventScroll, true);
+  assert.deepEqual(scrollCalls.at(-1), [17, 29]);
   assert.equal(shouldScheduleProjectFragmentFocusAfterRender(fragmentHandoff), true);
 
   const oldDynamicCard = makeNode("project-techdb", ["project-row"]);
@@ -661,12 +669,56 @@ test("catalogue replacement preserves project controls without stealing outside 
   projectsContainer.replaceChildren(dynamicCard);
   assert.equal(restoreProjectCatalogueFocus(dynamicFragmentHandoff), true);
   assert.equal(document.activeElement, dynamicCard);
+  assert.deepEqual(scrollCalls.at(-1), [17, 29]);
   assert.equal(
     shouldScheduleProjectFragmentFocusAfterRender(dynamicFragmentHandoff),
     true
   );
 
+  const oldDirectoryLink = makeNode("", ["project-directory-link"]);
+  oldDirectoryLink.getAttribute = (name) =>
+    name === "href" ? "#project-techdb" : null;
+  const newDirectoryLink = makeNode("", ["project-directory-link"]);
+  projectsDirectory.append(oldDirectoryLink);
+  projectsDirectory.querySelector = (selector) =>
+    selector === '.project-directory-link[href="#project-techdb"]'
+      ? newDirectoryLink
+      : null;
+  document.activeElement = oldDirectoryLink;
+  const directoryHandoff = captureProjectCatalogueFocus();
+  assert.equal(directoryHandoff.kind, "catalogue");
+  assert.equal(directoryHandoff.source, "directory");
+  projectsDirectory.replaceChildren(newDirectoryLink);
+  assert.equal(restoreProjectCatalogueFocus(directoryHandoff), true);
+  assert.equal(document.activeElement, newDirectoryLink);
+  assert.equal(newDirectoryLink.focusCalls.at(-1).preventScroll, true);
+  assert.equal(shouldScheduleProjectFragmentFocusAfterRender(directoryHandoff), false);
+
   const outsideControl = makeNode("outside-control");
+  const animationFrames = [];
+  window.requestAnimationFrame = (callback) => {
+    animationFrames.push(callback);
+    return animationFrames.length;
+  };
+  document.activeElement = fallbackLinks.primary;
+  const cancelledViewportHandoff = captureProjectCatalogueFocus();
+  assert.equal(restoreProjectCatalogueFocus(cancelledViewportHandoff), true);
+  assert.equal(animationFrames.length, 1);
+  animationFrames.shift()();
+  assert.equal(timers.length, 1);
+  document.activeElement = outsideControl;
+  const scrollCountBeforeCancelledFrame = scrollCalls.length;
+  timers.shift()();
+  assert.equal(scrollCalls.length, scrollCountBeforeCancelledFrame);
+
+  document.activeElement = fallbackLinks.primary;
+  const settledViewportHandoff = captureProjectCatalogueFocus();
+  assert.equal(restoreProjectCatalogueFocus(settledViewportHandoff), true);
+  animationFrames.shift()();
+  const scrollCountBeforeSettledFrame = scrollCalls.length;
+  timers.shift()();
+  assert.equal(scrollCalls.length, scrollCountBeforeSettledFrame + 1);
+
   document.activeElement = outsideControl;
   const outsideHandoff = captureProjectCatalogueFocus();
   assert.equal(outsideHandoff.kind, "outside");
@@ -678,8 +730,8 @@ test("catalogue replacement preserves project controls without stealing outside 
   const neutralHandoff = captureProjectCatalogueFocus();
   assert.equal(neutralHandoff.kind, "neutral");
   assert.equal(shouldScheduleProjectFragmentFocusAfterRender(neutralHandoff), true);
-  assert.equal(unobserved.length, 11);
-  assert.equal(scrollCalls.length, 9);
+  assert.equal(unobserved.length, 13);
+  assert.equal(scrollCalls.length, 15);
 });
 
 test("persistent failures reuse the fallback and retry recovery removes duplicate destinations", async () => {
