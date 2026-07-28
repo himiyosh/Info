@@ -994,7 +994,7 @@ html:lang(ja) .hero h1 span {
   display: none;
 }
 
-.js-enabled .projects-fallback:not(.is-visible) {
+html.projects-runtime-ready .projects-fallback:not(.is-visible) {
   display: none;
 }
 
