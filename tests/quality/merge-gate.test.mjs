@@ -16,7 +16,11 @@ const agentPath = path.join(repoRoot, ".github/agents/InfoAgent.agent.md");
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 const OTHER_HEAD = "89abcdef0123456789abcdef0123456789abcdef";
 
-function marker(head = HEAD) {
+function marker(head = HEAD, verdict = "pass") {
+  return `independent-review head=${head} verdict=${verdict}`;
+}
+
+function legacyMarker(head = HEAD) {
   return `independent-review head=${head}`;
 }
 
@@ -59,7 +63,8 @@ test("comments-only exact-head evidence and multiple successful checks satisfy t
   const evaluated = evaluateMergeGate(input, HEAD);
 
   assert.equal(evaluated.ok, true);
-  assert.deepEqual(evaluated.reviewEvidence, { surface: "comments", index: 0 });
+  assert.equal(evaluated.independentReview.verdict, "pass");
+  assert.equal(evaluated.independentReview.passEvidence.length, 1);
   assert.equal(evaluated.pullRequest.checks.length, 2);
 
   const result = runCli(input);
@@ -68,7 +73,7 @@ test("comments-only exact-head evidence and multiple successful checks satisfy t
   assert.match(result.stdout, new RegExp(`head=${HEAD}`));
   assert.match(result.stdout, /state=OPEN isDraft=false mergeable=MERGEABLE/);
   assert.match(result.stdout, /mergeStateStatus=CLEAN checks=2\/2/);
-  assert.match(result.stdout, /marker=comments\[0\]\.body/);
+  assert.match(result.stdout, /reviewVerdict=pass evidence=comments\[0\]\.body/);
 });
 
 test("closed and draft pull requests are blocked", () => {
@@ -136,7 +141,7 @@ test("pending and failing checks are each reported and block the gate", () => {
 test("missing and wrong-head review markers are blocked", () => {
   const missing = runCli(mergeGateInput({ comments: [] }));
   assert.equal(missing.status, 1);
-  assert.match(missing.stderr, new RegExp(`marker not found for exact head ${HEAD}`));
+  assert.match(missing.stderr, new RegExp(`verdict=pass not found for exact head ${HEAD}`));
 
   const wrong = runCli(
     mergeGateInput({
@@ -144,7 +149,42 @@ test("missing and wrong-head review markers are blocked", () => {
     })
   );
   assert.equal(wrong.status, 1);
-  assert.match(wrong.stderr, new RegExp(`marker not found for exact head ${HEAD}`));
+  assert.match(wrong.stderr, new RegExp(`verdict=pass not found for exact head ${HEAD}`));
+});
+
+test("review fail returns exit 3 and overrides pass regardless of surface order", () => {
+  const inputs = [
+    mergeGateInput({
+      reviews: [{ body: marker(HEAD, "fail") }],
+      comments: [{ body: marker(HEAD, "pass") }]
+    }),
+    mergeGateInput({
+      reviews: [{ body: marker(HEAD, "pass") }],
+      comments: [{ body: marker(HEAD, "fail") }]
+    })
+  ];
+
+  for (const input of inputs) {
+    const evaluated = evaluateMergeGate(input, HEAD);
+    assert.equal(evaluated.ok, false);
+    assert.equal(evaluated.independentReview.verdict, "fail");
+
+    const result = runCli(input);
+    assert.equal(result.status, 3);
+    assert.match(result.stderr, /verdict=fail found/);
+    assert.match(result.stderr, /fail=1 pass=1/);
+  }
+});
+
+test("legacy review markers without a verdict remain blocked with exit 1", () => {
+  const result = runCli(
+    mergeGateInput({
+      comments: [{ body: legacyMarker() }]
+    })
+  );
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /verdict=pass not found/);
 });
 
 test("legacy successful and unsuccessful status contexts are handled explicitly", () => {
@@ -270,6 +310,8 @@ test("quality wiring and documentation expose the full offline merge gate", asyn
   for (const source of [readme, agent]) {
     assert.match(source, /check-merge-gate\.mjs --head/);
     assert.match(source, /state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments/);
+    assert.match(source, /verdict=pass\|fail/);
+    assert.match(source, /fail wins/i);
     assert.match(source, /immediately before merge/i);
     assert.match(source, /unresolved review findings/i);
   }

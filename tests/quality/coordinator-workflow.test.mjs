@@ -100,8 +100,14 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
-    /Require a standalone `independent-review head=<40-character current head SHA>` marker/,
-    "The merge gate must require an exact full-head marker"
+    /Require the standalone `independent-review head=<40-character current head SHA> verdict=pass\|fail` format/,
+    "The merge gate must require an exact full-head verdict marker"
+  );
+  assert.match(source, /Any fail wins over any pass regardless of order or surface/, "Fail evidence must dominate pass evidence");
+  assert.match(
+    source,
+    /pass-only evidence satisfies the review verdict, no valid verdict exits 1, malformed input exits 2, and any fail exits 3/,
+    "The review verifier exit contract must remain explicit"
   );
   assert.match(
     source,
@@ -115,8 +121,8 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
-    /marker presence is not review approval/,
-    "Marker presence must not be represented as review clearance"
+    /it does not inspect the review's reasoning or scope/,
+    "The machine gate must not represent a pass marker as complete review analysis"
   );
   for (const limitation of [
     "production deployment",

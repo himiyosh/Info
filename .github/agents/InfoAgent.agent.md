@@ -51,9 +51,10 @@ Hallmark guides taste, not business logic. Never let it invent product claims, w
 
 - Never use `reviews.length == 0` as evidence that independent review is absent. GitHub rejects self-approval, so valid exact-head evidence may exist only in a pull request comment.
 - Always query both `reviews` and `comments`; neither evidence surface alone is sufficient input.
-- Require a standalone `independent-review head=<40-character current head SHA>` marker in a non-null review or comment body. Short, stale, wrong-head, and substring matches do not satisfy the gate.
+- Require the standalone `independent-review head=<40-character current head SHA> verdict=pass|fail` format in a non-null review or comment body. Short, stale, wrong-head, legacy verdict-less, and substring matches do not satisfy the gate.
+- Collect every matching marker across both evidence surfaces. Any fail wins over any pass regardless of order or surface; pass-only evidence satisfies the review verdict, no valid verdict exits 1, malformed input exits 2, and any fail exits 3.
 - Run the documented `gh pr view <N> --json state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments | node scripts/check-merge-gate.mjs --head <40-character current head SHA>` pipeline and treat every nonzero exit as a blocked merge.
-- The helper is dependency-free, offline, and snapshot-only. Exit zero means only that the supplied JSON reports OPEN, non-draft, exact-head, MERGEABLE, CLEAN, at least one check, successful terminal state for every reported check, and marker presence; marker presence is not review approval.
+- The helper is dependency-free, offline, and snapshot-only. Exit zero means only that the supplied JSON reports OPEN, non-draft, exact-head, MERGEABLE, CLEAN, at least one check, successful terminal state for every reported check, and pass-only review evidence; it does not inspect the review's reasoning or scope.
 - The coordinator still evaluates production deployment, secrets, permissions, billing, public-scope suitability, documentation completeness, and unresolved review findings. The helper does not evaluate or authorize those conditions.
 - Re-fetch the full pull-request snapshot and rerun the gate immediately before merge. Never merge from cached JSON or an earlier successful invocation.
 

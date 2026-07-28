@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
 
 import {
-  findIndependentReviewEvidence,
+  evaluateIndependentReviewEvidence,
   validateHeadSha
 } from "./check-independent-review.mjs";
 
@@ -150,7 +150,7 @@ export function validateMergeGateInput(input) {
 export function evaluateMergeGate(input, expectedHead) {
   validateHeadSha(expectedHead);
   const pullRequest = validateMergeGateInput(input);
-  const reviewEvidence = findIndependentReviewEvidence(input, expectedHead);
+  const independentReview = evaluateIndependentReviewEvidence(input, expectedHead);
   const failures = [];
 
   if (pullRequest.state !== "OPEN") {
@@ -184,9 +184,14 @@ export function evaluateMergeGate(input, expectedHead) {
       );
     }
   });
-  if (!reviewEvidence) {
+  if (independentReview.verdict === "missing") {
     failures.push(
-      `independent review marker not found for exact head ${expectedHead} in review or comment bodies`
+      `independent review verdict=pass not found for exact head ${expectedHead} in review or comment bodies`
+    );
+  }
+  if (independentReview.verdict === "fail") {
+    failures.push(
+      `independent review verdict=fail found for exact head ${expectedHead}: fail=${independentReview.failEvidence.length} pass=${independentReview.passEvidence.length}`
     );
   }
 
@@ -194,7 +199,7 @@ export function evaluateMergeGate(input, expectedHead) {
     ok: failures.length === 0,
     expectedHead,
     pullRequest,
-    reviewEvidence,
+    independentReview,
     failures
   };
 }
@@ -222,11 +227,14 @@ export async function runMergeGateCheck(args = process.argv.slice(2)) {
 
     if (!result.ok) {
       console.error(["Merge gate blocked:", ...result.failures.map((failure) => `- ${failure}`)].join("\n"));
-      return 1;
+      return result.independentReview.verdict === "fail" ? 3 : 1;
     }
 
+    const locations = result.independentReview.passEvidence
+      .map(({ surface, index }) => `${surface}[${index}].body`)
+      .join(",");
     console.log(
-      `Merge gate satisfied: head=${expectedHead} state=OPEN isDraft=false mergeable=MERGEABLE mergeStateStatus=CLEAN checks=${result.pullRequest.checks.length}/${result.pullRequest.checks.length} marker=${result.reviewEvidence.surface}[${result.reviewEvidence.index}].body`
+      `Merge gate satisfied: head=${expectedHead} state=OPEN isDraft=false mergeable=MERGEABLE mergeStateStatus=CLEAN checks=${result.pullRequest.checks.length}/${result.pullRequest.checks.length} reviewVerdict=pass evidence=${locations}`
     );
     return 0;
   } catch (error) {

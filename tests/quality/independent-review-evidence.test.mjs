@@ -4,6 +4,8 @@ import path from "node:path";
 import { test } from "node:test";
 
 import {
+  collectIndependentReviewEvidence,
+  evaluateIndependentReviewEvidence,
   findIndependentReviewEvidence,
   hasIndependentReviewEvidence,
   parseReviewEvidenceJson
@@ -14,7 +16,11 @@ const scriptPath = path.join(repoRoot, "scripts/check-independent-review.mjs");
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 const OTHER_HEAD = "89abcdef0123456789abcdef0123456789abcdef";
 
-function marker(head = HEAD) {
+function marker(verdict = "pass", head = HEAD) {
+  return `independent-review head=${head} verdict=${verdict}`;
+}
+
+function legacyMarker(head = HEAD) {
   return `independent-review head=${head}`;
 }
 
@@ -26,37 +32,116 @@ function runCli(input, head = HEAD) {
   });
 }
 
-test("comments-only evidence passes when reviews are empty", () => {
+test("pass-only comments evidence satisfies the exact-head verdict", () => {
   const input = {
     reviews: [],
-    comments: [{ body: `Independent check complete: ${marker()}` }]
+    comments: [{ body: `Independent check complete: ${marker("pass")}` }]
   };
 
   assert.deepEqual(findIndependentReviewEvidence(input, HEAD), {
     surface: "comments",
     index: 0
   });
+  assert.deepEqual(evaluateIndependentReviewEvidence(input, HEAD).verdict, "pass");
 
   const result = runCli(input);
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /comments\[0\]\.body/);
+  assert.match(result.stdout, /verdict passed/);
+  assert.match(result.stdout, /pass=1 evidence=comments\[0\]\.body/);
 });
 
-test("review evidence passes when comments are empty", () => {
+test("pass-only review evidence satisfies the exact-head verdict", () => {
   const input = {
-    reviews: [{ body: marker() }],
+    reviews: [{ body: marker("pass") }],
     comments: []
   };
 
-  assert.deepEqual(findIndependentReviewEvidence(input, HEAD), {
-    surface: "reviews",
-    index: 0
-  });
+  const result = evaluateIndependentReviewEvidence(input, HEAD);
+  assert.equal(result.verdict, "pass");
+  assert.equal(result.passEvidence.length, 1);
+  assert.equal(result.failEvidence.length, 0);
 });
 
-test("wrong-head evidence fails with a non-success exit", () => {
+test("fail-only evidence returns the dedicated failure exit", () => {
   const input = {
-    reviews: [{ body: marker(OTHER_HEAD) }],
+    reviews: [],
+    comments: [{ body: marker("fail") }]
+  };
+  const evaluated = evaluateIndependentReviewEvidence(input, HEAD);
+
+  assert.equal(evaluated.verdict, "fail");
+  assert.equal(evaluated.failEvidence.length, 1);
+  assert.equal(hasIndependentReviewEvidence(input, HEAD), true);
+
+  const result = runCli(input);
+  assert.equal(result.status, 3);
+  assert.match(result.stderr, /verdict failed/);
+  assert.match(result.stderr, /fail=1 pass=0/);
+});
+
+test("fail wins over pass regardless of evidence order or surface", () => {
+  const inputs = [
+    {
+      reviews: [{ body: marker("fail") }],
+      comments: [{ body: marker("pass") }]
+    },
+    {
+      reviews: [{ body: marker("pass") }],
+      comments: [{ body: marker("fail") }]
+    }
+  ];
+
+  for (const input of inputs) {
+    const evaluated = evaluateIndependentReviewEvidence(input, HEAD);
+    assert.equal(evaluated.verdict, "fail");
+    assert.equal(evaluated.passEvidence.length, 1);
+    assert.equal(evaluated.failEvidence.length, 1);
+    assert.deepEqual(findIndependentReviewEvidence(input, HEAD), {
+      surface: evaluated.failEvidence[0].surface,
+      index: evaluated.failEvidence[0].index
+    });
+    assert.equal(runCli(input).status, 3);
+  }
+});
+
+test("all verdict-bearing evidence is collected in source order", () => {
+  const body = [marker("pass"), marker("fail"), marker("pass")].join("\n");
+  const evidence = collectIndependentReviewEvidence(
+    {
+      reviews: [{ body }],
+      comments: [{ body: marker("fail") }]
+    },
+    HEAD
+  );
+
+  assert.deepEqual(
+    evidence.map(({ surface, index, verdict }) => ({ surface, index, verdict })),
+    [
+      { surface: "reviews", index: 0, verdict: "pass" },
+      { surface: "reviews", index: 0, verdict: "fail" },
+      { surface: "reviews", index: 0, verdict: "pass" },
+      { surface: "comments", index: 0, verdict: "fail" }
+    ]
+  );
+});
+
+test("legacy markers without a verdict remain unsatisfied", () => {
+  const input = {
+    reviews: [{ body: legacyMarker() }],
+    comments: []
+  };
+
+  assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "missing");
+  assert.equal(hasIndependentReviewEvidence(input, HEAD), false);
+
+  const result = runCli(input);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /pass verdict not found/);
+});
+
+test("wrong-head verdict evidence remains unsatisfied", () => {
+  const input = {
+    reviews: [{ body: marker("pass", OTHER_HEAD) }],
     comments: []
   };
 
@@ -64,7 +149,7 @@ test("wrong-head evidence fails with a non-success exit", () => {
 
   const result = runCli(input);
   assert.equal(result.status, 1);
-  assert.match(result.stderr, new RegExp(`not found for head ${HEAD}`));
+  assert.match(result.stderr, new RegExp(`pass verdict not found for head ${HEAD}`));
 });
 
 test("absent and null bodies do not count as evidence", () => {
@@ -97,17 +182,29 @@ test("malformed heads and input fail clearly", () => {
   assert.match(invalidJsonResult.stderr, /evidence check error: Review evidence input must be valid/);
 });
 
-test("short and substring markers do not produce false positives", () => {
+test("short, legacy, malformed-verdict, and substring markers do not produce false positives", () => {
   const input = {
     reviews: [
-      { body: `independent-review head=${HEAD.slice(0, 12)}` },
-      { body: `not-${marker()}` }
+      { body: `independent-review head=${HEAD.slice(0, 12)} verdict=pass` },
+      { body: `not-${marker("pass")}` },
+      { body: legacyMarker() },
+      { body: `${marker("pass")}age` }
     ],
     comments: [
-      { body: `${marker()}a` },
-      { body: `prefix${marker()}suffix` }
+      { body: `${marker("fail")}-safe` },
+      { body: `prefix${marker("pass")}suffix` },
+      { body: `independent-review head=${HEAD} verdict=PASS` }
     ]
   };
 
   assert.equal(hasIndependentReviewEvidence(input, HEAD), false);
+});
+
+test("punctuation-delimited verdict markers retain standalone boundary support", () => {
+  const input = {
+    reviews: [{ body: `(${marker("pass")})` }],
+    comments: []
+  };
+
+  assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "pass");
 });
