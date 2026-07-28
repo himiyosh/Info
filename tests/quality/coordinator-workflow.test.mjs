@@ -105,8 +105,13 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
-    /`independent-review head=<40-character current head SHA> verdict=pass` is the only clearance form/,
+    /`independent-review head=<40-character current head SHA> verdict=pass by=<full lowercase UUID>` is the only clearance form/,
     "Only the contiguous pass marker may provide clearance"
+  );
+  assert.match(
+    source,
+    /`by` value must be the assigned independent reviewer's full lowercase session UUID and must differ from the coordinator and implementation child session IDs/,
+    "Reviewer evidence must identify a distinct independent session"
   );
   assert.match(
     source,
@@ -115,7 +120,7 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
-    /Each active marker must express exactly one verdict\. After the first verdict, a second standalone `pass` or `fail` introduced by whitespace, English `or`, or one of the symbolic separators `\|`, `\/`, `,`, `、`, `;`, and `；` invalidates that marker/,
+    /Each active marker must express exactly one verdict\. After the complete marker, a second standalone `pass` or `fail` introduced by whitespace, English `or`, or one of the symbolic separators `\|`, `\/`, `,`, `、`, `;`, and `；` invalidates that marker/,
     "A second verdict after any documented separator must not satisfy the review gate"
   );
   assert.match(
@@ -126,7 +131,7 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   assert.match(source, /Any fail wins over any pass regardless of order or surface/, "Fail evidence must dominate pass evidence");
   assert.match(
     source,
-    /edit the original comment marker to `RETRACTED-independent-review head=<40-character reviewed head SHA> verdict=<pass\|fail>`/,
+    /edit the original comment marker to `RETRACTED-independent-review head=<40-character reviewed head SHA> verdict=<pass\|fail> by=<full lowercase UUID>`/,
     "Incorrect verdicts must be retracted in their original comment"
   );
   assert.match(
@@ -168,6 +173,16 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
     source,
     /state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments \| node scripts\/check-merge-gate\.mjs --head/,
     "The merge gate must validate the complete machine-readable PR snapshot"
+  );
+  assert.match(
+    source,
+    /Quality baseline must execute `npm run check:independent-review -- --repo <owner\/name> --pr <number> --head <40-character current head SHA>` only for the current OPEN pull request/,
+    "Pull-request CI must execute the live independent-review guard"
+  );
+  assert.match(
+    source,
+    /skips a valid closed snapshot so merged or closed pull requests are never retroactively failed/,
+    "Historical pull requests must remain outside the live guard"
   );
   assert.match(
     source,

@@ -7,6 +7,7 @@
     "generate:pages": "node scripts/generate-static-pages.mjs",
     "check:generated": "node scripts/generate-static-pages.mjs --check",
     "check:js": "node --check i18n.js && node --check script.js && node --check scripts/generate-static-pages.mjs && node --check scripts/check-external-links.mjs && node --check scripts/check-independent-review.mjs && node --check scripts/check-merge-gate.mjs",
+    "check:independent-review": "node scripts/check-independent-review.mjs",
     "check:links": "node scripts/check-external-links.mjs",
     "test:quality": "node --test tests/quality/*.test.mjs",
     "check:quality": "npm run check:generated && npm run check:js && npm run test:quality",
