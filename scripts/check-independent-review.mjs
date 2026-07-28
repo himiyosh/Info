@@ -5,7 +5,7 @@ const MARKER_PREFIX = "independent-review head=";
 const TOKEN_CHARACTER_PATTERN = /[A-Za-z0-9_-]/;
 const VERDICT_SUFFIX_PATTERN = /^ verdict=(pass|fail)(?![A-Za-z0-9_-])/;
 const ALTERNATIVE_VERDICT_PATTERN =
-  /^(?:[ \t]*[|/][ \t]*|[ \t]+or[ \t]+)(?:pass|fail)(?![A-Za-z0-9_-])/;
+  /^(?:[ \t]*[|/,、][ \t]*|[ \t]+or[ \t]+)(?:pass|fail)(?![A-Za-z0-9_-])/;
 const SURFACES = ["reviews", "comments"];
 const USAGE =
   "Usage: gh pr view <N> --json reviews,comments | node scripts/check-independent-review.mjs --head <40-character-head>";

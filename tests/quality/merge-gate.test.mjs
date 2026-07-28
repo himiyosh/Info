@@ -224,6 +224,40 @@ test("ambiguous enumerated verdicts cannot satisfy the aggregate gate", () => {
   }
 });
 
+test("comma-separated verdict alternatives cannot satisfy the aggregate gate", () => {
+  for (const verdict of ["pass, fail", "fail, pass", "pass、fail", "fail、pass"]) {
+    const input = mergeGateInput({
+      comments: [{ body: marker(HEAD, verdict) }]
+    });
+    const evaluated = evaluateMergeGate(input, HEAD);
+
+    assert.equal(evaluated.ok, false, verdict);
+    assert.equal(evaluated.independentReview.verdict, "missing", verdict);
+
+    const result = runCli(input);
+    assert.equal(result.status, 1, verdict);
+    assert.match(result.stderr, /verdict=pass not found/, verdict);
+  }
+});
+
+test("explanatory commas and Markdown table cells preserve aggregate pass clearance", () => {
+  const bodies = [
+    `${marker()}, review complete.`,
+    `${marker()}、review complete.`,
+    `| Result | ${marker()} | Review complete |`
+  ];
+
+  // Delimiters remain valid unless they introduce a second verdict token.
+  for (const body of bodies) {
+    const input = mergeGateInput({ comments: [{ body }] });
+    const evaluated = evaluateMergeGate(input, HEAD);
+
+    assert.equal(evaluated.ok, true, body);
+    assert.equal(evaluated.independentReview.verdict, "pass", body);
+    assert.equal(runCli(input).status, 0, body);
+  }
+});
+
 test("legacy successful and unsuccessful status contexts are handled explicitly", () => {
   const successful = runCli(
     mergeGateInput({
@@ -350,7 +384,9 @@ test("quality wiring and documentation expose the full offline merge gate", asyn
     assert.match(source, /contiguous/i);
     assert.match(source, /verdict=pass/);
     assert.match(source, /exactly one verdict/i);
-    assert.match(source, /pass\|fail.*pass\/fail.*pass or fail/i);
+    assert.match(source, /pass\|fail.*pass\/fail.*pass or fail.*pass, fail.*fail, pass/i);
+    assert.match(source, /Japanese-comma equivalents/i);
+    assert.match(source, /Markdown table delimiter.*explanatory prose/i);
     assert.match(source, /fail wins/i);
     assert.match(source, /RETRACTED-independent-review/);
     assert.match(source, /retraction reason/i);
