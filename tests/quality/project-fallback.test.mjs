@@ -387,10 +387,15 @@ test("project ownership waits for a ready runtime when scripts or initialization
     "function updateProjectStatus",
     "function clearProjectDirectory"
   );
-  const loadingSource = sourceBetween(
+  const initialLoadingSource = sourceBetween(
     scriptSource,
     "function renderProjectLoading",
     "function renderProjectError"
+  );
+  const loadingSource = sourceBetween(
+    scriptSource,
+    "function renderProjectLoading",
+    'document.addEventListener("site-languagechange"'
   );
   const documentElement = { classList: new FakeClassList() };
   const projectsStatus = new FakeElement("p");
@@ -402,6 +407,7 @@ test("project ownership waits for a ready runtime when scripts or initialization
     PROJECT_RUNTIME_READY_CLASS: "projects-runtime-ready",
     clearProjectDirectory: () => {},
     document: { documentElement },
+    fetch: () => new Promise(() => {}),
     projectState: "loading",
     projectStatusKeys: {
       loading: "projects.loading",
@@ -415,6 +421,7 @@ test("project ownership waits for a ready runtime when scripts or initialization
     resetProjectShareControllers: () => {},
     window: {
       siteI18n: {
+        resolveSitePath: (value) => value,
         t: () => "Loading projects."
       }
     }
@@ -435,13 +442,296 @@ test("project ownership waits for a ready runtime when scripts or initialization
   assert.equal(projectsFallback.getAttribute("aria-hidden"), undefined);
 
   context.window.siteI18n.t = () => "Loading projects.";
-  context.renderProjectLoading();
-  assert.equal(documentElement.classList.contains("projects-runtime-ready"), true);
+  const unresolvedLoad = context.loadProjects();
+  assert.equal(typeof unresolvedLoad.then, "function");
+  assert.doesNotMatch(
+    initialLoadingSource,
+    /classList\.add\(PROJECT_RUNTIME_READY_CLASS\)/,
+    "Initial loading must not claim runtime ownership before validated dynamic content exists"
+  );
+  assert.equal(documentElement.classList.contains("projects-runtime-ready"), false);
   assert.equal(projectsContainer.getAttribute("aria-busy"), "true");
   assert.equal(projectsStatus.hidden, false);
   assert.equal(projectsStatus.textContent, "Loading projects.");
-  assert.equal(projectsFallback.getAttribute("aria-hidden"), "true");
-  assert.equal(projectsFallback.classList.contains("is-visible"), false);
+  assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
+  assert.equal(projectsFallback.classList.contains("is-visible"), true);
+});
+
+test("catalogue replacement preserves project controls without stealing outside focus", async () => {
+  const scriptSource = await readUtf8("script.js");
+  const focusSource = sourceBetween(
+    scriptSource,
+    "function captureProjectCatalogueFocus",
+    "function updateProjectStatus"
+  );
+  const document = {
+    activeElement: null,
+    body: {},
+    documentElement: { style: { scrollBehavior: "" } }
+  };
+  const scrollCalls = [];
+  const timers = [];
+  const window = {
+    scrollX: 17,
+    scrollY: 29,
+    scrollTo: (...coordinates) => scrollCalls.push(coordinates),
+    setTimeout: (callback) => {
+      timers.push(callback);
+      return timers.length;
+    }
+  };
+
+  function makeNode(id, classNames = []) {
+    const classes = new Set(classNames);
+    return {
+      id,
+      children: [],
+      focusCalls: [],
+      parentElement: null,
+      classList: {
+        add: (...names) => names.forEach((name) => classes.add(name)),
+        contains: (name) => classes.has(name),
+        remove: (...names) => names.forEach((name) => classes.delete(name))
+      },
+      append(...children) {
+        children.forEach((child) => {
+          child.parentElement = this;
+          this.children.push(child);
+        });
+      },
+      replaceChildren(...children) {
+        this.children.forEach((child) => {
+          child.parentElement = null;
+        });
+        this.children = [];
+        this.append(...children);
+      },
+      closest(selector) {
+        const className = selector.startsWith(".") ? selector.slice(1) : null;
+        for (let current = this; current; current = current.parentElement) {
+          if (className && current.classList?.contains(className)) {
+            return current;
+          }
+        }
+        return null;
+      },
+      contains(element) {
+        for (let current = element; current; current = current.parentElement) {
+          if (current === this) {
+            return true;
+          }
+        }
+        return false;
+      },
+      focus(options) {
+        this.focusCalls.push(options);
+        document.activeElement = this;
+      },
+      querySelector(selector) {
+        const className = selector.startsWith(".") ? selector.slice(1) : null;
+        const queue = [...this.children];
+        while (queue.length > 0) {
+          const candidate = queue.shift();
+          if (className && candidate.classList.contains(className)) {
+            return candidate;
+          }
+          queue.push(...candidate.children);
+        }
+        return null;
+      }
+    };
+  }
+
+  const projectsFallback = makeNode("projects-fallback");
+  const fallbackCard = makeNode("project-techdb", ["projects-fallback-card"]);
+  const fallbackPermalink = makeNode("", [
+    "project-permalink",
+    "projects-fallback-permalink"
+  ]);
+  const fallbackLinks = Object.fromEntries(
+    ["primary", "secondary", "evidence"].map((variant) => [
+      variant,
+      makeNode("", ["project-link", `project-link--${variant}`])
+    ])
+  );
+  fallbackCard.append(fallbackPermalink, ...Object.values(fallbackLinks));
+  projectsFallback.append(fallbackCard);
+
+  const projectsContainer = makeNode("projects-container");
+  const projectsDirectory = makeNode("projects-directory");
+  const dynamicCard = makeNode("project-techdb", ["project-row", "is-priming"]);
+  const dynamicPermalink = makeNode("", ["project-permalink"]);
+  const dynamicShare = makeNode("", ["project-share-button"]);
+  const dynamicLinks = Object.fromEntries(
+    ["primary", "secondary", "evidence"].map((variant) => [
+      variant,
+      makeNode("", ["project-link", `project-link--${variant}`])
+    ])
+  );
+  dynamicCard.append(dynamicPermalink, dynamicShare, ...Object.values(dynamicLinks));
+  projectsContainer.append(dynamicCard);
+  const unobserved = [];
+  document.getElementById = (id) => (id === dynamicCard.id ? dynamicCard : null);
+
+  const {
+    captureProjectCatalogueFocus,
+    restoreProjectCatalogueFocus,
+    shouldScheduleProjectFragmentFocusAfterRender
+  } = vm.runInNewContext(
+    `(() => { ${focusSource}; return {
+      captureProjectCatalogueFocus,
+      restoreProjectCatalogueFocus,
+      shouldScheduleProjectFragmentFocusAfterRender
+    }; })()`,
+    {
+      document,
+      projectRevealObserver: {
+        unobserve: (target) => unobserved.push(target.id)
+      },
+      projectsContainer,
+      projectsDirectory,
+      projectsFallback,
+      window
+    },
+    { timeout: 1000 }
+  );
+
+  for (const [fallbackControl, dynamicControl, expectedSelector] of [
+    [fallbackPermalink, dynamicPermalink, ".project-permalink"],
+    [fallbackLinks.primary, dynamicLinks.primary, ".project-link--primary"],
+    [fallbackLinks.secondary, dynamicLinks.secondary, ".project-link--secondary"],
+    [fallbackLinks.evidence, dynamicLinks.evidence, ".project-link--evidence"]
+  ]) {
+    document.activeElement = fallbackControl;
+    dynamicCard.classList.add("is-priming");
+    const handoff = captureProjectCatalogueFocus();
+    assert.equal(handoff.kind, "catalogue");
+    assert.equal(handoff.projectId, "project-techdb");
+    assert.equal(handoff.scrollX, 17);
+    assert.equal(handoff.scrollY, 29);
+    assert.equal(handoff.source, "fallback");
+    assert.equal(handoff.targetSelector, expectedSelector);
+    assert.equal(handoff.wasProjectTarget, false);
+    assert.equal(restoreProjectCatalogueFocus(handoff), true);
+    assert.equal(document.activeElement, dynamicControl);
+    assert.equal(dynamicControl.focusCalls.at(-1).preventScroll, true);
+    assert.equal(dynamicCard.classList.contains("is-priming"), false);
+    assert.equal(shouldScheduleProjectFragmentFocusAfterRender(handoff), false);
+    assert.deepEqual(scrollCalls.at(-1), [17, 29]);
+  }
+
+  document.activeElement = fallbackCard;
+  const fragmentHandoff = captureProjectCatalogueFocus();
+  assert.equal(fragmentHandoff.wasProjectTarget, true);
+  assert.equal(restoreProjectCatalogueFocus(fragmentHandoff), true);
+  assert.equal(document.activeElement, dynamicCard);
+  assert.equal(dynamicCard.focusCalls.at(-1).preventScroll, true);
+  assert.deepEqual(scrollCalls.at(-1), [17, 29]);
+  assert.equal(shouldScheduleProjectFragmentFocusAfterRender(fragmentHandoff), true);
+
+  const oldDynamicCard = makeNode("project-techdb", ["project-row"]);
+  const oldDynamicPermalink = makeNode("", ["project-permalink"]);
+  const oldDynamicShare = makeNode("", ["project-share-button"]);
+  const oldDynamicLinks = Object.fromEntries(
+    ["primary", "secondary", "evidence"].map((variant) => [
+      variant,
+      makeNode("", ["project-link", `project-link--${variant}`])
+    ])
+  );
+  oldDynamicCard.append(
+    oldDynamicPermalink,
+    oldDynamicShare,
+    ...Object.values(oldDynamicLinks)
+  );
+  for (const [oldControl, newControl, expectedSelector] of [
+    [oldDynamicPermalink, dynamicPermalink, ".project-permalink"],
+    [oldDynamicShare, dynamicShare, ".project-share-button"],
+    [oldDynamicLinks.primary, dynamicLinks.primary, ".project-link--primary"],
+    [oldDynamicLinks.secondary, dynamicLinks.secondary, ".project-link--secondary"],
+    [oldDynamicLinks.evidence, dynamicLinks.evidence, ".project-link--evidence"]
+  ]) {
+    projectsContainer.replaceChildren(oldDynamicCard);
+    document.activeElement = oldControl;
+    const handoff = captureProjectCatalogueFocus();
+    assert.equal(handoff.kind, "catalogue");
+    assert.equal(handoff.source, "dynamic");
+    assert.equal(handoff.targetSelector, expectedSelector);
+    projectsContainer.replaceChildren(dynamicCard);
+    assert.equal(restoreProjectCatalogueFocus(handoff), true);
+    assert.equal(document.activeElement, newControl);
+    assert.equal(newControl.focusCalls.at(-1).preventScroll, true);
+    assert.equal(shouldScheduleProjectFragmentFocusAfterRender(handoff), false);
+  }
+
+  projectsContainer.replaceChildren(oldDynamicCard);
+  document.activeElement = oldDynamicCard;
+  const dynamicFragmentHandoff = captureProjectCatalogueFocus();
+  projectsContainer.replaceChildren(dynamicCard);
+  assert.equal(restoreProjectCatalogueFocus(dynamicFragmentHandoff), true);
+  assert.equal(document.activeElement, dynamicCard);
+  assert.deepEqual(scrollCalls.at(-1), [17, 29]);
+  assert.equal(
+    shouldScheduleProjectFragmentFocusAfterRender(dynamicFragmentHandoff),
+    true
+  );
+
+  const oldDirectoryLink = makeNode("", ["project-directory-link"]);
+  oldDirectoryLink.getAttribute = (name) =>
+    name === "href" ? "#project-techdb" : null;
+  const newDirectoryLink = makeNode("", ["project-directory-link"]);
+  projectsDirectory.append(oldDirectoryLink);
+  projectsDirectory.querySelector = (selector) =>
+    selector === '.project-directory-link[href="#project-techdb"]'
+      ? newDirectoryLink
+      : null;
+  document.activeElement = oldDirectoryLink;
+  const directoryHandoff = captureProjectCatalogueFocus();
+  assert.equal(directoryHandoff.kind, "catalogue");
+  assert.equal(directoryHandoff.source, "directory");
+  projectsDirectory.replaceChildren(newDirectoryLink);
+  assert.equal(restoreProjectCatalogueFocus(directoryHandoff), true);
+  assert.equal(document.activeElement, newDirectoryLink);
+  assert.equal(newDirectoryLink.focusCalls.at(-1).preventScroll, true);
+  assert.equal(shouldScheduleProjectFragmentFocusAfterRender(directoryHandoff), false);
+
+  const outsideControl = makeNode("outside-control");
+  const animationFrames = [];
+  window.requestAnimationFrame = (callback) => {
+    animationFrames.push(callback);
+    return animationFrames.length;
+  };
+  document.activeElement = fallbackLinks.primary;
+  const cancelledViewportHandoff = captureProjectCatalogueFocus();
+  assert.equal(restoreProjectCatalogueFocus(cancelledViewportHandoff), true);
+  assert.equal(animationFrames.length, 1);
+  animationFrames.shift()();
+  assert.equal(timers.length, 1);
+  document.activeElement = outsideControl;
+  const scrollCountBeforeCancelledFrame = scrollCalls.length;
+  timers.shift()();
+  assert.equal(scrollCalls.length, scrollCountBeforeCancelledFrame);
+
+  document.activeElement = fallbackLinks.primary;
+  const settledViewportHandoff = captureProjectCatalogueFocus();
+  assert.equal(restoreProjectCatalogueFocus(settledViewportHandoff), true);
+  animationFrames.shift()();
+  const scrollCountBeforeSettledFrame = scrollCalls.length;
+  timers.shift()();
+  assert.equal(scrollCalls.length, scrollCountBeforeSettledFrame + 1);
+
+  document.activeElement = outsideControl;
+  const outsideHandoff = captureProjectCatalogueFocus();
+  assert.equal(outsideHandoff.kind, "outside");
+  assert.equal(restoreProjectCatalogueFocus(outsideHandoff), false);
+  assert.equal(document.activeElement, outsideControl);
+  assert.equal(shouldScheduleProjectFragmentFocusAfterRender(outsideHandoff), false);
+
+  document.activeElement = document.body;
+  const neutralHandoff = captureProjectCatalogueFocus();
+  assert.equal(neutralHandoff.kind, "neutral");
+  assert.equal(shouldScheduleProjectFragmentFocusAfterRender(neutralHandoff), true);
+  assert.equal(unobserved.length, 13);
+  assert.equal(scrollCalls.length, 15);
 });
 
 test("persistent failures reuse the fallback and retry recovery removes duplicate destinations", async () => {
@@ -476,6 +766,13 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   const responses = [
     { ok: false, status: 503 },
     new TypeError("offline"),
+    {
+      ok: true,
+      json: async () => {
+        throw new SyntaxError("Malformed projects.json");
+      }
+    },
+    { ok: true, json: async () => [{ invalid: true }] },
     { ok: true, json: async () => projects }
   ];
   const context = {
@@ -509,7 +806,11 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
       fragmentFocusCalls += 1;
     },
     localizedValue: (value) => value[siteI18n.language],
-    validateProject: () => {},
+    validateProject: (project) => {
+      if (project.invalid) {
+        throw new TypeError("Invalid project record");
+      }
+    },
     window: { siteI18n }
   };
   context.renderProjects = () => {
@@ -522,13 +823,14 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
     projectsContainer.replaceChildren(...cards);
     context.renderProjectDirectory();
     context.updateProjectStatus("ready");
+    documentElement.classList.add(context.PROJECT_RUNTIME_READY_CLASS);
   };
 
   vm.runInNewContext(`${statusSource}\n${loadingSource}`, context, { timeout: 1000 });
 
   assert.equal(documentElement.classList.contains("projects-runtime-ready"), false);
   await context.loadProjects();
-  assert.equal(documentElement.classList.contains("projects-runtime-ready"), true);
+  assert.equal(documentElement.classList.contains("projects-runtime-ready"), false);
   assert.equal(projectsStatus.textContent, "プロジェクトを読み込めませんでした。通信状況を確認して、もう一度お試しください。");
   assert.equal(projectsFallback.classList.contains("is-visible"), true);
   assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
@@ -544,8 +846,8 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   siteI18n.setLanguage("en", { persist: false });
   const repeatedFailure = firstRetry.click();
   assert.equal(projectsStatus.textContent, "Loading projects.");
-  assert.equal(projectsFallback.classList.contains("is-visible"), false);
-  assert.equal(projectsFallback.getAttribute("aria-hidden"), "true");
+  assert.equal(projectsFallback.classList.contains("is-visible"), true);
+  assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
   assert.equal(projectsContainer.children.length, 0);
   await repeatedFailure;
   assert.equal(projectsStatus.textContent, "Projects could not be loaded. Check your connection and try again.");
@@ -557,12 +859,35 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   const recoveryRetry = projectsContainer.children[0].children[0];
   assert.equal(recoveryRetry.textContent, "Try again");
 
-  const recovery = recoveryRetry.click();
+  const malformedJson = recoveryRetry.click();
   assert.equal(projectsStatus.textContent, "Loading projects.");
-  assert.equal(projectsFallback.classList.contains("is-visible"), false);
+  assert.equal(projectsFallback.classList.contains("is-visible"), true);
+  assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
+  assert.equal(projectsContainer.children.length, 0);
+  await malformedJson;
+  assert.equal(projectsStatus.textContent, "Projects could not be loaded. Check your connection and try again.");
+  assert.equal(projectsFallback.children.length, 9);
+  assert.equal(projectsContainer.children.length, 1);
+
+  const validationRetry = projectsContainer.children[0].children[0];
+  const invalidCatalogue = validationRetry.click();
+  assert.equal(projectsStatus.textContent, "Loading projects.");
+  assert.equal(projectsFallback.classList.contains("is-visible"), true);
+  assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
+  assert.equal(projectsContainer.children.length, 0);
+  await invalidCatalogue;
+  assert.equal(projectsStatus.textContent, "Projects could not be loaded. Check your connection and try again.");
+  assert.equal(projectsFallback.children.length, 9);
+  assert.equal(projectsContainer.children.length, 1);
+
+  const recovery = projectsContainer.children[0].children[0].click();
+  assert.equal(projectsStatus.textContent, "Loading projects.");
+  assert.equal(projectsFallback.classList.contains("is-visible"), true);
+  assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");
   assert.equal(projectsContainer.children.length, 0);
   await recovery;
 
+  assert.equal(documentElement.classList.contains("projects-runtime-ready"), true);
   assert.equal(projectsStatus.textContent, "9 projects loaded.");
   assert.equal(projectsStatus.classList.contains("sr-only"), true);
   assert.equal(projectsFallback.classList.contains("is-visible"), false);
@@ -583,8 +908,8 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
     projects.map((project) => project.link)
   );
   assert.equal(new Set(projectsContainer.children.map((card) => card.destination)).size, 9);
-  assert.equal(consoleErrors.length, 2);
-  assert.equal(fragmentFocusCalls, 2);
+  assert.equal(consoleErrors.length, 4);
+  assert.equal(fragmentFocusCalls, 4);
 
   const renderSource = sourceBetween(
     scriptSource,
@@ -595,5 +920,10 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
     renderSource.indexOf("projectsFallback.replaceChildren()") <
       renderSource.indexOf("projectsContainer.replaceChildren(fragment)"),
     "Static targets must leave the DOM before enhanced targets enter it"
+  );
+  assert.ok(
+    renderSource.indexOf("projectsContainer.replaceChildren(fragment)") <
+      renderSource.indexOf("classList.add(PROJECT_RUNTIME_READY_CLASS)"),
+    "Runtime ownership must begin only after enhanced targets enter the DOM"
   );
 });

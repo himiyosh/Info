@@ -1033,11 +1033,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     projectFragmentFocusQueued = true;
-    queueMicrotask(() => {
+    const commitFocus = () => {
       const scheduledHash = pendingProjectFragmentHash;
       pendingProjectFragmentHash = null;
       projectFragmentFocusQueued = false;
       focusProjectFragment(scheduledHash);
+    };
+    if (typeof window.requestAnimationFrame !== "function") {
+      queueMicrotask(commitFocus);
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(commitFocus);
     });
   }
 
@@ -1081,6 +1088,129 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function captureProjectCatalogueFocus() {
+    const focusedElement = document.activeElement;
+    if (
+      !focusedElement ||
+      focusedElement === document.body ||
+      focusedElement === document.documentElement
+    ) {
+      return { kind: "neutral" };
+    }
+    const isFallbackFocus = projectsFallback.contains(focusedElement);
+    const isDynamicFocus = projectsContainer.contains(focusedElement);
+    const isDirectoryFocus = projectsDirectory.contains(focusedElement);
+    if (!isFallbackFocus && !isDynamicFocus && !isDirectoryFocus) {
+      return { kind: "outside" };
+    }
+
+    if (isDirectoryFocus) {
+      const directoryLink = focusedElement.closest(".project-directory-link");
+      const projectId = directoryLink?.getAttribute("href")?.slice(1);
+      if (!/^project-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(projectId ?? "")) {
+        return { kind: "outside" };
+      }
+      return {
+        kind: "catalogue",
+        projectId,
+        scrollX: window.scrollX,
+        scrollY: window.scrollY,
+        source: "directory",
+        targetSelector: null,
+        wasProjectTarget: false
+      };
+    }
+
+    const projectCard = focusedElement.closest(
+      isFallbackFocus ? ".projects-fallback-card" : ".project-row"
+    );
+    if (!projectCard) {
+      return { kind: "outside" };
+    }
+
+    let targetSelector = null;
+    if (focusedElement.closest(".project-permalink")) {
+      targetSelector = ".project-permalink";
+    } else if (focusedElement.closest(".project-share-button")) {
+      targetSelector = ".project-share-button";
+    } else {
+      const projectLink = focusedElement.closest(".project-link");
+      const variant = ["primary", "secondary", "evidence"].find((name) =>
+        projectLink?.classList.contains(`project-link--${name}`)
+      );
+      if (variant) {
+        targetSelector = `.project-link--${variant}`;
+      }
+    }
+
+    return {
+      kind: "catalogue",
+      projectId: projectCard.id,
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      source: isFallbackFocus ? "fallback" : "dynamic",
+      targetSelector,
+      wasProjectTarget: focusedElement === projectCard
+    };
+  }
+
+  function restoreProjectCatalogueFocus(focusHandoff) {
+    if (focusHandoff.kind !== "catalogue") {
+      return false;
+    }
+
+    let target;
+    if (focusHandoff.source === "directory") {
+      target = projectsDirectory.querySelector(
+        `.project-directory-link[href="#${focusHandoff.projectId}"]`
+      );
+      if (!target) {
+        return false;
+      }
+    } else {
+      const projectCard = document.getElementById(focusHandoff.projectId);
+      if (
+        !projectCard ||
+        !projectsContainer.contains(projectCard) ||
+        !projectCard.classList.contains("project-row")
+      ) {
+        return false;
+      }
+
+      projectCard.classList.remove("is-priming");
+      projectRevealObserver?.unobserve(projectCard);
+      target = focusHandoff.targetSelector
+        ? projectCard.querySelector(focusHandoff.targetSelector) ?? projectCard
+        : projectCard;
+    }
+
+    target.focus({ preventScroll: true });
+    const restoreViewport = () => {
+      const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+      document.documentElement.style.scrollBehavior = "auto";
+      window.scrollTo(focusHandoff.scrollX, focusHandoff.scrollY);
+      document.documentElement.style.scrollBehavior = previousScrollBehavior;
+    };
+    restoreViewport();
+    if (typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(() => {
+        window.setTimeout(() => {
+          if (document.activeElement === target) {
+            restoreViewport();
+          }
+        }, 0);
+      });
+    }
+    return true;
+  }
+
+  function shouldScheduleProjectFragmentFocusAfterRender(focusHandoff) {
+    return (
+      focusHandoff.kind === "neutral" ||
+      (focusHandoff.kind === "catalogue" && focusHandoff.wasProjectTarget)
+    );
+  }
+
   function updateProjectStatus(state) {
     const translationKey = projectStatusKeys[state];
     if (!translationKey) {
@@ -1088,7 +1218,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const isReady = state === "ready";
-    const isError = state === "error";
+    const hasFallbackOwnership = !isReady;
     const translatedStatus = window.siteI18n.t(translationKey);
     const statusMessage = isReady
       ? translatedStatus.replace("{count}", String(projects.length))
@@ -1100,8 +1230,8 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsStatus.classList.toggle("projects-list", !isReady);
     projectsStatus.classList.toggle("sr-only", isReady);
     projectsStatus.hidden = false;
-    projectsFallback.classList.toggle("is-visible", isError);
-    projectsFallback.setAttribute("aria-hidden", String(!isError));
+    projectsFallback.classList.toggle("is-visible", hasFallbackOwnership);
+    projectsFallback.setAttribute("aria-hidden", String(!hasFallbackOwnership));
     projectsStatus.dataset.i18n = translationKey;
 
     if (projectsStatus.textContent !== statusMessage) {
@@ -1158,6 +1288,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const projectFocusHandoff = captureProjectCatalogueFocus();
     resetProjectShareControllers({ discard: true });
     projectRevealObserver?.disconnect();
     const animateReveal = shouldAnimateProjectReveal();
@@ -1321,6 +1452,7 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshScrollScenes();
     requestScrollMotionUpdate();
     updateProjectStatus("ready");
+    document.documentElement.classList.add(PROJECT_RUNTIME_READY_CLASS);
 
     if (animateReveal) {
       const rows = [...projectsContainer.querySelectorAll(".project-row")];
@@ -1337,7 +1469,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 2500);
     }
 
-    scheduleProjectFragmentFocus();
+    restoreProjectCatalogueFocus(projectFocusHandoff);
+    if (shouldScheduleProjectFragmentFocusAfterRender(projectFocusHandoff)) {
+      scheduleProjectFragmentFocus();
+    }
   }
 
   function renderProjectLoading() {
@@ -1345,7 +1480,6 @@ document.addEventListener("DOMContentLoaded", () => {
     clearProjectDirectory();
     projectsContainer.replaceChildren();
     updateProjectStatus("loading");
-    document.documentElement.classList.add(PROJECT_RUNTIME_READY_CLASS);
   }
 
   function renderProjectError() {
