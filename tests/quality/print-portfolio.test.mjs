@@ -18,6 +18,9 @@ const routes = [
   ["ja", "/"],
   ["en", "/en/"]
 ];
+const expectedProjectActionCount = projects.reduce((count, project) =>
+  count + 1 + Number(Boolean(project.sourceLink)) +
+    Number(Boolean(project.proofLink)), 0);
 const hiddenSelectors = [
   ".scroll-progress",
   ".viewport-stage",
@@ -264,6 +267,18 @@ async function evaluate(browser, expression) {
   return result?.value;
 }
 
+async function configureBrowser(browser, { height, media, width }) {
+  await Promise.all([
+    browser.client.send("Emulation.setDeviceMetricsOverride", {
+      deviceScaleFactor: 1,
+      height,
+      mobile: false,
+      width
+    }),
+    browser.client.send("Emulation.setEmulatedMedia", { media })
+  ]);
+}
+
 async function waitForPortfolio(browser) {
   const deadline = Date.now() + 12_000;
   while (Date.now() < deadline) {
@@ -284,6 +299,139 @@ async function waitForPortfolio(browser) {
   }
   throw new Error("Timed out waiting for the portfolio to render");
 }
+
+const textSpacingExpression = `(async () => {
+  const frames = () => new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const normalize = (value) => value.trim().replace(/\\s+/g, " ");
+  const override = document.createElement("style");
+  override.textContent = \`
+    html, body, body * {
+      line-height: 1.5 !important;
+      letter-spacing: 0.12em !important;
+      word-spacing: 0.16em !important;
+    }
+    p { margin-block-end: 2em !important; }
+  \`;
+  document.head.append(override);
+  await document.fonts.ready;
+  await frames();
+
+  const visible = (element) => {
+    if (!element || element.hidden || element.closest("[hidden]")) return false;
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.display !== "none" && style.visibility !== "hidden" &&
+      Number(style.opacity) > 0 && rect.width > 0 && rect.height > 0;
+  };
+  const contained = (element) => {
+    const rect = element.getBoundingClientRect();
+    return rect.left >= -1 && rect.right <= innerWidth + 1;
+  };
+  const clipped = (element) => {
+    const style = getComputedStyle(element);
+    return (
+      ["hidden", "clip"].includes(style.overflowX) &&
+        element.scrollWidth > element.clientWidth + 1
+    ) || (
+      ["hidden", "clip"].includes(style.overflowY) &&
+        element.scrollHeight > element.clientHeight + 1
+    );
+  };
+  const clippedLabel = (control) => [control, ...control.querySelectorAll("*")]
+    .some((element) => visible(element) &&
+      !element.matches(".sr-only, .project-directory-title, .project-directory-kind") &&
+      !element.closest(".sr-only, [aria-hidden='true']") && clipped(element));
+  const focusable = (element) => {
+    element.focus({ preventScroll: true });
+    const result = document.activeElement === element;
+    element.blur();
+    return result;
+  };
+  const activate = async (button) => {
+    const status = document.getElementById(button.getAttribute("aria-describedby"));
+    button.click();
+    for (let attempt = 0; attempt < 100 && !status.textContent.trim(); attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    return visible(status) && contained(status) && !clipped(status) &&
+      ["success", "error"].includes(status.dataset.state);
+  };
+
+  const nav = document.querySelector(".nav-menu");
+  const menu = document.querySelector(".menu-toggle");
+  if (!visible(nav)) {
+    menu.click();
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  const navLinks = [...nav.querySelectorAll("a")];
+  const navAvailable = visible(nav) && navLinks.length === 4 &&
+    navLinks.every((link) => visible(link) && focusable(link) && !clippedLabel(link));
+  if (menu.getAttribute("aria-expanded") === "true") menu.click();
+
+  const shareFlow = await activate(document.querySelector(".project-share-button"));
+  const copyFlow = await activate(document.querySelector(".contact-copy-button"));
+  const projectStatus = document.querySelector("#projects-status");
+  projectStatus.classList.remove("sr-only");
+  projectStatus.textContent = window.siteI18n.t("projects.error");
+  const statusText = [projectStatus, document.querySelector(".project-share-status"),
+    document.querySelector("#copy-email-status")];
+  const statusesVisible = statusText.every((status) =>
+    visible(status) && contained(status) && !clipped(status));
+
+  scrollTo({ behavior: "instant", left: 0, top: 0 });
+  await frames();
+  const directory = [...document.querySelectorAll(".project-directory-link")].map(
+    (link) => {
+      const title = link.querySelector(".project-directory-title");
+      const target = document.querySelector(link.hash);
+      return {
+        context: normalize(title.textContent) ===
+          normalize(target?.querySelector("h3")?.textContent ?? ""),
+        ellipsized: title.scrollWidth > title.clientWidth + 1 &&
+          getComputedStyle(title).textOverflow === "ellipsis",
+        target: visible(target)
+      };
+    });
+  const rows = [...document.querySelectorAll(".project-row")];
+  const controls = [...document.querySelectorAll(
+    ".hero-actions a, .project-directory-link, .project-permalink, " +
+    ".project-share-button, .project-link, .contact-links a, .contact-copy-button"
+  )];
+  const bodyStyle = getComputedStyle(document.body);
+  const paragraphStyle = getComputedStyle(document.querySelector(".about-copy p"));
+  const em = (value, size) => Math.round((parseFloat(value) /
+    parseFloat(size)) * 100) / 100;
+  const root = document.documentElement;
+  return {
+    actionCount: document.querySelectorAll(".project-link").length,
+    contacts: document.querySelectorAll(
+      '.contact-links a[href^="mailto:"], .contact-links a[href^="https://github.com/"]'
+    ).length,
+    controlCount: controls.length,
+    controlsAvailable: controls.every((control) =>
+      visible(control) && contained(control) && focusable(control) &&
+      !clippedLabel(control)),
+    copyFlow,
+    directory,
+    navAvailable,
+    overflow: Math.max(root.scrollWidth, document.body.scrollWidth) - root.clientWidth,
+    projectCount: rows.length,
+    projectIdentities: rows.every((row) => {
+      const title = row.querySelector("h3");
+      return visible(title) && contained(title);
+    }),
+    shareButtons: document.querySelectorAll(".project-share-button").length,
+    shareFlow,
+    spacing: {
+      letter: em(bodyStyle.letterSpacing, bodyStyle.fontSize),
+      line: em(bodyStyle.lineHeight, bodyStyle.fontSize),
+      paragraph: em(paragraphStyle.marginBlockEnd, paragraphStyle.fontSize),
+      word: em(bodyStyle.wordSpacing, bodyStyle.fontSize)
+    },
+    statusesVisible
+  };
+})()`;
 
 const snapshotExpression = `(() => {
   const inspect = (element) => {
@@ -407,6 +555,17 @@ async function render(browser, url) {
     signature: pdf.subarray(0, 5).toString("ascii")
   };
   return snapshot;
+}
+
+async function renderTextSpacing(browser, url, width) {
+  await configureBrowser(browser, {
+    height: width === 320 ? 900 : 1024,
+    media: "screen",
+    width
+  });
+  await browser.client.send("Page.navigate", { url });
+  await waitForPortfolio(browser);
+  return evaluate(browser, textSpacingExpression);
 }
 
 function diagnostic(language, snapshot) {
@@ -589,4 +748,66 @@ test("JA and EN generated pages provide a complete compact print portfolio", asy
     await browser.close();
     await server.close();
   }
+});
+
+test("JA and EN generated pages tolerate WCAG text spacing at 320px and 768px", async () => {
+  const server = await startServer();
+  const browser = await launchChrome();
+  const results = [];
+  try {
+    for (const [language, route] of routes) {
+      for (const width of [320, 768]) {
+        results.push({
+          language,
+          snapshot: await renderTextSpacing(
+            browser,
+            `${server.origin}${route}?text-spacing=${width}`,
+            width
+          ),
+          width
+        });
+      }
+    }
+  } finally {
+    await browser.close();
+    await server.close();
+  }
+
+  const failures = results.flatMap(({ language, snapshot, width }) => {
+    const current = [];
+    const expect = (condition, signal) => {
+      if (!condition) current.push(`${language}@${width}: ${signal}`);
+    };
+    expect(snapshot.overflow === 0, `horizontal overflow ${snapshot.overflow}px`);
+    expect(
+      JSON.stringify(snapshot.spacing) ===
+        JSON.stringify({ letter: 0.12, line: 1.5, paragraph: 2, word: 0.16 }),
+      `spacing override ${JSON.stringify(snapshot.spacing)}`
+    );
+    expect(snapshot.navAvailable, "navigation unavailable");
+    expect(snapshot.projectCount === projects.length, "project identity count changed");
+    expect(snapshot.projectIdentities, "project identity outside the viewport");
+    expect(snapshot.directory.length === projects.length, "directory count changed");
+    expect(snapshot.directory.every(({ context, target }) => context && target), "directory context lost");
+    expect(snapshot.actionCount === expectedProjectActionCount, "project action count changed");
+    expect(snapshot.shareButtons === projects.length, "project share action count changed");
+    expect(snapshot.contacts === 2, "contact path count changed");
+    expect(snapshot.controlCount === 55, "important action count changed");
+    expect(snapshot.controlsAvailable, "important action or label lost");
+    expect(snapshot.statusesVisible, "status text hidden or clipped");
+    expect(snapshot.shareFlow, "project share flow lost");
+    expect(snapshot.copyFlow, "contact copy flow lost");
+    return current;
+  });
+  const diagnostic = results.map(({ language, snapshot, width }) => ({
+    actions: snapshot.actionCount,
+    contacts: snapshot.contacts,
+    contexts: snapshot.directory.filter(({ context }) => context).length,
+    ellipsized: snapshot.directory.filter(({ ellipsized }) => ellipsized).length,
+    language,
+    overflow: snapshot.overflow,
+    projects: snapshot.projectCount,
+    width
+  }));
+  assert.deepEqual(failures, [], JSON.stringify(diagnostic, null, 2));
 });
