@@ -208,6 +208,22 @@ test("legacy review markers without a verdict remain blocked with exit 1", () =>
   assert.match(result.stderr, /verdict=pass not found/);
 });
 
+test("ambiguous enumerated verdicts cannot satisfy the aggregate gate", () => {
+  for (const verdict of ["pass|fail", "pass/fail", "pass or fail"]) {
+    const input = mergeGateInput({
+      comments: [{ body: marker(HEAD, verdict) }]
+    });
+    const evaluated = evaluateMergeGate(input, HEAD);
+
+    assert.equal(evaluated.ok, false, verdict);
+    assert.equal(evaluated.independentReview.verdict, "missing", verdict);
+
+    const result = runCli(input);
+    assert.equal(result.status, 1, verdict);
+    assert.match(result.stderr, /verdict=pass not found/, verdict);
+  }
+});
+
 test("legacy successful and unsuccessful status contexts are handled explicitly", () => {
   const successful = runCli(
     mergeGateInput({
@@ -333,6 +349,8 @@ test("quality wiring and documentation expose the full offline merge gate", asyn
     assert.match(source, /state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments/);
     assert.match(source, /contiguous/i);
     assert.match(source, /verdict=pass/);
+    assert.match(source, /exactly one verdict/i);
+    assert.match(source, /pass\|fail.*pass\/fail.*pass or fail/i);
     assert.match(source, /fail wins/i);
     assert.match(source, /RETRACTED-independent-review/);
     assert.match(source, /retraction reason/i);

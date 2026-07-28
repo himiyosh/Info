@@ -113,6 +113,11 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
     /detached verdict prose/,
     "Detached verdict syntax must not complete a legacy marker"
   );
+  assert.match(
+    source,
+    /Each active marker must express exactly one verdict; `pass\|fail`, `pass\/fail`, and `pass or fail` are invalid/,
+    "Enumerated verdict alternatives must not satisfy the review gate"
+  );
   assert.match(source, /Any fail wins over any pass regardless of order or surface/, "Fail evidence must dominate pass evidence");
   assert.match(
     source,
