@@ -3,7 +3,7 @@
 
 ## Development
 - Run `python3 -m http.server 8000` from the repository root, then open the Japanese route at http://localhost:8000/ or the English route at http://localhost:8000/en/.
-- `templates/index.html` is the only page-structure source, and `i18n.js` is the shared Japanese/English copy catalogue used by both the browser and the dependency-free generator. After changing either file, run `npm run generate:pages` to refresh the checked-in `index.html` and `en/index.html`; do not edit the generated pages directly.
+- `templates/index.html` is the canonical home-page structure, `templates/404.html` is the canonical bilingual recovery-page structure, and `i18n.js` is the shared Japanese/English copy catalogue used by both the browser and the dependency-free generator. After changing these sources, run `npm run generate:pages` to refresh the checked-in `index.html`, `en/index.html`, and root `404.html`; do not edit the generated pages directly.
 - Stable language URLs are `/` for Japanese and `/en/` for English. The language control navigates between them while preserving fragments, and legacy `?lang=ja` / `?lang=en` bookmarks are normalized client-side to the matching stable route without overriding an explicitly visited route from stored preferences.
 - Portfolio entries declare a 960x540 JPEG fallback in `image`, a desktop 960x540 AVIF in `desktopImageAvif`, and a mobile 720x405 AVIF in `mobileImageAvif`; verified public repositories can add paired `sourceAction` (`ja`/`en`) and HTTPS `sourceLink` fields for a secondary source action. Source-backed project facts use paired localized `proof` and `proofLink` fields; citations must be HTTPS GitHub blob URLs pinned to a 40-character commit SHA with bounded line anchors and must match a public repository action already exposed by that card.
 - Every portfolio entry declares a unique lowercase kebab-case `slug`; its stable same-page URL is `#project-${slug}` and remains unchanged across Japanese and English rendering.
@@ -24,16 +24,17 @@
 | `image-resizer-preview` | 20,417 | 5,828 | 71.5% |
 - `tokens.css` is the design-token source of truth. The Latin display font is bundled under `assets/fonts/` with its `OFL.txt` license, so no runtime font provider is required.
 - `robots.txt` and `sitemap.xml` expose both canonical language routes with reciprocal `ja`, `en`, and `x-default` alternates.
+- Root `404.html` is a generated, bilingual, no-JavaScript recovery page with `noindex` metadata and `/Info/`-absolute links so GitHub Pages can serve it at arbitrarily deep missing routes without creating a soft redirect.
 - The site uses local HTML, CSS, JavaScript, and imagery for its initial render. AdSense is deferred to production so core content remains fast and resilient.
 
 ## Deployment
 - GitHub Pages is deployed by `.github/workflows/pages.yml` on pushes to `main` and manual `workflow_dispatch`.
 - Canonical project destinations are checked by `.github/workflows/external-link-health.yml` every Wednesday at a non-round UTC minute and on manual `workflow_dispatch`; the read-only job uses no secrets and does not run on pull requests.
-- The workflow verifies generated-page drift, then publishes only the production artifact paths listed in `.github/pages-artifact-whitelist.txt` (the root page, `en/`, shared site files, and `assets/`). Repository-internal templates, generator scripts, tests, workflows, and docs are not published.
+- The workflow verifies generated-page drift, then publishes only the production artifact paths listed in `.github/pages-artifact-whitelist.txt` (the root page, custom `404.html`, `en/`, shared site files, and `assets/`). Repository-internal templates, generator scripts, tests, workflows, and docs are not published.
 - Workflow actions are pinned to immutable Node.js-24-compatible SHAs to avoid deprecated runtime warnings from GitHub-managed actions.
 
 ## Quality checks
-- `npm run generate:pages`: deterministically render both checked-in language routes from the canonical template and shared locale catalogue.
+- `npm run generate:pages`: deterministically render both checked-in language routes and the bilingual root `404.html` from canonical templates and the shared locale catalogue.
 - `npm run check:generated`: fail when either generated route differs from the canonical inputs.
 - `npm run check:js`: parse validation for `i18n.js`, `script.js`, the static-page generator, and the dependency-free external link checker.
 - `npm run check:links`: live validation of every `link`, `sourceLink`, and `proofLink` in `projects.json`, with bounded concurrency, timeouts, fallback requests, and one transient retry.

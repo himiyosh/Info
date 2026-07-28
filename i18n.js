@@ -79,6 +79,18 @@
         copyManualSelected: "コピーできませんでした。選択中のアドレスを手動でコピーしてください。",
         copyFailure: "コピーできませんでした。表示中のアドレスを手動でコピーしてください。"
       },
+      notFound: {
+        metaDescription:
+          "指定されたページは見つかりませんでした。himiyosh のポートフォリオから日本語または英語のページへ移動できます。",
+        title: "ページが見つかりません",
+        languageLabel: "日本語",
+        guidance:
+          "指定された URL にページはありません。ホームへ戻るか、プロジェクトや連絡先へ移動してください。",
+        navigationLabel: "日本語の復帰先",
+        homeAction: "日本語ホームへ",
+        projectsAction: "プロジェクトを見る",
+        contactAction: "お問い合わせ"
+      },
       footer: {
         backToTop: "ページ上部へ"
       },
@@ -156,6 +168,18 @@
         copySuccess: "Email address copied.",
         copyManualSelected: "Copy failed. Copy the selected address manually.",
         copyFailure: "Copy failed. Select the visible address and copy it manually."
+      },
+      notFound: {
+        metaDescription:
+          "The requested page was not found. Continue to the Japanese or English pages of himiyosh's portfolio.",
+        title: "Page not found",
+        languageLabel: "English",
+        guidance:
+          "There is no page at this URL. Return home, browse the projects, or use the contact links.",
+        navigationLabel: "Recovery links in English",
+        homeAction: "English home",
+        projectsAction: "View projects",
+        contactAction: "Contact"
       },
       footer: {
         backToTop: "Back to top"

@@ -1,5 +1,17 @@
 [
   {
+    "date": "2026-07-28",
+    "scope": "page",
+    "macrostructure": "Index-First",
+    "theme": "Graphite Blue",
+    "drop": "branded-404-recovery",
+    "enrichment": "none",
+    "brief": "Bilingual no-JavaScript recovery index for missing GitHub Pages routes with project-root-safe portfolio navigation",
+    "slopTest": {
+      "result": "58/58"
+    }
+  },
+  {
     "date": "2026-07-27",
     "scope": "app",
     "macrostructure": "Feature Stack",

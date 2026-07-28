@@ -2044,6 +2044,7 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
   const whitelistSet = new Set(whitelistEntries);
   const expectedWhitelist = new Set([
     "index.html",
+    "404.html",
     "en",
     "tokens.css",
     "styles.css",
@@ -2063,6 +2064,7 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
     [...expectedWhitelist].sort(),
     "Whitelist must contain only the approved production paths"
   );
+  assert.ok(whitelistSet.has("404.html"), "The custom Pages recovery document must ship");
 
   const localReferences = new Set();
   for (const match of indexHtml.matchAll(/\b(?:src|href)="([^"]+)"/g)) {
