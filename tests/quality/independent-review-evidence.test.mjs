@@ -15,6 +15,25 @@ const repoRoot = process.cwd();
 const scriptPath = path.join(repoRoot, "scripts/check-independent-review.mjs");
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 const OTHER_HEAD = "89abcdef0123456789abcdef0123456789abcdef";
+const SECOND_VERDICT_CASES = [
+  ["space", "pass fail"],
+  ["tab", "fail\tpass"],
+  ["line break", "pass\nfail"],
+  ["pipe", "pass|fail"],
+  ["spaced pipe", "fail | pass"],
+  ["slash", "pass/fail"],
+  ["spaced slash", "fail / pass"],
+  ["English or", "pass or fail"],
+  ["tabbed English or", "fail\tor\tpass"],
+  ["ASCII comma", "pass,fail"],
+  ["spaced ASCII comma", "fail, pass"],
+  ["Japanese comma", "pass、fail"],
+  ["spaced Japanese comma", "fail 、 pass"],
+  ["semicolon", "pass;fail"],
+  ["spaced semicolon", "fail ; pass"],
+  ["fullwidth semicolon", "pass；fail"],
+  ["comma plus English or", "fail, or pass"]
+];
 
 function marker(verdict = "pass", head = HEAD) {
   return `independent-review head=${head} verdict=${verdict}`;
@@ -182,30 +201,23 @@ test("detached verdict syntax in explanation prose or code cannot satisfy a lega
   assert.equal(runCli(input).status, 1);
 });
 
-test("enumerated verdict alternatives cannot provide exact-head pass clearance", () => {
-  for (const verdict of ["pass|fail", "pass/fail", "pass or fail"]) {
+test("a separator followed by a second verdict invalidates the exact-head marker", () => {
+  for (const [label, verdict] of SECOND_VERDICT_CASES) {
     const input = {
       reviews: [],
       comments: [{ body: marker(verdict) }]
     };
 
-    assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "missing", verdict);
-    assert.equal(collectIndependentReviewEvidence(input, HEAD).length, 0, verdict);
-    assert.equal(runCli(input).status, 1, verdict);
+    assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "missing", label);
+    assert.equal(collectIndependentReviewEvidence(input, HEAD).length, 0, label);
   }
-});
 
-test("comma-separated verdict alternatives cannot provide exact-head clearance", () => {
-  for (const verdict of ["pass, fail", "fail, pass", "pass、fail", "fail、pass"]) {
-    const input = {
-      reviews: [],
-      comments: [{ body: marker(verdict) }]
-    };
-
-    assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "missing", verdict);
-    assert.equal(collectIndependentReviewEvidence(input, HEAD).length, 0, verdict);
-    assert.equal(runCli(input).status, 1, verdict);
-  }
+  const result = runCli({
+    reviews: [],
+    comments: [{ body: marker("pass;fail") }]
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /pass verdict not found/);
 });
 
 test("wrong-head verdict evidence remains unsatisfied", () => {
@@ -269,34 +281,28 @@ test("short, legacy, malformed-verdict, and substring markers do not produce fal
   assert.equal(hasIndependentReviewEvidence(input, HEAD), false);
 });
 
-test("explanatory commas preserve single pass and fail verdicts", () => {
+test("non-verdict punctuation and prose preserve single pass and fail verdicts", () => {
   const cases = [
-    { body: `${marker("pass")}, review complete.`, verdict: "pass", exit: 0 },
-    { body: `${marker("pass")}、review complete.`, verdict: "pass", exit: 0 },
-    { body: `${marker("fail")}, blocking issue remains.`, verdict: "fail", exit: 3 },
-    { body: `${marker("fail")}、blocking issue remains.`, verdict: "fail", exit: 3 }
+    { body: `${marker("pass")}, review complete.`, verdict: "pass" },
+    { body: `${marker("pass")}、レビュー完了。`, verdict: "pass" },
+    { body: `${marker("pass")}; failures: none.`, verdict: "pass" },
+    { body: `${marker("pass")}| passing checks complete.`, verdict: "pass" },
+    { body: `${marker("pass")}/ review complete.`, verdict: "pass" },
+    { body: `${marker("pass")} or continue with the merge gate.`, verdict: "pass" },
+    { body: `(${marker("pass")}).`, verdict: "pass" },
+    { body: `${marker("pass")}!`, verdict: "pass" },
+    { body: `| Result | ${marker("pass")} | Review complete |`, verdict: "pass" },
+    { body: `${marker("fail")}, blocking issue remains.`, verdict: "fail" },
+    { body: `${marker("fail")}、修正が必要です。`, verdict: "fail" },
+    { body: `${marker("fail")}; blocking issue remains.`, verdict: "fail" }
   ];
 
-  // Punctuation stays compatible with prose; only a following verdict token is ambiguous.
-  for (const { body, verdict, exit } of cases) {
+  // A delimiter is blocked only when it begins a second valid verdict token, preserving prose and Markdown cells.
+  for (const { body, verdict } of cases) {
     const input = { reviews: [{ body }], comments: [] };
     assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, verdict, body);
-    assert.equal(runCli(input).status, exit, body);
   }
-});
 
-test("punctuation-delimited verdict markers retain standalone and Markdown table support", () => {
-  const bodies = [
-    `(${marker("pass")})`,
-    `${marker("pass")}: no blocking findings.`,
-    `${marker("pass")}| review complete.`,
-    `${marker("pass")}/ review complete.`,
-    `${marker("pass")} or continue with the merge gate.`,
-    `| Result | ${marker("pass")} | Review complete |`
-  ];
-
-  for (const body of bodies) {
-    const input = { reviews: [{ body }], comments: [] };
-    assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "pass", body);
-  }
+  assert.equal(runCli({ reviews: [{ body: cases[8].body }], comments: [] }).status, 0);
+  assert.equal(runCli({ reviews: [{ body: cases[10].body }], comments: [] }).status, 3);
 });

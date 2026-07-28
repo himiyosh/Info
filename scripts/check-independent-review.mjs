@@ -4,8 +4,9 @@ const FULL_HEAD_PATTERN = /^[0-9a-f]{40}$/;
 const MARKER_PREFIX = "independent-review head=";
 const TOKEN_CHARACTER_PATTERN = /[A-Za-z0-9_-]/;
 const VERDICT_SUFFIX_PATTERN = /^ verdict=(pass|fail)(?![A-Za-z0-9_-])/;
-const ALTERNATIVE_VERDICT_PATTERN =
-  /^(?:[ \t]*[|/,、][ \t]*|[ \t]+or[ \t]+)(?:pass|fail)(?![A-Za-z0-9_-])/;
+const SECOND_VERDICT_PATTERN = /^(?:pass|fail)(?![A-Za-z0-9_-])/;
+const VERDICT_SEPARATOR_PATTERN =
+  /^(?:[ \t\r\n]*[|/,、;；][ \t\r\n]*|[ \t\r\n]+)(?:or[ \t\r\n]+)?/;
 const SURFACES = ["reviews", "comments"];
 const USAGE =
   "Usage: gh pr view <N> --json reviews,comments | node scripts/check-independent-review.mjs --head <40-character-head>";
@@ -34,6 +35,15 @@ export function parseReviewEvidenceJson(source) {
   }
 }
 
+function hasSecondVerdictAfterSeparator(suffix) {
+  const separatorMatch = suffix.match(VERDICT_SEPARATOR_PATTERN);
+
+  return (
+    separatorMatch !== null &&
+    SECOND_VERDICT_PATTERN.test(suffix.slice(separatorMatch[0].length))
+  );
+}
+
 function collectStandaloneVerdicts(body, head) {
   const marker = `${MARKER_PREFIX}${head}`;
   const matches = [];
@@ -45,11 +55,11 @@ function collectStandaloneVerdicts(body, head) {
       precedingCharacter === undefined || !TOKEN_CHARACTER_PATTERN.test(precedingCharacter);
     const suffix = body.slice(index + marker.length);
     const suffixMatch = suffix.match(VERDICT_SUFFIX_PATTERN);
-    const hasAlternativeVerdict =
+    const hasSecondVerdict =
       suffixMatch &&
-      ALTERNATIVE_VERDICT_PATTERN.test(suffix.slice(suffixMatch[0].length));
+      hasSecondVerdictAfterSeparator(suffix.slice(suffixMatch[0].length));
 
-    if (hasValidStart && suffixMatch && !hasAlternativeVerdict) {
+    if (hasValidStart && suffixMatch && !hasSecondVerdict) {
       matches.push({ verdict: suffixMatch[1], offset: index });
     }
 

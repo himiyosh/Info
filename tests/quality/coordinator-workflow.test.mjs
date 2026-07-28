@@ -115,12 +115,12 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
-    /Each active marker must express exactly one verdict; `pass\|fail`, `pass\/fail`, `pass or fail`, `pass, fail`, and `fail, pass` \(including Japanese-comma equivalents\) are invalid/,
-    "Enumerated verdict alternatives must not satisfy the review gate"
+    /Each active marker must express exactly one verdict\. After the first verdict, a second standalone `pass` or `fail` introduced by whitespace, English `or`, or one of the symbolic separators `\|`, `\/`, `,`, `、`, `;`, and `；` invalidates that marker/,
+    "A second verdict after any documented separator must not satisfy the review gate"
   );
   assert.match(
     source,
-    /A comma, Japanese comma, or Markdown table delimiter remains valid when it begins explanatory prose rather than a second verdict/,
+    /A delimiter remains valid when it begins non-verdict explanatory prose, including a Markdown table cell, rather than a second verdict/,
     "Ordinary punctuation must remain compatible with explanatory prose and Markdown tables"
   );
   assert.match(source, /Any fail wins over any pass regardless of order or surface/, "Fail evidence must dominate pass evidence");
