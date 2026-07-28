@@ -77,6 +77,10 @@ class FakeClassList {
     this.values = new Set();
   }
 
+  add(...classNames) {
+    classNames.forEach((className) => this.values.add(className));
+  }
+
   contains(className) {
     return this.values.has(className);
   }
@@ -258,10 +262,15 @@ test("each static fallback exposes canonical localized decision cues without Jav
     );
   }
 
-  assert.match(
+  assert.doesNotMatch(
     stylesSource,
     /\.js-enabled\s+\.projects-fallback:not\(\.is-visible\)\s*\{\s*display:\s*none;/,
-    "Enhanced rendering must hide the fallback before first paint"
+    "JavaScript detection alone must not hide the static project catalogue"
+  );
+  assert.match(
+    stylesSource,
+    /html\.projects-runtime-ready\s+\.projects-fallback:not\(\.is-visible\)\s*\{\s*display:\s*none;/,
+    "Only an initialized Projects runtime may hide the fallback"
   );
   assert.match(
     stylesSource,
@@ -310,6 +319,131 @@ test("each static fallback exposes canonical localized decision cues without Jav
   );
 });
 
+test("project ownership waits for a ready runtime when scripts or initialization fail", async () => {
+  const [indexHtml, scriptSource, stylesSource] = await Promise.all([
+    readUtf8("index.html"),
+    readUtf8("script.js"),
+    readUtf8("styles.css")
+  ]);
+  const inlineScript = indexHtml.match(/<script>\s*([\s\S]*?js-enabled[\s\S]*?)<\/script>/i)?.[1];
+  assert.ok(inlineScript, "The synchronous JavaScript detection marker must remain");
+
+  const detectedRoot = { classList: new FakeClassList() };
+  vm.runInNewContext(inlineScript, {
+    document: { documentElement: detectedRoot }
+  });
+  assert.equal(detectedRoot.classList.contains("js-enabled"), true);
+  assert.equal(detectedRoot.classList.contains("projects-runtime-ready"), false);
+  assert.doesNotMatch(
+    stylesSource,
+    /\.js-enabled\s+\.projects-fallback:not\(\.is-visible\)/,
+    "A blocked script.js must leave the generated fallback visible"
+  );
+  assert.match(
+    stylesSource,
+    /html\.projects-runtime-ready\s+\.projects-fallback:not\(\.is-visible\)/
+  );
+
+  function captureRuntimeInitializer(window) {
+    let initialize;
+    const documentElement = { classList: new FakeClassList() };
+    const document = {
+      documentElement,
+      addEventListener(type, listener) {
+        if (type === "DOMContentLoaded") {
+          initialize = listener;
+        }
+      },
+      getElementById: () => null
+    };
+    vm.runInNewContext(scriptSource, { document, window }, { timeout: 1000 });
+    assert.equal(typeof initialize, "function");
+    return { documentElement, initialize };
+  }
+
+  const missingI18n = captureRuntimeInitializer({});
+  assert.throws(() => missingI18n.initialize(), /redirecting/);
+  assert.equal(
+    missingI18n.documentElement.classList.contains("projects-runtime-ready"),
+    false,
+    "A blocked i18n.js must not transfer ownership away from static summaries"
+  );
+
+  const earlyFailure = captureRuntimeInitializer({
+    siteI18n: { redirecting: false }
+  });
+  assert.throws(
+    () => earlyFailure.initialize(),
+    /Required element #hamburger-menu was not found/
+  );
+  assert.equal(
+    earlyFailure.documentElement.classList.contains("projects-runtime-ready"),
+    false,
+    "Initialization failures before Projects setup must preserve the fallback"
+  );
+
+  const statusSource = sourceBetween(
+    scriptSource,
+    "function updateProjectStatus",
+    "function clearProjectDirectory"
+  );
+  const loadingSource = sourceBetween(
+    scriptSource,
+    "function renderProjectLoading",
+    "function renderProjectError"
+  );
+  const documentElement = { classList: new FakeClassList() };
+  const projectsStatus = new FakeElement("p");
+  projectsStatus.hidden = true;
+  const projectsContainer = new FakeElement("div");
+  projectsContainer.setAttribute("aria-busy", "false");
+  const projectsFallback = new FakeElement("div");
+  const context = {
+    PROJECT_RUNTIME_READY_CLASS: "projects-runtime-ready",
+    clearProjectDirectory: () => {},
+    document: { documentElement },
+    projectState: "loading",
+    projectStatusKeys: {
+      loading: "projects.loading",
+      ready: "projects.ready",
+      error: "projects.error"
+    },
+    projects: null,
+    projectsContainer,
+    projectsFallback,
+    projectsStatus,
+    resetProjectShareControllers: () => {},
+    window: {
+      siteI18n: {
+        t: () => "Loading projects."
+      }
+    }
+  };
+  vm.runInNewContext(`${statusSource}\n${loadingSource}`, context, {
+    timeout: 1000
+  });
+
+  context.window.siteI18n.t = () => {
+    throw new Error("Injected translation initialization failure.");
+  };
+  assert.throws(
+    () => context.renderProjectLoading(),
+    /Injected translation initialization failure/
+  );
+  assert.equal(documentElement.classList.contains("projects-runtime-ready"), false);
+  assert.equal(projectsStatus.hidden, true);
+  assert.equal(projectsFallback.getAttribute("aria-hidden"), undefined);
+
+  context.window.siteI18n.t = () => "Loading projects.";
+  context.renderProjectLoading();
+  assert.equal(documentElement.classList.contains("projects-runtime-ready"), true);
+  assert.equal(projectsContainer.getAttribute("aria-busy"), "true");
+  assert.equal(projectsStatus.hidden, false);
+  assert.equal(projectsStatus.textContent, "Loading projects.");
+  assert.equal(projectsFallback.getAttribute("aria-hidden"), "true");
+  assert.equal(projectsFallback.classList.contains("is-visible"), false);
+});
+
 test("persistent failures reuse the fallback and retry recovery removes duplicate destinations", async () => {
   const [scriptSource, projects, siteI18n] = await Promise.all([
     readUtf8("script.js"),
@@ -331,6 +465,7 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
   projectsDirectory.hidden = true;
   const projectsContainer = new FakeElement("div");
   const projectsFallback = new FakeElement("div");
+  const documentElement = { classList: new FakeClassList() };
   projectsFallback.replaceChildren(
     ...projects.map((project) => Object.assign(new FakeElement("article"), {
       id: `project-${project.slug}`
@@ -344,8 +479,12 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
     { ok: true, json: async () => projects }
   ];
   const context = {
+    PROJECT_RUNTIME_READY_CLASS: "projects-runtime-ready",
     console: { error: (...args) => consoleErrors.push(args) },
-    document: { createElement: (tagName) => new FakeElement(tagName) },
+    document: {
+      createElement: (tagName) => new FakeElement(tagName),
+      documentElement
+    },
     fetch: async () => {
       const response = responses.shift();
       if (response instanceof Error) {
@@ -387,7 +526,9 @@ test("persistent failures reuse the fallback and retry recovery removes duplicat
 
   vm.runInNewContext(`${statusSource}\n${loadingSource}`, context, { timeout: 1000 });
 
+  assert.equal(documentElement.classList.contains("projects-runtime-ready"), false);
   await context.loadProjects();
+  assert.equal(documentElement.classList.contains("projects-runtime-ready"), true);
   assert.equal(projectsStatus.textContent, "プロジェクトを読み込めませんでした。通信状況を確認して、もう一度お試しください。");
   assert.equal(projectsFallback.classList.contains("is-visible"), true);
   assert.equal(projectsFallback.getAttribute("aria-hidden"), "false");

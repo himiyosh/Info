@@ -11,6 +11,7 @@ const PROJECT_SHARE_STATUS_KEYS = Object.freeze({
   copied: "projects.copySuccess",
   failure: "projects.shareFailure"
 });
+const PROJECT_RUNTIME_READY_CLASS = "projects-runtime-ready";
 
 async function writeTextToClipboard(value) {
   if (
@@ -1086,9 +1087,14 @@ document.addEventListener("DOMContentLoaded", () => {
       throw new RangeError(`Unsupported project state: ${state}`);
     }
 
-    projectState = state;
     const isReady = state === "ready";
     const isError = state === "error";
+    const translatedStatus = window.siteI18n.t(translationKey);
+    const statusMessage = isReady
+      ? translatedStatus.replace("{count}", String(projects.length))
+      : translatedStatus;
+
+    projectState = state;
     projectsContainer.setAttribute("aria-busy", String(state === "loading"));
     projectsContainer.classList.toggle("projects-list", isReady);
     projectsStatus.classList.toggle("projects-list", !isReady);
@@ -1098,10 +1104,6 @@ document.addEventListener("DOMContentLoaded", () => {
     projectsFallback.setAttribute("aria-hidden", String(!isError));
     projectsStatus.dataset.i18n = translationKey;
 
-    const translatedStatus = window.siteI18n.t(translationKey);
-    const statusMessage = isReady
-      ? translatedStatus.replace("{count}", String(projects.length))
-      : translatedStatus;
     if (projectsStatus.textContent !== statusMessage) {
       projectsStatus.textContent = statusMessage;
     }
@@ -1341,8 +1343,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderProjectLoading() {
     resetProjectShareControllers({ discard: true });
     clearProjectDirectory();
-    updateProjectStatus("loading");
     projectsContainer.replaceChildren();
+    updateProjectStatus("loading");
+    document.documentElement.classList.add(PROJECT_RUNTIME_READY_CLASS);
   }
 
   function renderProjectError() {
