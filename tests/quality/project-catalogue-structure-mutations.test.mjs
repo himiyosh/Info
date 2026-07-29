@@ -35,8 +35,12 @@ const [guardSource, catalogueSource, monolithSource] = await Promise.all([
 const catalogueTestNames = [
   ...catalogueSource.matchAll(/^test\("([^"]+)",/gm)
 ].map((match) => match[1]);
+const catalogueBodyStart = catalogueSource.indexOf(
+  `test(${JSON.stringify(catalogueTestNames[0])}`
+);
 
 assert.equal(catalogueTestNames.length, 11, "Mutation fixtures require the fixed 11-test inventory");
+assert.notEqual(catalogueBodyStart, -1, "Mutation fixtures require the catalogue body boundary");
 
 function appendSource(source, addition) {
   return `${source.trimEnd()}\n\n${addition}\n`;
@@ -201,16 +205,21 @@ test("project catalogue structure guard rejects monolith padding", async () => {
 });
 
 test("project catalogue structure guard rejects empty stubs plus unrelated extraction", async () => {
-  const stubSource = [
-    'import { test } from "node:test";',
-    "",
-    "const unrelatedDeploymentContract = true;",
-    "",
+  const stubHeader = padWithComment(
+    [
+      'import { test } from "node:test";',
+      "",
+      "const unrelatedDeploymentContract = true;",
+      ""
+    ].join("\n"),
+    catalogueBodyStart
+  );
+  const stubBody = [
     ...catalogueTestNames.map((name) => `test(${JSON.stringify(name)}, () => {});`),
     ""
   ].join("\n");
   const unrelatedExtraction = padWithComment(
-    stubSource,
+    `${stubHeader}${stubBody}`,
     Buffer.byteLength(catalogueSource)
   );
 
