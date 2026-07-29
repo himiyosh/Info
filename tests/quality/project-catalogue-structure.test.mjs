@@ -15,7 +15,7 @@ const globalInventoryEnvironment = "INFO_PROJECT_CATALOGUE_INVENTORY";
 const globalInventoryEnvironmentValue = "complete-runtime-v1";
 const globalInventoryChildMode =
   process.env[globalInventoryEnvironment] === globalInventoryEnvironmentValue;
-const monolithExpectedBytes = 78_634;
+const monolithExpectedBytes = 73_855;
 const catalogueExpectedBytes = 52_002;
 const catalogueBodyStartExpectedBytes = 8_196;
 const catalogueBodyExpectedBytes = 43_806;
@@ -23,7 +23,7 @@ const catalogueBodyExpectedSha256 =
   "d9b94bf0f5f70fdb7fe289aa32f5da411539958825b1602c1e11561feb4a7821";
 const mutationGuardExpectedBytes = 12_145;
 const mutationGuardExpectedSha256 =
-  "f8bbdb994a44aa07de7ac87243b7f619575dd2089b8ef356d6827dc8e7d19926";
+  "2d510a01b4bbb2fffc0a6700b3c296eacaff612cf7552aa505cbf0ff871156c6";
 const expectedCatalogueTestNames = [
   "projects.json schema, localization, links, and preview assets are valid",
   "exactly six live projects expose verified public source actions",

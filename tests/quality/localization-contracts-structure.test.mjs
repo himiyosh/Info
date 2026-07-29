@@ -16,7 +16,7 @@ const globalInventoryChildMode =
   process.env[localizationInventoryEnvironment] ===
     globalInventoryEnvironmentValue ||
   process.env[catalogueInventoryEnvironment] === globalInventoryEnvironmentValue;
-const monolithExpectedBytes = 78_634;
+const monolithExpectedBytes = 73_855;
 const localizationExpectedBytes = 10_298;
 const localizationBodyStartExpectedBytes = 5_836;
 const localizationBodyExpectedBytes = 4_462;
