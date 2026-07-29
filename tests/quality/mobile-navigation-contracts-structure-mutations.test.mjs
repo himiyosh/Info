@@ -168,5 +168,9 @@ mutationTest(
       0,
       `The actual structure guard accepted the padded inert header wrapper:\n${result.output}`
     );
+    assert.match(
+      result.output,
+      /mobile-navigation-contracts\.test\.mjs header SHA-256 must match the reviewed extraction/
+    );
   }
 );

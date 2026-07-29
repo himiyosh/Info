@@ -29,6 +29,8 @@ const globalInventoryChildMode =
 const monolithExpectedBytes = 64_652;
 const mobileNavigationExpectedBytes = 6_211;
 const mobileNavigationBodyStartExpectedBytes = 273;
+const mobileNavigationHeaderExpectedSha256 =
+  "0e56555309f1cd482e5b0a071cf213f6859415387ac7983795e29915a1781fb3";
 const mobileNavigationBodyExpectedBytes = 5_938;
 const mobileNavigationBodyExpectedSha256 =
   "228bade1b831e0c6d50a4a656b5ec3f73bf4744f8618b91e4fe540d91129491e";
@@ -253,6 +255,11 @@ test("mobile navigation contracts live in one focused module", async () => {
     Buffer.byteLength(mobileNavigationHeader),
     mobileNavigationBodyStartExpectedBytes,
     `${mobileNavigationFile} assertion body must start at byte ${mobileNavigationBodyStartExpectedBytes}`
+  );
+  assert.equal(
+    sha256(mobileNavigationHeader),
+    mobileNavigationHeaderExpectedSha256,
+    `${mobileNavigationFile} header SHA-256 must match the reviewed extraction`
   );
   assert.equal(
     Buffer.byteLength(mobileNavigationBody),
