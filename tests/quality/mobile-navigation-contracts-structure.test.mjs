@@ -26,7 +26,7 @@ const globalInventoryChildMode =
     globalInventoryEnvironmentValue ||
   process.env[mobileNavigationInventoryEnvironment] ===
     globalInventoryEnvironmentValue;
-const monolithExpectedBytes = 64_652;
+const monolithExpectedBytes = 53_111;
 const mobileNavigationExpectedBytes = 6_211;
 const mobileNavigationBodyStartExpectedBytes = 273;
 const mobileNavigationHeaderExpectedSha256 =
