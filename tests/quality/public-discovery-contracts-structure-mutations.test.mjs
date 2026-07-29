@@ -111,6 +111,19 @@ function padWithComment(source, targetBytes) {
   return `${source}/*${"x".repeat(remainingBytes - 4)}*/`;
 }
 
+function replaceOncePreservingBytes(source, marker, replacement) {
+  const remainingBytes = Buffer.byteLength(marker) - Buffer.byteLength(replacement);
+  assert.ok(
+    remainingBytes >= 0,
+    "Mutation replacement must not exceed its reviewed marker"
+  );
+  return replaceOnce(
+    source,
+    marker,
+    `${replacement}${" ".repeat(remainingBytes)}`
+  );
+}
+
 async function linkRuntimeFixtures(rootDirectory) {
   await Promise.all(
     runtimeFixturePaths.map((relativePath) =>
@@ -200,6 +213,52 @@ mutationTest(
   async () => {
     const result = await runGuardMutation();
     assert.equal(result.status, 0, result.output);
+  }
+);
+
+mutationTest(
+  "public discovery structure guard rejects canonical names leaking into the monolith",
+  async () => {
+    const paddingStart = monolithFixtureSource.lastIndexOf("/*");
+    assert.notEqual(paddingStart, -1, "Monolith fixture must retain its padding");
+    const canonicalNameLeak = padWithComment(
+      [
+        monolithFixtureSource.slice(0, paddingStart),
+        `const leakedCanonicalName = ${JSON.stringify(publicDiscoveryTestNames[0])};`,
+        ""
+      ].join("\n"),
+      Buffer.byteLength(monolithFixtureSource)
+    );
+    assert.equal(
+      Buffer.byteLength(canonicalNameLeak),
+      Buffer.byteLength(monolithFixtureSource)
+    );
+    await assertMutationRejected(
+      { monolith: canonicalNameLeak },
+      /must exclusively own the three canonical public discovery contracts/
+    );
+  }
+);
+
+mutationTest(
+  "public discovery structure guard rejects adjacent monolith contracts leaking into the focused module",
+  async () => {
+    const reviewedAssertionMessage = JSON.stringify(
+      "Static summary primary actions must exactly match the canonical project destinations"
+    );
+    const adjacentContractLeak = replaceOncePreservingBytes(
+      publicDiscoverySource,
+      reviewedAssertionMessage,
+      JSON.stringify(adjacentMonolithTestNames[0])
+    );
+    assert.equal(
+      Buffer.byteLength(adjacentContractLeak),
+      Buffer.byteLength(publicDiscoverySource)
+    );
+    await assertMutationRejected(
+      { publicDiscovery: adjacentContractLeak },
+      /adjacent JavaScript, rejected-experiment, and new-tab contracts must remain exclusively in the monolith/
+    );
   }
 );
 

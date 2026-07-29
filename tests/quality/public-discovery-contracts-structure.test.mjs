@@ -33,9 +33,9 @@ const publicDiscoveryHeaderExpectedSha256 =
 const publicDiscoveryBodyExpectedBytes = 4_720;
 const publicDiscoveryBodyExpectedSha256 =
   "c29e8f3a93bff0d813f57d1d36072bcca00d78cd3a8ad1a93a0c41726ac9f802";
-const mutationGuardExpectedBytes = 13_061;
+const mutationGuardExpectedBytes = 15_048;
 const mutationGuardExpectedSha256 =
-  "cc10dac11caf1341c3546b152e003a087dcb20e8de436ef992c55514eb3db92e";
+  "7cf564870aa6d58d12443f36db2276f123e16b3fa7ea2c077b3d30d8f30b1a36";
 const expectedPublicDiscoveryTestNames = [
   "required SEO and social metadata exist and are consistent",
   "static project summaries preserve canonical primary, source, proof, and fragment access",
