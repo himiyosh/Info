@@ -8,29 +8,32 @@ import { test } from "node:test";
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const monolithFile = "site-quality.test.mjs";
-const workflowSecurityFile = "workflow-security.test.mjs";
+const publishingIntegrityFile = "publishing-integrity.test.mjs";
 const workflowSecurityInventoryEnvironment = "INFO_WORKFLOW_SECURITY_INVENTORY";
 const localizationInventoryEnvironment = "INFO_LOCALIZATION_INVENTORY";
 const catalogueInventoryEnvironment = "INFO_PROJECT_CATALOGUE_INVENTORY";
+const publishingIntegrityInventoryEnvironment = "INFO_PUBLISHING_INTEGRITY_INVENTORY";
 const globalInventoryEnvironmentValue = "complete-runtime-v1";
 const globalInventoryChildMode =
   process.env[workflowSecurityInventoryEnvironment] ===
     globalInventoryEnvironmentValue ||
   process.env[localizationInventoryEnvironment] ===
     globalInventoryEnvironmentValue ||
-  process.env[catalogueInventoryEnvironment] === globalInventoryEnvironmentValue;
+  process.env[catalogueInventoryEnvironment] ===
+    globalInventoryEnvironmentValue ||
+  process.env[publishingIntegrityInventoryEnvironment] ===
+    globalInventoryEnvironmentValue;
 const monolithExpectedBytes = 70_590;
-const workflowSecurityExpectedBytes = 5_051;
-const workflowSecurityBodyStartExpectedBytes = 479;
-const workflowSecurityBodyExpectedBytes = 4_572;
-const workflowSecurityBodyExpectedSha256 =
-  "08b0c5e432a84c57f900fee623a1903ec36f7daff0d99a665872986dc3d99c16";
-const expectedWorkflowSecurityTestNames = [
-  "workflow actions are pinned to immutable Node.js-24-compatible SHAs",
-  "workflow checkouts do not persist credentials",
-  "Pages workflow keeps least-privilege permissions and artifact-only deployment"
+const publishingIntegrityExpectedBytes = 4_245;
+const publishingIntegrityBodyStartExpectedBytes = 981;
+const publishingIntegrityBodyExpectedBytes = 3_264;
+const publishingIntegrityBodyExpectedSha256 =
+  "bdbb764c443a43753325ec95d8c48a417426dc021f862104393b83a885742464";
+const expectedPublishingIntegrityTestNames = [
+  "Pages artifact whitelist is strict and covers all locally referenced production files",
+  "robots.txt and sitemap.xml are consistent"
 ];
-const workflowSecurityBodyStartMarker = `test(${JSON.stringify(expectedWorkflowSecurityTestNames[0])}`;
+const publishingIntegrityBodyStartMarker = `test(${JSON.stringify(expectedPublishingIntegrityTestNames[0])}`;
 const junitSummaryKeys = [
   "tests",
   "suites",
@@ -81,6 +84,8 @@ function runTestModules(
       globalInventoryEnvironmentValue;
     childProcessEnv[catalogueInventoryEnvironment] =
       globalInventoryEnvironmentValue;
+    childProcessEnv[publishingIntegrityInventoryEnvironment] =
+      globalInventoryEnvironmentValue;
   }
   const args = [
     "--test",
@@ -99,45 +104,45 @@ function runTestModules(
   assert.equal(
     result.status,
     0,
-    `Quality test modules must execute successfully for workflow security inventory:\n${result.stdout}${result.stderr}`
+    `Quality test modules must execute successfully for publishing integrity inventory:\n${result.stdout}${result.stderr}`
   );
   return parseJunitReport(result.stdout);
 }
 
-function runWorkflowSecurityTests({ only = false } = {}) {
+function runPublishingIntegrityTests({ only = false } = {}) {
   return runTestModules(
-    [path.posix.join("tests", "quality", workflowSecurityFile)],
+    [path.posix.join("tests", "quality", publishingIntegrityFile)],
     { only }
   );
 }
 
-function runGlobalWorkflowSecurityInventory(qualityTestFiles) {
+function runGlobalPublishingIntegrityInventory(qualityTestFiles) {
   const runtimeFiles = qualityTestFiles.map((file) =>
     path.posix.join("tests", "quality", file)
   );
   return runTestModules(runtimeFiles, { globalInventory: true });
 }
 
-test("workflow security contracts live in one focused module", async () => {
+test("publishing integrity contracts live in one focused module", async () => {
   const [
     entries,
     monolithSource,
     monolithStats,
-    workflowSecuritySource,
-    workflowSecurityStats
+    publishingIntegritySource,
+    publishingIntegrityStats
   ] = await Promise.all([
     readdir(qualityDirectory, { withFileTypes: true }),
     readFile(path.join(qualityDirectory, monolithFile), "utf8"),
     stat(path.join(qualityDirectory, monolithFile)),
-    readFile(path.join(qualityDirectory, workflowSecurityFile), "utf8"),
-    stat(path.join(qualityDirectory, workflowSecurityFile))
+    readFile(path.join(qualityDirectory, publishingIntegrityFile), "utf8"),
+    stat(path.join(qualityDirectory, publishingIntegrityFile))
   ]);
   const qualityTestFiles = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith(".test.mjs"))
     .map((entry) => entry.name)
     .sort();
   const monolithCanonicalNameCounts = Object.fromEntries(
-    expectedWorkflowSecurityTestNames.map((testName) => [
+    expectedPublishingIntegrityTestNames.map((testName) => [
       testName,
       [...monolithSource.matchAll(new RegExp(JSON.stringify(testName), "g"))].length
     ])
@@ -145,43 +150,43 @@ test("workflow security contracts live in one focused module", async () => {
 
   assert.deepEqual(
     {
-      focusedModulePresent: qualityTestFiles.includes(workflowSecurityFile),
+      focusedModulePresent: qualityTestFiles.includes(publishingIntegrityFile),
       monolithCanonicalNameCounts
     },
     {
       focusedModulePresent: true,
       monolithCanonicalNameCounts: Object.fromEntries(
-        expectedWorkflowSecurityTestNames.map((testName) => [testName, 0])
+        expectedPublishingIntegrityTestNames.map((testName) => [testName, 0])
       )
     },
-    `${workflowSecurityFile} must exclusively own the three canonical workflow security contracts`
+    `${publishingIntegrityFile} must exclusively own the two canonical publishing integrity contracts`
   );
 
-  const runtimeReport = runWorkflowSecurityTests();
+  const runtimeReport = runPublishingIntegrityTests();
   assert.deepEqual(
     runtimeReport.names,
-    expectedWorkflowSecurityTestNames,
-    `${workflowSecurityFile} must retain the exact runtime test-name inventory`
+    expectedPublishingIntegrityTestNames,
+    `${publishingIntegrityFile} must retain the exact runtime test-name inventory`
   );
   assert.deepEqual(
     runtimeReport.summary,
     {
-      tests: expectedWorkflowSecurityTestNames.length,
+      tests: expectedPublishingIntegrityTestNames.length,
       suites: 0,
-      pass: expectedWorkflowSecurityTestNames.length,
+      pass: expectedPublishingIntegrityTestNames.length,
       fail: 0,
       cancelled: 0,
       skipped: 0,
       todo: 0
     },
-    `${workflowSecurityFile} must execute all three contracts without skip or todo`
+    `${publishingIntegrityFile} must execute both contracts without skip or todo`
   );
 
-  const onlyReport = runWorkflowSecurityTests({ only: true });
+  const onlyReport = runPublishingIntegrityTests({ only: true });
   assert.deepEqual(
     onlyReport,
     {
-      names: [path.posix.join("tests", "quality", workflowSecurityFile)],
+      names: [path.posix.join("tests", "quality", publishingIntegrityFile)],
       summary: {
         tests: 1,
         suites: 0,
@@ -192,13 +197,13 @@ test("workflow security contracts live in one focused module", async () => {
         todo: 0
       }
     },
-    `${workflowSecurityFile} must not register test.only or an only option`
+    `${publishingIntegrityFile} must not register test.only or an only option`
   );
 
   if (!globalInventoryChildMode) {
-    const globalReport = runGlobalWorkflowSecurityInventory(qualityTestFiles);
+    const globalReport = runGlobalPublishingIntegrityInventory(qualityTestFiles);
     const globalCounts = Object.fromEntries(
-      expectedWorkflowSecurityTestNames.map((testName) => [
+      expectedPublishingIntegrityTestNames.map((testName) => [
         testName,
         globalReport.names.filter((name) => name === testName).length
       ])
@@ -206,49 +211,51 @@ test("workflow security contracts live in one focused module", async () => {
     assert.deepEqual(
       globalCounts,
       Object.fromEntries(
-        expectedWorkflowSecurityTestNames.map((testName) => [testName, 1])
+        expectedPublishingIntegrityTestNames.map((testName) => [testName, 1])
       ),
-      "canonical workflow security test names must be registered exactly once globally"
+      "canonical publishing integrity test names must be registered exactly once globally"
     );
   }
 
   assert.equal(
     monolithStats.size,
     monolithExpectedBytes,
-    `${monolithFile} must be exactly ${monolithExpectedBytes} bytes at the reviewed workflow security extraction boundary`
+    `${monolithFile} must be exactly ${monolithExpectedBytes} bytes at the reviewed publishing integrity extraction boundary`
   );
   assert.equal(
-    workflowSecurityStats.size,
-    workflowSecurityExpectedBytes,
-    `${workflowSecurityFile} must be exactly ${workflowSecurityExpectedBytes} bytes at the reviewed extraction boundary`
+    publishingIntegrityStats.size,
+    publishingIntegrityExpectedBytes,
+    `${publishingIntegrityFile} must be exactly ${publishingIntegrityExpectedBytes} bytes at the reviewed extraction boundary`
   );
 
-  const bodyStart = workflowSecuritySource.indexOf(workflowSecurityBodyStartMarker);
+  const bodyStart = publishingIntegritySource.indexOf(
+    publishingIntegrityBodyStartMarker
+  );
   assert.notEqual(
     bodyStart,
     -1,
-    `${workflowSecurityFile} must retain the first workflow security test`
+    `${publishingIntegrityFile} must retain the first publishing integrity test`
   );
   assert.equal(
     bodyStart,
-    workflowSecuritySource.lastIndexOf(workflowSecurityBodyStartMarker),
-    `${workflowSecurityFile} must contain one unambiguous workflow security body start`
+    publishingIntegritySource.lastIndexOf(publishingIntegrityBodyStartMarker),
+    `${publishingIntegrityFile} must contain one unambiguous publishing integrity body start`
   );
-  const workflowSecurityHeader = workflowSecuritySource.slice(0, bodyStart);
-  const workflowSecurityBody = workflowSecuritySource.slice(bodyStart);
+  const publishingIntegrityHeader = publishingIntegritySource.slice(0, bodyStart);
+  const publishingIntegrityBody = publishingIntegritySource.slice(bodyStart);
   assert.equal(
-    Buffer.byteLength(workflowSecurityHeader),
-    workflowSecurityBodyStartExpectedBytes,
-    `${workflowSecurityFile} assertion body must start at byte ${workflowSecurityBodyStartExpectedBytes}`
-  );
-  assert.equal(
-    Buffer.byteLength(workflowSecurityBody),
-    workflowSecurityBodyExpectedBytes,
-    `${workflowSecurityFile} assertion body must be exactly ${workflowSecurityBodyExpectedBytes} bytes`
+    Buffer.byteLength(publishingIntegrityHeader),
+    publishingIntegrityBodyStartExpectedBytes,
+    `${publishingIntegrityFile} assertion body must start at byte ${publishingIntegrityBodyStartExpectedBytes}`
   );
   assert.equal(
-    sha256(workflowSecurityBody),
-    workflowSecurityBodyExpectedSha256,
-    `${workflowSecurityFile} assertion body SHA-256 must match the reviewed extraction`
+    Buffer.byteLength(publishingIntegrityBody),
+    publishingIntegrityBodyExpectedBytes,
+    `${publishingIntegrityFile} assertion body must be exactly ${publishingIntegrityBodyExpectedBytes} bytes`
+  );
+  assert.equal(
+    sha256(publishingIntegrityBody),
+    publishingIntegrityBodyExpectedSha256,
+    `${publishingIntegrityFile} assertion body SHA-256 must match the reviewed extraction`
   );
 });
