@@ -41,6 +41,10 @@ const expectedPublicDiscoveryTestNames = [
   "static project summaries preserve canonical primary, source, proof, and fragment access",
   "JoJo deck entries stay distinct and aligned with live deck routes"
 ];
+const requiredOwnershipMutationTestNames = [
+  "public discovery structure guard rejects canonical names leaking into the monolith",
+  "public discovery structure guard rejects adjacent monolith contracts leaking into the focused module"
+];
 const adjacentMonolithTestNames = [
   "JavaScript files are parseable",
   "rejected continuous curiosity field recovery remains absent",
@@ -151,6 +155,22 @@ test("public discovery contracts live in one focused module", async () => {
     .filter((entry) => entry.isFile() && entry.name.endsWith(".test.mjs"))
     .map((entry) => entry.name)
     .sort();
+  const mutationTestNames = [
+    ...mutationGuardSource.matchAll(/^mutationTest\(\n  "([^"]+)",/gm)
+  ].map((match) => match[1]);
+  const requiredOwnershipMutationNameCounts = Object.fromEntries(
+    requiredOwnershipMutationTestNames.map((testName) => [
+      testName,
+      mutationTestNames.filter((name) => name === testName).length
+    ])
+  );
+  assert.deepEqual(
+    requiredOwnershipMutationNameCounts,
+    Object.fromEntries(
+      requiredOwnershipMutationTestNames.map((testName) => [testName, 1])
+    ),
+    `${mutationGuardFile} must register each required executable ownership mutation exactly once`
+  );
   const monolithCanonicalNameCounts = Object.fromEntries(
     expectedPublicDiscoveryTestNames.map((testName) => [
       testName,
