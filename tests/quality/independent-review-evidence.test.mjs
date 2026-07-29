@@ -90,6 +90,21 @@ function runCurrentPullRequestCli(input, head = HEAD) {
   );
 }
 
+function assertMissingEvidence(body) {
+  const input = {
+    reviews: [],
+    comments: [{ body }]
+  };
+
+  assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "missing");
+  assert.equal(collectIndependentReviewEvidence(input, HEAD).length, 0);
+  assert.equal(hasIndependentReviewEvidence(input, HEAD), false);
+
+  const result = runCli(input);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /pass verdict not found/);
+}
+
 test("pass-only comments evidence satisfies the exact-head verdict", () => {
   const input = {
     reviews: [],
@@ -221,6 +236,22 @@ test("legacy markers without a verdict remain unsatisfied", () => {
   const result = runCli(input);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /pass verdict not found/);
+});
+
+test("negated prose cannot satisfy the exact-head verdict", () => {
+  assertMissingEvidence(`まだ ${marker("pass")} を投稿していません`);
+});
+
+test("prohibition prose cannot satisfy the exact-head verdict", () => {
+  assertMissingEvidence(`絶対に ${marker("pass")} と書かないでください`);
+});
+
+test("an inline-code marker cannot satisfy the exact-head verdict", () => {
+  assertMissingEvidence(`Documented syntax: \`${marker("pass")}\``);
+});
+
+test("a fenced-code marker cannot satisfy the exact-head verdict", () => {
+  assertMissingEvidence(["Documentation example:", "```text", marker("pass"), "```"].join("\n"));
 });
 
 test("detached verdict syntax in explanation prose or code cannot satisfy a legacy marker", () => {
