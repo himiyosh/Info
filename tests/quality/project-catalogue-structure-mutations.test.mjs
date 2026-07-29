@@ -15,6 +15,7 @@ import { test } from "node:test";
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const guardFile = "project-catalogue-structure.test.mjs";
+const mutationGuardFile = "project-catalogue-structure-mutations.test.mjs";
 const catalogueFile = "project-catalogue.test.mjs";
 const monolithFile = "site-quality.test.mjs";
 const childProcessEnv = { ...process.env, NO_COLOR: "1" };
@@ -27,11 +28,13 @@ const runtimeFixturePaths = [
   "styles.css",
   "modern.css"
 ];
-const [guardSource, catalogueSource, monolithSource] = await Promise.all([
-  readFile(path.join(qualityDirectory, guardFile), "utf8"),
-  readFile(path.join(qualityDirectory, catalogueFile), "utf8"),
-  readFile(path.join(qualityDirectory, monolithFile), "utf8")
-]);
+const [guardSource, mutationGuardSource, catalogueSource, monolithSource] =
+  await Promise.all([
+    readFile(path.join(qualityDirectory, guardFile), "utf8"),
+    readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
+    readFile(path.join(qualityDirectory, catalogueFile), "utf8"),
+    readFile(path.join(qualityDirectory, monolithFile), "utf8")
+  ]);
 const catalogueTestNames = [
   ...catalogueSource.matchAll(/^test\("([^"]+)",/gm)
 ].map((match) => match[1]);
@@ -76,6 +79,8 @@ async function linkRuntimeFixtures(rootDirectory) {
 async function runGuardMutation({
   catalogue = catalogueSource,
   extraQualityFiles = {},
+  guard = guardSource,
+  mutationGuard = mutationGuardSource,
   monolith = monolithSource
 } = {}) {
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "info-catalogue-guard-"));
@@ -85,7 +90,8 @@ async function runGuardMutation({
     await mkdir(fixtureQualityDirectory, { recursive: true });
     await linkRuntimeFixtures(fixtureRoot);
     await Promise.all([
-      writeFile(path.join(fixtureQualityDirectory, guardFile), guardSource),
+      writeFile(path.join(fixtureQualityDirectory, guardFile), guard),
+      writeFile(path.join(fixtureQualityDirectory, mutationGuardFile), mutationGuard),
       writeFile(path.join(fixtureQualityDirectory, catalogueFile), catalogue),
       writeFile(path.join(fixtureQualityDirectory, monolithFile), monolith),
       ...Object.entries(extraQualityFiles).map(([file, source]) => {
@@ -230,6 +236,46 @@ test("project catalogue structure guard rejects split computed aliased duplicate
         "computed-catalogue-duplicate.test.mjs": computedAliasedDuplicate
       }
     },
+    /canonical catalogue test names must be registered exactly once globally/
+  );
+});
+
+test("project catalogue structure guard rejects nested canonical subtests behind nonmatching wrappers", async () => {
+  const [firstNamePrefix, firstNameSuffix] = catalogueTestNames[0].split(
+    " localization"
+  );
+  const nestedCanonicalDuplicate = [
+    'import { test } from "node:test";',
+    "",
+    'test("unrelated wrapper", async (context) => {',
+    `  const nestedName = ${JSON.stringify(`${firstNamePrefix} `)} + ${JSON.stringify(`localization${firstNameSuffix}`)};`,
+    "  await context.test(nestedName, () => {});",
+    "});",
+    ""
+  ].join("\n");
+  await assertMutationRejected(
+    {
+      extraQualityFiles: {
+        "nested-catalogue-duplicate.test.mjs": nestedCanonicalDuplicate
+      }
+    },
+    /canonical catalogue test names must be registered exactly once globally/
+  );
+});
+
+test("project catalogue structure guard inventories canonical registrations in guard modules", async () => {
+  const [firstNamePrefix, firstNameSuffix] = catalogueTestNames[0].split(
+    " localization"
+  );
+  const guardWithComputedDuplicate = appendSource(
+    guardSource,
+    [
+      `const guardCanonicalName = ${JSON.stringify(`${firstNamePrefix} `)} + ${JSON.stringify(`localization${firstNameSuffix}`)};`,
+      "test(guardCanonicalName, () => {});"
+    ].join("\n")
+  );
+  await assertMutationRejected(
+    { guard: guardWithComputedDuplicate },
     /canonical catalogue test names must be registered exactly once globally/
   );
 });
