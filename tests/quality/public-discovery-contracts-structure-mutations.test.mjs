@@ -14,6 +14,8 @@ import { test } from "node:test";
 
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
+const helperDirectory = path.join(repoRoot, "tests/helpers");
+const boundaryAuthorityFile = "site-quality-boundary.mjs";
 const guardFile = "public-discovery-contracts-structure.test.mjs";
 const mutationGuardFile =
   "public-discovery-contracts-structure-mutations.test.mjs";
@@ -38,11 +40,13 @@ const childProcessEnv = { ...process.env, NO_COLOR: "1" };
 delete childProcessEnv.NODE_TEST_CONTEXT;
 const runtimeFixturePaths = ["index.html", "projects.json"];
 const [
+  boundaryAuthoritySource,
   guardSource,
   mutationGuardSource,
   publicDiscoverySource,
   monolithSource
 ] = await Promise.all([
+  readFile(path.join(helperDirectory, boundaryAuthorityFile), "utf8"),
   readFile(path.join(qualityDirectory, guardFile), "utf8"),
   readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
   readFile(path.join(qualityDirectory, publicDiscoveryFile), "utf8"),
@@ -146,9 +150,13 @@ async function runGuardMutation({
     path.join(os.tmpdir(), "info-public-discovery-guard-")
   );
   const fixtureQualityDirectory = path.join(fixtureRoot, "tests/quality");
+  const fixtureHelperDirectory = path.join(fixtureRoot, "tests/helpers");
 
   try {
-    await mkdir(fixtureQualityDirectory, { recursive: true });
+    await Promise.all([
+      mkdir(fixtureQualityDirectory, { recursive: true }),
+      mkdir(fixtureHelperDirectory, { recursive: true })
+    ]);
     await linkRuntimeFixtures(fixtureRoot);
     await Promise.all([
       writeFile(path.join(fixtureQualityDirectory, guardFile), guard),
@@ -163,6 +171,10 @@ async function runGuardMutation({
       writeFile(
         path.join(fixtureQualityDirectory, monolithFile),
         monolith
+      ),
+      writeFile(
+        path.join(fixtureHelperDirectory, boundaryAuthorityFile),
+        boundaryAuthoritySource
       ),
       ...Object.entries(extraQualityFiles).map(([file, source]) => {
         assert.equal(

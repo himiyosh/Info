@@ -5,6 +5,8 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
+
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const monolithFile = "site-quality.test.mjs";
@@ -15,15 +17,14 @@ const globalInventoryEnvironment = "INFO_PROJECT_CATALOGUE_INVENTORY";
 const globalInventoryEnvironmentValue = "complete-runtime-v1";
 const globalInventoryChildMode =
   process.env[globalInventoryEnvironment] === globalInventoryEnvironmentValue;
-const monolithExpectedBytes = 43_522;
 const catalogueExpectedBytes = 52_002;
 const catalogueBodyStartExpectedBytes = 8_196;
 const catalogueBodyExpectedBytes = 43_806;
 const catalogueBodyExpectedSha256 =
   "d9b94bf0f5f70fdb7fe289aa32f5da411539958825b1602c1e11561feb4a7821";
-const mutationGuardExpectedBytes = 12_145;
+const mutationGuardExpectedBytes = 12_645;
 const mutationGuardExpectedSha256 =
-  "1e0b610d6eca03b349d9d5c65f9a0a23637fd198278fd710606eeb3f34b87e5b";
+  "30c807ebc547c9a0cae5bb7dffbd1c82c7dabe1c3a55479f2dfa3d2bbcfd7b90";
 const expectedCatalogueTestNames = [
   "projects.json schema, localization, links, and preview assets are valid",
   "exactly six live projects expose verified public source actions",
@@ -124,8 +125,8 @@ test("site quality monolith stays below the project catalogue extraction boundar
   const monolithStats = await stat(path.join(qualityDirectory, monolithFile));
   assert.equal(
     monolithStats.size,
-    monolithExpectedBytes,
-    `${monolithFile} must be exactly ${monolithExpectedBytes} bytes at the reviewed extraction boundary`
+    siteQualityExpectedBytes,
+    `${monolithFile} must be exactly ${siteQualityExpectedBytes} bytes at the reviewed extraction boundary`
   );
 });
 

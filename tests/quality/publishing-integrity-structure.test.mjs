@@ -5,6 +5,8 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
+
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const monolithFile = "site-quality.test.mjs";
@@ -23,7 +25,6 @@ const globalInventoryChildMode =
     globalInventoryEnvironmentValue ||
   process.env[publishingIntegrityInventoryEnvironment] ===
     globalInventoryEnvironmentValue;
-const monolithExpectedBytes = 43_522;
 const publishingIntegrityExpectedBytes = 4_245;
 const publishingIntegrityBodyStartExpectedBytes = 981;
 const publishingIntegrityBodyExpectedBytes = 3_264;
@@ -219,8 +220,8 @@ test("publishing integrity contracts live in one focused module", async () => {
 
   assert.equal(
     monolithStats.size,
-    monolithExpectedBytes,
-    `${monolithFile} must be exactly ${monolithExpectedBytes} bytes at the reviewed publishing integrity extraction boundary`
+    siteQualityExpectedBytes,
+    `${monolithFile} must be exactly ${siteQualityExpectedBytes} bytes at the reviewed publishing integrity extraction boundary`
   );
   assert.equal(
     publishingIntegrityStats.size,

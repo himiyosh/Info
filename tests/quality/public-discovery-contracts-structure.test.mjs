@@ -5,6 +5,8 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
+
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const monolithFile = "site-quality.test.mjs";
@@ -25,7 +27,6 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const monolithExpectedBytes = 43_522;
 const publicDiscoveryExpectedBytes = 4_993;
 const publicDiscoveryBodyStartExpectedBytes = 273;
 const publicDiscoveryHeaderExpectedSha256 =
@@ -33,9 +34,9 @@ const publicDiscoveryHeaderExpectedSha256 =
 const publicDiscoveryBodyExpectedBytes = 4_720;
 const publicDiscoveryBodyExpectedSha256 =
   "c29e8f3a93bff0d813f57d1d36072bcca00d78cd3a8ad1a93a0c41726ac9f802";
-const mutationGuardExpectedBytes = 15_048;
+const mutationGuardExpectedBytes = 15_550;
 const mutationGuardExpectedSha256 =
-  "37afe4507a4395e87b13d527d96f5d0ba20a05a6ee02f22b6fb9c7e0b8c5e1a4";
+  "7063ffd4899a58691fc0e9999534dae6b735f248d55484e5c125f4e38fc4b85a";
 const expectedPublicDiscoveryTestNames = [
   "required SEO and social metadata exist and are consistent",
   "static project summaries preserve canonical primary, source, proof, and fragment access",
@@ -287,8 +288,8 @@ test("public discovery contracts live in one focused module", async () => {
 
   assert.equal(
     monolithStats.size,
-    monolithExpectedBytes,
-    `${monolithFile} must be exactly ${monolithExpectedBytes} bytes at the reviewed public discovery extraction boundary`
+    siteQualityExpectedBytes,
+    `${monolithFile} must be exactly ${siteQualityExpectedBytes} bytes at the reviewed public discovery extraction boundary`
   );
   assert.equal(
     publicDiscoveryStats.size,

@@ -5,6 +5,8 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
+
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const monolithFile = "site-quality.test.mjs";
@@ -26,7 +28,6 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const monolithExpectedBytes = 43_522;
 const baselineMotionSafetyExpectedBytes = 5_142;
 const baselineMotionSafetyBodyStartExpectedBytes = 273;
 const baselineMotionSafetyHeaderExpectedSha256 =
@@ -34,9 +35,9 @@ const baselineMotionSafetyHeaderExpectedSha256 =
 const baselineMotionSafetyBodyExpectedBytes = 4_869;
 const baselineMotionSafetyBodyExpectedSha256 =
   "5c16a1a1b158abab2d2c0c7e17fbbd001e2daedeadab7dadc19a6f5f4b050360";
-const mutationGuardExpectedBytes = 15_878;
+const mutationGuardExpectedBytes = 16_380;
 const mutationGuardExpectedSha256 =
-  "c9987448ab956e3f137f32bdecac73f0556eb215c3968e2ed35fefa8c86642fa";
+  "ff71da4c5443f64db00e8156f6ccc4f2330d242cf7d96599019e9580c48eb7f0";
 const expectedBaselineMotionSafetyTestNames = [
   "hero image has no entrance animation and decorative keyframes are removed",
   "contact link hover transitions do not animate layout properties",
@@ -317,8 +318,8 @@ test("baseline motion safety contracts live in one focused module", async () => 
 
   assert.equal(
     monolithStats.size,
-    monolithExpectedBytes,
-    `${monolithFile} must be exactly ${monolithExpectedBytes} bytes at the reviewed baseline motion-safety extraction boundary`
+    siteQualityExpectedBytes,
+    `${monolithFile} must be exactly ${siteQualityExpectedBytes} bytes at the reviewed baseline motion-safety extraction boundary`
   );
   assert.equal(
     baselineMotionSafetyStats.size,

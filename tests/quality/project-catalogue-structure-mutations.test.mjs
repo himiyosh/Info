@@ -14,6 +14,8 @@ import { test } from "node:test";
 
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
+const helperDirectory = path.join(repoRoot, "tests/helpers");
+const boundaryAuthorityFile = "site-quality-boundary.mjs";
 const guardFile = "project-catalogue-structure.test.mjs";
 const mutationGuardFile = "project-catalogue-structure-mutations.test.mjs";
 const catalogueFile = "project-catalogue.test.mjs";
@@ -31,13 +33,19 @@ const runtimeFixturePaths = [
   "styles.css",
   "modern.css"
 ];
-const [guardSource, mutationGuardSource, catalogueSource, monolithSource] =
-  await Promise.all([
-    readFile(path.join(qualityDirectory, guardFile), "utf8"),
-    readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
-    readFile(path.join(qualityDirectory, catalogueFile), "utf8"),
-    readFile(path.join(qualityDirectory, monolithFile), "utf8")
-  ]);
+const [
+  boundaryAuthoritySource,
+  guardSource,
+  mutationGuardSource,
+  catalogueSource,
+  monolithSource
+] = await Promise.all([
+  readFile(path.join(helperDirectory, boundaryAuthorityFile), "utf8"),
+  readFile(path.join(qualityDirectory, guardFile), "utf8"),
+  readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
+  readFile(path.join(qualityDirectory, catalogueFile), "utf8"),
+  readFile(path.join(qualityDirectory, monolithFile), "utf8")
+]);
 const catalogueTestNames = [
   ...catalogueSource.matchAll(/^test\("([^"]+)",/gm)
 ].map((match) => match[1]);
@@ -92,15 +100,23 @@ async function runGuardMutation({
 } = {}) {
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "info-catalogue-guard-"));
   const fixtureQualityDirectory = path.join(fixtureRoot, "tests/quality");
+  const fixtureHelperDirectory = path.join(fixtureRoot, "tests/helpers");
 
   try {
-    await mkdir(fixtureQualityDirectory, { recursive: true });
+    await Promise.all([
+      mkdir(fixtureQualityDirectory, { recursive: true }),
+      mkdir(fixtureHelperDirectory, { recursive: true })
+    ]);
     await linkRuntimeFixtures(fixtureRoot);
     await Promise.all([
       writeFile(path.join(fixtureQualityDirectory, guardFile), guard),
       writeFile(path.join(fixtureQualityDirectory, mutationGuardFile), mutationGuard),
       writeFile(path.join(fixtureQualityDirectory, catalogueFile), catalogue),
       writeFile(path.join(fixtureQualityDirectory, monolithFile), monolith),
+      writeFile(
+        path.join(fixtureHelperDirectory, boundaryAuthorityFile),
+        boundaryAuthoritySource
+      ),
       ...Object.entries(extraQualityFiles).map(([file, source]) => {
         assert.equal(path.basename(file), file, "Extra quality fixtures must use a file name");
         assert.ok(file.endsWith(".test.mjs"), "Extra quality fixtures must be test modules");
