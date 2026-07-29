@@ -26,7 +26,7 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const monolithExpectedBytes = 48_391;
+const monolithExpectedBytes = 43_522;
 const assetIntegrityExpectedBytes = 11_612;
 const assetIntegrityBodyStartExpectedBytes = 5_148;
 const assetIntegrityHeaderExpectedSha256 =
@@ -37,16 +37,16 @@ const assetIntegrityBodyExpectedSha256 =
 const sharedHelperExpectedBytes = 457;
 const sharedHelperExpectedSha256 =
   "6648599f751d88c67bbf4d481b5d1817260c13fcd030f521aa6ea1e71fcd6492";
-const mutationGuardExpectedBytes = 13_054;
+const mutationGuardExpectedBytes = 12_805;
 const mutationGuardExpectedSha256 =
-  "4a9f819ed4ef981af471c9abe7b5ea5a28530deac9cb70ecbb964bb6bc102c2b";
+  "f737bb45e8cec521e68236294773bc84238a8b992157d125e94d19c6d318c4ab";
 const expectedAssetIntegrityTestNames = [
   "all referenced local files exist",
   "preview assets are not stale or orphaned",
   "removed legacy particles file is not referenced",
   "hero image keeps an eager JPEG fallback and responsive assets match their descriptors"
 ];
-const adjacentHeroAnimationTestName =
+const extractedHeroAnimationTestName =
   "hero image has no entrance animation and decorative keyframes are removed";
 const assetIntegrityBodyStartMarker = `test(${JSON.stringify(expectedAssetIntegrityTestNames[0])}`;
 const junitSummaryKeys = [
@@ -182,20 +182,20 @@ test("asset integrity contracts live in one focused module", async () => {
     {
       monolithCount: [
         ...monolithSource.matchAll(
-          new RegExp(JSON.stringify(adjacentHeroAnimationTestName), "g")
+          new RegExp(JSON.stringify(extractedHeroAnimationTestName), "g")
         )
       ].length,
       focusedModuleCount: [
         ...assetIntegritySource.matchAll(
-          new RegExp(JSON.stringify(adjacentHeroAnimationTestName), "g")
+          new RegExp(JSON.stringify(extractedHeroAnimationTestName), "g")
         )
       ].length
     },
     {
-      monolithCount: 1,
+      monolithCount: 0,
       focusedModuleCount: 0
     },
-    "the adjacent hero animation contract must remain exclusively in the monolith"
+    "the extracted hero animation contract must remain outside the asset integrity module and monolith"
   );
 
   const runtimeReport = runAssetIntegrityTests();

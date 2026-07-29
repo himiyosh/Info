@@ -23,7 +23,7 @@ const globalInventoryChildMode =
     globalInventoryEnvironmentValue ||
   process.env[publishingIntegrityInventoryEnvironment] ===
     globalInventoryEnvironmentValue;
-const monolithExpectedBytes = 48_391;
+const monolithExpectedBytes = 43_522;
 const publishingIntegrityExpectedBytes = 4_245;
 const publishingIntegrityBodyStartExpectedBytes = 981;
 const publishingIntegrityBodyExpectedBytes = 3_264;

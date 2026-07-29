@@ -25,7 +25,7 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const monolithExpectedBytes = 48_391;
+const monolithExpectedBytes = 43_522;
 const publicDiscoveryExpectedBytes = 4_993;
 const publicDiscoveryBodyStartExpectedBytes = 273;
 const publicDiscoveryHeaderExpectedSha256 =
@@ -35,7 +35,7 @@ const publicDiscoveryBodyExpectedSha256 =
   "c29e8f3a93bff0d813f57d1d36072bcca00d78cd3a8ad1a93a0c41726ac9f802";
 const mutationGuardExpectedBytes = 15_048;
 const mutationGuardExpectedSha256 =
-  "7cf564870aa6d58d12443f36db2276f123e16b3fa7ea2c077b3d30d8f30b1a36";
+  "37afe4507a4395e87b13d527d96f5d0ba20a05a6ee02f22b6fb9c7e0b8c5e1a4";
 const expectedPublicDiscoveryTestNames = [
   "required SEO and social metadata exist and are consistent",
   "static project summaries preserve canonical primary, source, proof, and fragment access",

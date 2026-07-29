@@ -14,10 +14,10 @@ import { test } from "node:test";
 
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
-const guardFile = "public-discovery-contracts-structure.test.mjs";
+const guardFile = "baseline-motion-safety-structure.test.mjs";
 const mutationGuardFile =
-  "public-discovery-contracts-structure-mutations.test.mjs";
-const publicDiscoveryFile = "public-discovery-contracts.test.mjs";
+  "baseline-motion-safety-structure-mutations.test.mjs";
+const baselineMotionSafetyFile = "baseline-motion-safety.test.mjs";
 const monolithFile = "site-quality.test.mjs";
 const globalInventoryEnvironments = [
   "INFO_WORKFLOW_SECURITY_INVENTORY",
@@ -26,7 +26,8 @@ const globalInventoryEnvironments = [
   "INFO_PUBLISHING_INTEGRITY_INVENTORY",
   "INFO_MOBILE_NAVIGATION_INVENTORY",
   "INFO_ASSET_INTEGRITY_INVENTORY",
-  "INFO_PUBLIC_DISCOVERY_INVENTORY"
+  "INFO_PUBLIC_DISCOVERY_INVENTORY",
+  "INFO_BASELINE_MOTION_SAFETY_INVENTORY"
 ];
 const globalInventoryEnvironmentValue = "complete-runtime-v1";
 const globalInventoryChildMode = globalInventoryEnvironments.some(
@@ -36,52 +37,52 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
 const mutationTest = globalInventoryChildMode ? test.skip : test;
 const childProcessEnv = { ...process.env, NO_COLOR: "1" };
 delete childProcessEnv.NODE_TEST_CONTEXT;
-const runtimeFixturePaths = ["index.html", "projects.json"];
+const runtimeFixturePaths = ["script.js", "styles.css"];
 const [
   guardSource,
   mutationGuardSource,
-  publicDiscoverySource,
+  baselineMotionSafetySource,
   monolithSource
 ] = await Promise.all([
   readFile(path.join(qualityDirectory, guardFile), "utf8"),
   readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
-  readFile(path.join(qualityDirectory, publicDiscoveryFile), "utf8"),
+  readFile(path.join(qualityDirectory, baselineMotionSafetyFile), "utf8"),
   readFile(path.join(qualityDirectory, monolithFile), "utf8")
 ]);
-const publicDiscoveryTestNames = [
-  ...publicDiscoverySource.matchAll(/^test\("([^"]+)",/gm)
+const baselineMotionSafetyTestNames = [
+  ...baselineMotionSafetySource.matchAll(/^test\("([^"]+)",/gm)
 ].map((match) => match[1]);
-const publicDiscoveryBodyStart = publicDiscoverySource.indexOf(
-  `test(${JSON.stringify(publicDiscoveryTestNames[0])}`
+const baselineMotionSafetyBodyStart = baselineMotionSafetySource.indexOf(
+  `test(${JSON.stringify(baselineMotionSafetyTestNames[0])}`
 );
-const publicDiscoveryHeader = publicDiscoverySource.slice(
+const baselineMotionSafetyHeader = baselineMotionSafetySource.slice(
   0,
-  publicDiscoveryBodyStart
+  baselineMotionSafetyBodyStart
 );
-const publicDiscoveryBodyBytes =
-  Buffer.byteLength(publicDiscoverySource) - publicDiscoveryBodyStart;
+const baselineMotionSafetyBodyBytes =
+  Buffer.byteLength(baselineMotionSafetySource) -
+  baselineMotionSafetyBodyStart;
 const adjacentMonolithTestNames = [
-  "JavaScript files are parseable",
-  "rejected continuous curiosity field recovery remains absent",
-  "new-tab links include bilingual accessibility announcement text"
+  "index.html IDs are unique and internal anchors are valid",
+  "Japanese hero keeps each supplied phrase intact before the narrow emergency override"
 ];
 
 assert.equal(
-  publicDiscoveryTestNames.length,
+  baselineMotionSafetyTestNames.length,
   3,
   "Mutation fixtures require the fixed three-test inventory"
 );
 assert.notEqual(
-  publicDiscoveryBodyStart,
+  baselineMotionSafetyBodyStart,
   -1,
-  "Mutation fixtures require the public discovery body boundary"
+  "Mutation fixtures require the baseline motion-safety body boundary"
 );
 const monolithFixtureSource = padWithComment(
   [
     'import { test } from "node:test";',
     "",
     ...adjacentMonolithTestNames.map(
-      (name) => `test(${JSON.stringify(name)}, () => {});`
+      (testName) => `test(${JSON.stringify(testName)}, () => {});`
     ),
     ""
   ].join("\n"),
@@ -112,7 +113,8 @@ function padWithComment(source, targetBytes) {
 }
 
 function replaceOncePreservingBytes(source, marker, replacement) {
-  const remainingBytes = Buffer.byteLength(marker) - Buffer.byteLength(replacement);
+  const remainingBytes =
+    Buffer.byteLength(marker) - Buffer.byteLength(replacement);
   assert.ok(
     remainingBytes >= 0,
     "Mutation replacement must not exceed its reviewed marker"
@@ -136,14 +138,13 @@ async function linkRuntimeFixtures(rootDirectory) {
 }
 
 async function runGuardMutation({
+  baselineMotionSafety = baselineMotionSafetySource,
   extraQualityFiles = {},
-  guard = guardSource,
-  monolith = monolithFixtureSource,
   mutationGuard = mutationGuardSource,
-  publicDiscovery = publicDiscoverySource
+  monolith = monolithFixtureSource
 } = {}) {
   const fixtureRoot = await mkdtemp(
-    path.join(os.tmpdir(), "info-public-discovery-guard-")
+    path.join(os.tmpdir(), "info-baseline-motion-safety-guard-")
   );
   const fixtureQualityDirectory = path.join(fixtureRoot, "tests/quality");
 
@@ -151,14 +152,14 @@ async function runGuardMutation({
     await mkdir(fixtureQualityDirectory, { recursive: true });
     await linkRuntimeFixtures(fixtureRoot);
     await Promise.all([
-      writeFile(path.join(fixtureQualityDirectory, guardFile), guard),
+      writeFile(path.join(fixtureQualityDirectory, guardFile), guardSource),
       writeFile(
         path.join(fixtureQualityDirectory, mutationGuardFile),
         mutationGuard
       ),
       writeFile(
-        path.join(fixtureQualityDirectory, publicDiscoveryFile),
-        publicDiscovery
+        path.join(fixtureQualityDirectory, baselineMotionSafetyFile),
+        baselineMotionSafety
       ),
       writeFile(
         path.join(fixtureQualityDirectory, monolithFile),
@@ -209,7 +210,7 @@ async function assertMutationRejected(mutation, expectedMessage) {
 }
 
 mutationTest(
-  "public discovery structure guard accepts the reviewed unchanged extraction",
+  "baseline motion safety structure guard accepts the reviewed unchanged extraction",
   async () => {
     const result = await runGuardMutation();
     assert.equal(result.status, 0, result.output);
@@ -217,14 +218,14 @@ mutationTest(
 );
 
 mutationTest(
-  "public discovery structure guard rejects canonical names leaking into the monolith",
+  "baseline motion safety structure guard rejects canonical names leaking into the monolith",
   async () => {
     const paddingStart = monolithFixtureSource.lastIndexOf("/*");
     assert.notEqual(paddingStart, -1, "Monolith fixture must retain its padding");
     const canonicalNameLeak = padWithComment(
       [
         monolithFixtureSource.slice(0, paddingStart),
-        `const leakedCanonicalName = ${JSON.stringify(publicDiscoveryTestNames[0])};`,
+        `const leakedCanonicalName = ${JSON.stringify(baselineMotionSafetyTestNames[0])};`,
         ""
       ].join("\n"),
       Buffer.byteLength(monolithFixtureSource)
@@ -235,117 +236,105 @@ mutationTest(
     );
     await assertMutationRejected(
       { monolith: canonicalNameLeak },
-      /must exclusively own the three canonical public discovery contracts/
+      /must exclusively own the three canonical baseline motion-safety contracts/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects adjacent monolith contracts leaking into the focused module",
+  "baseline motion safety structure guard rejects adjacent monolith contracts leaking into the focused module",
   async () => {
     const reviewedAssertionMessage = JSON.stringify(
-      "Static summary primary actions must exactly match the canonical project destinations"
+      "Reveal priming must be gated on both reduced-motion and IntersectionObserver support, re-evaluated per render"
     );
     const adjacentContractLeak = replaceOncePreservingBytes(
-      publicDiscoverySource,
+      baselineMotionSafetySource,
       reviewedAssertionMessage,
       JSON.stringify(adjacentMonolithTestNames[0])
     );
     assert.equal(
       Buffer.byteLength(adjacentContractLeak),
-      Buffer.byteLength(publicDiscoverySource)
+      Buffer.byteLength(baselineMotionSafetySource)
     );
     await assertMutationRejected(
-      { publicDiscovery: adjacentContractLeak },
-      /adjacent JavaScript, rejected-experiment, and new-tab contracts must remain exclusively in the monolith/
+      { baselineMotionSafety: adjacentContractLeak },
+      /adjacent ID-anchor and Japanese-hero contracts must remain exclusively in the monolith/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects computed duplicate registrations",
+  "baseline motion safety structure guard rejects computed duplicate registrations",
   async () => {
     const duplicateRegistration = appendSource(
-      publicDiscoverySource,
+      baselineMotionSafetySource,
       [
-        `const duplicatePublicDiscoveryName = ${JSON.stringify(publicDiscoveryTestNames[0])};`,
-        "test(duplicatePublicDiscoveryName, () => {});"
+        `const duplicateMotionSafetyName = ${JSON.stringify(baselineMotionSafetyTestNames[0])};`,
+        "test(duplicateMotionSafetyName, () => {});"
       ].join("\n")
     );
     await assertMutationRejected(
-      { publicDiscovery: duplicateRegistration },
+      { baselineMotionSafety: duplicateRegistration },
       /exact runtime test-name inventory/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects dynamic test registrations",
+  "baseline motion safety structure guard rejects dynamically assembled duplicate registrations",
   async () => {
-    const dynamicRegistration = appendSource(
-      publicDiscoverySource,
+    const [namePrefix, nameSuffix] =
+      baselineMotionSafetyTestNames[1].split(" transitions");
+    const dynamicDuplicate = appendSource(
+      baselineMotionSafetySource,
       [
-        'const dynamicPublicDiscoveryName = ["dynamic", "public", "discovery", "contract"].join(" ");',
-        "test(dynamicPublicDiscoveryName, () => {});"
+        `const dynamicMotionSafetyName = ${JSON.stringify(namePrefix)} + ${JSON.stringify(` transitions${nameSuffix}`)};`,
+        "test(dynamicMotionSafetyName, () => {});"
       ].join("\n")
     );
     await assertMutationRejected(
-      { publicDiscovery: dynamicRegistration },
+      { baselineMotionSafety: dynamicDuplicate },
       /exact runtime test-name inventory/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects hidden global duplicates",
+  "baseline motion safety structure guard rejects hidden global duplicates",
   async () => {
-    const [namePrefix, nameSuffix] = publicDiscoveryTestNames[0].split(
-      " social metadata"
-    );
+    const hiddenName = baselineMotionSafetyTestNames[2];
+    const separator = " and ";
+    const separatorIndex = hiddenName.indexOf(separator);
+    assert.notEqual(separatorIndex, -1, "Hidden duplicate needs a split point");
+    const namePrefix = hiddenName.slice(0, separatorIndex);
+    const nameSuffix = hiddenName.slice(separatorIndex + separator.length);
     const hiddenDuplicate = [
       'import { test as registerTest } from "node:test";',
       "",
-      `const canonicalName = ${JSON.stringify(`${namePrefix} `)} + ${JSON.stringify(`social metadata${nameSuffix}`)};`,
-      "registerTest(canonicalName, () => {});",
+      `const hiddenMotionSafetyName = ${JSON.stringify(`${namePrefix} and`)} + ${JSON.stringify(` ${nameSuffix}`)};`,
+      "registerTest(hiddenMotionSafetyName, () => {});",
       ""
     ].join("\n");
     await assertMutationRejected(
       {
         extraQualityFiles: {
-          "hidden-public-discovery-duplicate.test.mjs": hiddenDuplicate
+          "hidden-baseline-motion-safety-duplicate.test.mjs": hiddenDuplicate
         }
       },
-      /canonical public discovery test names must be registered exactly once globally/
+      /canonical baseline motion-safety test names must be registered exactly once globally/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects runtime-disabled canonical contracts",
+  "baseline motion safety structure guard rejects skipped canonical contracts",
   async () => {
     const firstRegistration =
-      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
-    const runtimeDisabled = replaceOnce(
-      publicDiscoverySource,
-      firstRegistration,
-      `${firstRegistration.slice(0, -"() => {".length)}(context) => {\n  context.skip("mutation");\n  return;`
-    );
-    await assertMutationRejected(
-      { publicDiscovery: runtimeDisabled },
-      /must execute all three contracts without skip or todo/
-    );
-  }
-);
-
-mutationTest(
-  "public discovery structure guard rejects skipped canonical contracts",
-  async () => {
-    const firstRegistration =
-      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
+      `test(${JSON.stringify(baselineMotionSafetyTestNames[0])}, async () => {`;
     await assertMutationRejected(
       {
-        publicDiscovery: replaceOnce(
-          publicDiscoverySource,
+        baselineMotionSafety: replaceOnce(
+          baselineMotionSafetySource,
           firstRegistration,
           firstRegistration.replace("test(", "test.skip(")
         )
@@ -356,14 +345,14 @@ mutationTest(
 );
 
 mutationTest(
-  "public discovery structure guard rejects todo canonical contracts",
+  "baseline motion safety structure guard rejects todo canonical contracts",
   async () => {
     const firstRegistration =
-      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
+      `test(${JSON.stringify(baselineMotionSafetyTestNames[0])}, async () => {`;
     await assertMutationRejected(
       {
-        publicDiscovery: replaceOnce(
-          publicDiscoverySource,
+        baselineMotionSafety: replaceOnce(
+          baselineMotionSafetySource,
           firstRegistration,
           firstRegistration.replace("test(", "test.todo(")
         )
@@ -374,14 +363,14 @@ mutationTest(
 );
 
 mutationTest(
-  "public discovery structure guard rejects exclusive canonical contracts",
+  "baseline motion safety structure guard rejects exclusive canonical contracts",
   async () => {
     const firstRegistration =
-      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
+      `test(${JSON.stringify(baselineMotionSafetyTestNames[0])}, async () => {`;
     await assertMutationRejected(
       {
-        publicDiscovery: replaceOnce(
-          publicDiscoverySource,
+        baselineMotionSafety: replaceOnce(
+          baselineMotionSafetySource,
           firstRegistration,
           firstRegistration.replace("test(", "test.only(")
         )
@@ -392,17 +381,37 @@ mutationTest(
 );
 
 mutationTest(
-  "public discovery structure guard rejects focused-module padding",
+  "baseline motion safety structure guard rejects runtime-disabled canonical contracts",
   async () => {
+    const firstRegistration =
+      `test(${JSON.stringify(baselineMotionSafetyTestNames[0])}, async () => {`;
+    const disabledRegistration =
+      `test(${JSON.stringify(baselineMotionSafetyTestNames[0])}, { skip: true }, async () => {`;
     await assertMutationRejected(
-      { publicDiscovery: `${publicDiscoverySource} ` },
-      /public-discovery-contracts\.test\.mjs must be exactly 4993 bytes/
+      {
+        baselineMotionSafety: replaceOnce(
+          baselineMotionSafetySource,
+          firstRegistration,
+          disabledRegistration
+        )
+      },
+      /must execute all three contracts without skip or todo/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects monolith padding",
+  "baseline motion safety structure guard rejects focused-module padding",
+  async () => {
+    await assertMutationRejected(
+      { baselineMotionSafety: `${baselineMotionSafetySource} ` },
+      /baseline-motion-safety\.test\.mjs must be exactly 5142 bytes/
+    );
+  }
+);
+
+mutationTest(
+  "baseline motion safety structure guard rejects monolith padding",
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
@@ -412,63 +421,63 @@ mutationTest(
 );
 
 mutationTest(
-  "public discovery structure guard rejects a same-length inert header wrapper",
+  "baseline motion safety structure guard rejects a same-length inert header wrapper",
   async () => {
     const inertHeader = `${padWithComment(
       'import { test as t } from "node:test"; const test=(name)=>t(name,()=>{});\n',
-      publicDiscoveryBodyStart - 1
+      baselineMotionSafetyBodyStart - 1
     )}\n`;
     const headerWrapperBypass =
-      `${inertHeader}${publicDiscoverySource.slice(publicDiscoveryBodyStart)}`;
+      `${inertHeader}${baselineMotionSafetySource.slice(baselineMotionSafetyBodyStart)}`;
 
     assert.equal(
       Buffer.byteLength(headerWrapperBypass),
-      Buffer.byteLength(publicDiscoverySource)
+      Buffer.byteLength(baselineMotionSafetySource)
     );
     assert.equal(
-      headerWrapperBypass.slice(publicDiscoveryBodyStart),
-      publicDiscoverySource.slice(publicDiscoveryBodyStart)
+      headerWrapperBypass.slice(baselineMotionSafetyBodyStart),
+      baselineMotionSafetySource.slice(baselineMotionSafetyBodyStart)
     );
 
     await assertMutationRejected(
-      { publicDiscovery: headerWrapperBypass },
-      /public-discovery-contracts\.test\.mjs header SHA-256 must match the reviewed extraction/
+      { baselineMotionSafety: headerWrapperBypass },
+      /baseline-motion-safety\.test\.mjs header SHA-256 must match the reviewed extraction/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects empty stubs plus unrelated extraction",
+  "baseline motion safety structure guard rejects empty stubs plus unrelated extraction",
   async () => {
     const stubBody = [
-      ...publicDiscoveryTestNames.map(
+      ...baselineMotionSafetyTestNames.map(
         (name) => `test(${JSON.stringify(name)}, () => {});`
       ),
       "",
-      "const unrelatedNewTabAccessibilityExtraction = true;",
+      "const unrelatedContactMotionExtraction = true;",
       ""
     ].join("\n");
     const unrelatedExtraction =
-      `${publicDiscoveryHeader}${padWithComment(stubBody, publicDiscoveryBodyBytes)}`;
+      `${baselineMotionSafetyHeader}${padWithComment(stubBody, baselineMotionSafetyBodyBytes)}`;
 
     assert.equal(
       Buffer.byteLength(unrelatedExtraction),
-      Buffer.byteLength(publicDiscoverySource)
+      Buffer.byteLength(baselineMotionSafetySource)
     );
 
     await assertMutationRejected(
-      { publicDiscovery: unrelatedExtraction },
+      { baselineMotionSafety: unrelatedExtraction },
       /assertion body SHA-256/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard binds skipped mutation callbacks",
+  "baseline motion safety structure guard binds skipped mutation callbacks",
   async () => {
     const wrapperMarker = [
       "mutationTest(",
-      '  "public discovery structure guard accepts the reviewed unchanged extraction",',
+      '  "baseline motion safety structure guard accepts the reviewed unchanged extraction",',
       "  async () => {",
       "    const result = await runGuardMutation();"
     ].join("\n");
@@ -479,7 +488,7 @@ mutationTest(
         .replace("async ()", "async (context)")
         .replace(
           "\n    const result",
-          "\n    const hiddenCanonicalName = publicDiscoveryTestNames[0].slice(0);" +
+          "\n    const hiddenCanonicalName = baselineMotionSafetyTestNames[0].slice(0);" +
             "\n    await context.test(hiddenCanonicalName, () => {});" +
             "\n    const result"
         )
