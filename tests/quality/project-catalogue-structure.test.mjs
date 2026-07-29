@@ -21,6 +21,9 @@ const catalogueBodyStartExpectedBytes = 8_196;
 const catalogueBodyExpectedBytes = 43_806;
 const catalogueBodyExpectedSha256 =
   "d9b94bf0f5f70fdb7fe289aa32f5da411539958825b1602c1e11561feb4a7821";
+const mutationGuardExpectedBytes = 12_145;
+const mutationGuardExpectedSha256 =
+  "320f4a78e6e68c44d8b77cc82cf5f3060f4044158b94e6fa7f62550c6a98d7d9";
 const expectedCatalogueTestNames = [
   "projects.json schema, localization, links, and preview assets are valid",
   "exactly six live projects expose verified public source actions",
@@ -142,6 +145,10 @@ test("project catalogue tests live in one focused bounded module", async () => {
     path.join(qualityDirectory, catalogueFile),
     "utf8"
   );
+  const mutationGuardSource = await readFile(
+    path.join(qualityDirectory, mutationGuardFile),
+    "utf8"
+  );
   const catalogueStats = await stat(path.join(qualityDirectory, catalogueFile));
   const runtimeReport = runCatalogueTests();
 
@@ -180,6 +187,17 @@ test("project catalogue tests live in one focused bounded module", async () => {
       }
     },
     `${catalogueFile} must not register test.only or an only option`
+  );
+
+  assert.equal(
+    sha256(mutationGuardSource),
+    mutationGuardExpectedSha256,
+    `${mutationGuardFile} mutation guard source SHA-256 must match the reviewed fixture`
+  );
+  assert.equal(
+    Buffer.byteLength(mutationGuardSource),
+    mutationGuardExpectedBytes,
+    `${mutationGuardFile} must be exactly ${mutationGuardExpectedBytes} bytes`
   );
 
   if (!globalInventoryChildMode) {
