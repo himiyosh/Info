@@ -73,9 +73,6 @@ const assetIntegrityHeader = assetIntegritySource.slice(
 );
 const assetIntegrityBodyBytes =
   Buffer.byteLength(assetIntegritySource) - assetIntegrityBodyStart;
-const adjacentHeroAnimationTestName =
-  "hero image has no entrance animation and decorative keyframes are removed";
-
 assert.equal(
   assetIntegrityTestNames.length,
   4,
@@ -87,12 +84,7 @@ assert.notEqual(
   "Mutation fixtures require the asset integrity body boundary"
 );
 const monolithFixtureSource = padWithComment(
-  [
-    'import { test } from "node:test";',
-    "",
-    `test(${JSON.stringify(adjacentHeroAnimationTestName)}, () => {});`,
-    ""
-  ].join("\n"),
+  "export {};\n",
   Buffer.byteLength(monolithSource)
 );
 
@@ -346,7 +338,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
-      /site-quality\.test\.mjs must be exactly 48391 bytes/
+      /site-quality\.test\.mjs must be exactly 43522 bytes/
     );
   }
 );
