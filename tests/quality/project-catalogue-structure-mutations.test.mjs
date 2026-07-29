@@ -18,6 +18,9 @@ const guardFile = "project-catalogue-structure.test.mjs";
 const mutationGuardFile = "project-catalogue-structure-mutations.test.mjs";
 const catalogueFile = "project-catalogue.test.mjs";
 const monolithFile = "site-quality.test.mjs";
+const globalInventoryChildMode =
+  process.env.INFO_PROJECT_CATALOGUE_INVENTORY === "complete-runtime-v1";
+const mutationTest = globalInventoryChildMode ? test.skip : test;
 const childProcessEnv = { ...process.env, NO_COLOR: "1" };
 delete childProcessEnv.NODE_TEST_CONTEXT;
 const runtimeFixturePaths = [
@@ -44,6 +47,10 @@ const catalogueBodyStart = catalogueSource.indexOf(
 
 assert.equal(catalogueTestNames.length, 11, "Mutation fixtures require the fixed 11-test inventory");
 assert.notEqual(catalogueBodyStart, -1, "Mutation fixtures require the catalogue body boundary");
+const monolithFixtureSource = padWithComment(
+  "export {};\n",
+  Buffer.byteLength(monolithSource)
+);
 
 function appendSource(source, addition) {
   return `${source.trimEnd()}\n\n${addition}\n`;
@@ -81,7 +88,7 @@ async function runGuardMutation({
   extraQualityFiles = {},
   guard = guardSource,
   mutationGuard = mutationGuardSource,
-  monolith = monolithSource
+  monolith = monolithFixtureSource
 } = {}) {
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "info-catalogue-guard-"));
   const fixtureQualityDirectory = path.join(fixtureRoot, "tests/quality");
@@ -131,12 +138,12 @@ async function assertMutationRejected(mutation, expectedMessage) {
   assert.match(result.output, expectedMessage);
 }
 
-test("project catalogue structure guard accepts the reviewed unchanged extraction", async () => {
+mutationTest("project catalogue structure guard accepts the reviewed unchanged extraction", async () => {
   const result = await runGuardMutation();
   assert.equal(result.status, 0, result.output);
 });
 
-test("project catalogue structure guard rejects spaced test registrations", async () => {
+mutationTest("project catalogue structure guard rejects spaced test registrations", async () => {
   const spacedDuplicate = appendSource(
     catalogueSource,
     `test (${JSON.stringify(catalogueTestNames[0])}, () => {});`
@@ -147,7 +154,7 @@ test("project catalogue structure guard rejects spaced test registrations", asyn
   );
 });
 
-test("project catalogue structure guard rejects dynamic test registrations", async () => {
+mutationTest("project catalogue structure guard rejects dynamic test registrations", async () => {
   const dynamicRegistration = appendSource(
     catalogueSource,
     [
@@ -161,7 +168,7 @@ test("project catalogue structure guard rejects dynamic test registrations", asy
   );
 });
 
-test("project catalogue structure guard rejects aliased test registrations", async () => {
+mutationTest("project catalogue structure guard rejects aliased test registrations", async () => {
   const aliasedRegistration = appendSource(
     catalogueSource,
     [
@@ -175,7 +182,7 @@ test("project catalogue structure guard rejects aliased test registrations", asy
   );
 });
 
-test("project catalogue structure guard rejects runtime skip", async () => {
+mutationTest("project catalogue structure guard rejects runtime skip", async () => {
   const firstTestMarker = `test(${JSON.stringify(catalogueTestNames[0])}, async () => {`;
   const runtimeSkip = replaceOnce(
     catalogueSource,
@@ -188,7 +195,7 @@ test("project catalogue structure guard rejects runtime skip", async () => {
   );
 });
 
-test("project catalogue structure guard rejects computed duplicate canonical names", async () => {
+mutationTest("project catalogue structure guard rejects computed duplicate canonical names", async () => {
   const computedDuplicate = appendSource(
     catalogueSource,
     [
@@ -202,7 +209,7 @@ test("project catalogue structure guard rejects computed duplicate canonical nam
   );
 });
 
-test("project catalogue structure guard rejects single-quoted canonical duplicates in another module", async () => {
+mutationTest("project catalogue structure guard rejects single-quoted canonical duplicates in another module", async () => {
   const singleQuotedDuplicate = [
     "import { test } from 'node:test';",
     "",
@@ -219,7 +226,7 @@ test("project catalogue structure guard rejects single-quoted canonical duplicat
   );
 });
 
-test("project catalogue structure guard rejects split computed aliased duplicates in another module", async () => {
+mutationTest("project catalogue structure guard rejects split computed aliased duplicates in another module", async () => {
   const [firstNamePrefix, firstNameSuffix] = catalogueTestNames[0].split(
     " localization"
   );
@@ -240,7 +247,7 @@ test("project catalogue structure guard rejects split computed aliased duplicate
   );
 });
 
-test("project catalogue structure guard rejects nested canonical subtests behind nonmatching wrappers", async () => {
+mutationTest("project catalogue structure guard rejects nested canonical subtests behind nonmatching wrappers", async () => {
   const [firstNamePrefix, firstNameSuffix] = catalogueTestNames[0].split(
     " localization"
   );
@@ -263,7 +270,7 @@ test("project catalogue structure guard rejects nested canonical subtests behind
   );
 });
 
-test("project catalogue structure guard inventories canonical registrations in guard modules", async () => {
+mutationTest("project catalogue structure guard inventories canonical registrations in guard modules", async () => {
   const [firstNamePrefix, firstNameSuffix] = catalogueTestNames[0].split(
     " localization"
   );
@@ -280,21 +287,21 @@ test("project catalogue structure guard inventories canonical registrations in g
   );
 });
 
-test("project catalogue structure guard rejects focused-module padding", async () => {
+mutationTest("project catalogue structure guard rejects focused-module padding", async () => {
   await assertMutationRejected(
     { catalogue: `${catalogueSource} ` },
     /project-catalogue\.test\.mjs must be exactly 52002 bytes/
   );
 });
 
-test("project catalogue structure guard rejects monolith padding", async () => {
+mutationTest("project catalogue structure guard rejects monolith padding", async () => {
   await assertMutationRejected(
-    { monolith: `${monolithSource} ` },
+    { monolith: `${monolithFixtureSource} ` },
     /site-quality\.test\.mjs must be exactly 88634 bytes/
   );
 });
 
-test("project catalogue structure guard rejects empty stubs plus unrelated extraction", async () => {
+mutationTest("project catalogue structure guard rejects empty stubs plus unrelated extraction", async () => {
   const stubHeader = padWithComment(
     [
       'import { test } from "node:test";',

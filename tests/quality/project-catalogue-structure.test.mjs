@@ -11,6 +11,10 @@ const monolithFile = "site-quality.test.mjs";
 const catalogueFile = "project-catalogue.test.mjs";
 const guardFile = "project-catalogue-structure.test.mjs";
 const mutationGuardFile = "project-catalogue-structure-mutations.test.mjs";
+const globalInventoryEnvironment = "INFO_PROJECT_CATALOGUE_INVENTORY";
+const globalInventoryEnvironmentValue = "complete-runtime-v1";
+const globalInventoryChildMode =
+  process.env[globalInventoryEnvironment] === globalInventoryEnvironmentValue;
 const monolithExpectedBytes = 88_634;
 const catalogueExpectedBytes = 52_002;
 const catalogueBodyStartExpectedBytes = 8_196;
@@ -68,17 +72,19 @@ function parseJunitReport(source) {
   return { names, summary };
 }
 
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function runTestModules(files, { namePattern, only = false } = {}) {
+function runTestModules(
+  files,
+  { globalInventory = false, only = false } = {}
+) {
   const childProcessEnv = { ...process.env, NO_COLOR: "1" };
   delete childProcessEnv.NODE_TEST_CONTEXT;
+  if (globalInventory) {
+    childProcessEnv[globalInventoryEnvironment] =
+      globalInventoryEnvironmentValue;
+  }
   const args = [
     "--test",
     ...(only ? ["--test-only"] : []),
-    ...(namePattern ? [`--test-name-pattern=${namePattern}`] : []),
     "--test-reporter=junit",
     ...files
   ];
@@ -107,12 +113,8 @@ function runCatalogueTests({ only = false } = {}) {
 
 function runGlobalCatalogueInventory(qualityTestFiles) {
   const runtimeFiles = qualityTestFiles
-    .filter((file) => file !== guardFile && file !== mutationGuardFile)
     .map((file) => path.posix.join("tests", "quality", file));
-  const namePattern = `^(?:${expectedCatalogueTestNames
-    .map(escapeRegExp)
-    .join("|")})$`;
-  return runTestModules(runtimeFiles, { namePattern });
+  return runTestModules(runtimeFiles, { globalInventory: true });
 }
 
 test("site quality monolith stays below the project catalogue extraction boundary", async () => {
@@ -180,18 +182,22 @@ test("project catalogue tests live in one focused bounded module", async () => {
     `${catalogueFile} must not register test.only or an only option`
   );
 
-  const globalReport = runGlobalCatalogueInventory(qualityTestFiles);
-  const globalCounts = Object.fromEntries(
-    expectedCatalogueTestNames.map((testName) => [
-      testName,
-      globalReport.names.filter((name) => name === testName).length
-    ])
-  );
-  assert.deepEqual(
-    globalCounts,
-    Object.fromEntries(expectedCatalogueTestNames.map((testName) => [testName, 1])),
-    "canonical catalogue test names must be registered exactly once globally"
-  );
+  if (!globalInventoryChildMode) {
+    const globalReport = runGlobalCatalogueInventory(qualityTestFiles);
+    const globalCounts = Object.fromEntries(
+      expectedCatalogueTestNames.map((testName) => [
+        testName,
+        globalReport.names.filter((name) => name === testName).length
+      ])
+    );
+    assert.deepEqual(
+      globalCounts,
+      Object.fromEntries(
+        expectedCatalogueTestNames.map((testName) => [testName, 1])
+      ),
+      "canonical catalogue test names must be registered exactly once globally"
+    );
+  }
 
   assert.equal(
     catalogueStats.size,
