@@ -10,6 +10,7 @@ const qualityDirectory = path.join(repoRoot, "tests/quality");
 const monolithFile = "site-quality.test.mjs";
 const catalogueFile = "project-catalogue.test.mjs";
 const guardFile = "project-catalogue-structure.test.mjs";
+const mutationGuardFile = "project-catalogue-structure-mutations.test.mjs";
 const monolithExpectedBytes = 88_634;
 const catalogueExpectedBytes = 52_002;
 const catalogueBodyStartExpectedBytes = 8_196;
@@ -67,15 +68,19 @@ function parseJunitReport(source) {
   return { names, summary };
 }
 
-function runCatalogueTests({ only = false } = {}) {
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function runTestModules(files, { namePattern, only = false } = {}) {
   const childProcessEnv = { ...process.env, NO_COLOR: "1" };
   delete childProcessEnv.NODE_TEST_CONTEXT;
-  const cataloguePath = path.posix.join("tests", "quality", catalogueFile);
   const args = [
     "--test",
     ...(only ? ["--test-only"] : []),
+    ...(namePattern ? [`--test-name-pattern=${namePattern}`] : []),
     "--test-reporter=junit",
-    cataloguePath
+    ...files
   ];
   const result = spawnSync(process.execPath, args, {
     cwd: repoRoot,
@@ -88,22 +93,26 @@ function runCatalogueTests({ only = false } = {}) {
   assert.equal(
     result.status,
     0,
-    `${catalogueFile} must execute successfully for structural inventory:\n${result.stdout}${result.stderr}`
+    `Quality test modules must execute successfully for structural inventory:\n${result.stdout}${result.stderr}`
   );
   return parseJunitReport(result.stdout);
 }
 
-function literalLocations(sources, value) {
-  const literal = JSON.stringify(value);
-  return [...sources.entries()].flatMap(([file, source]) => {
-    const locations = [];
-    let index = source.indexOf(literal);
-    while (index !== -1) {
-      locations.push(file);
-      index = source.indexOf(literal, index + literal.length);
-    }
-    return locations;
-  });
+function runCatalogueTests({ only = false } = {}) {
+  return runTestModules(
+    [path.posix.join("tests", "quality", catalogueFile)],
+    { only }
+  );
+}
+
+function runGlobalCatalogueInventory(qualityTestFiles) {
+  const runtimeFiles = qualityTestFiles
+    .filter((file) => file !== guardFile && file !== mutationGuardFile)
+    .map((file) => path.posix.join("tests", "quality", file));
+  const namePattern = `^(?:${expectedCatalogueTestNames
+    .map(escapeRegExp)
+    .join("|")})$`;
+  return runTestModules(runtimeFiles, { namePattern });
 }
 
 test("site quality monolith stays below the project catalogue extraction boundary", async () => {
@@ -127,14 +136,10 @@ test("project catalogue tests live in one focused bounded module", async () => {
     `${catalogueFile} must own the fixed project catalogue quality contracts`
   );
 
-  const sourceEntries = await Promise.all(
-    qualityTestFiles.map(async (file) => [
-      file,
-      await readFile(path.join(qualityDirectory, file), "utf8")
-    ])
+  const catalogueSource = await readFile(
+    path.join(qualityDirectory, catalogueFile),
+    "utf8"
   );
-  const sources = new Map(sourceEntries);
-  const catalogueSource = sources.get(catalogueFile);
   const catalogueStats = await stat(path.join(qualityDirectory, catalogueFile));
   const runtimeReport = runCatalogueTests();
 
@@ -175,6 +180,19 @@ test("project catalogue tests live in one focused bounded module", async () => {
     `${catalogueFile} must not register test.only or an only option`
   );
 
+  const globalReport = runGlobalCatalogueInventory(qualityTestFiles);
+  const globalCounts = Object.fromEntries(
+    expectedCatalogueTestNames.map((testName) => [
+      testName,
+      globalReport.names.filter((name) => name === testName).length
+    ])
+  );
+  assert.deepEqual(
+    globalCounts,
+    Object.fromEntries(expectedCatalogueTestNames.map((testName) => [testName, 1])),
+    "canonical catalogue test names must be registered exactly once globally"
+  );
+
   assert.equal(
     catalogueStats.size,
     catalogueExpectedBytes,
@@ -205,12 +223,4 @@ test("project catalogue tests live in one focused bounded module", async () => {
     catalogueBodyExpectedSha256,
     `${catalogueFile} assertion body SHA-256 must match the reviewed extraction`
   );
-
-  for (const testName of expectedCatalogueTestNames) {
-    assert.deepEqual(
-      literalLocations(sources, testName).sort(),
-      [catalogueFile, guardFile].sort(),
-      `"${testName}" must have one catalogue registration and one guard inventory literal`
-    );
-  }
 });
