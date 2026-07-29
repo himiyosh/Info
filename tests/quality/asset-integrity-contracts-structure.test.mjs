@@ -5,6 +5,8 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
+
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const helperDirectory = path.join(repoRoot, "tests/helpers");
@@ -26,7 +28,6 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const monolithExpectedBytes = 43_522;
 const assetIntegrityExpectedBytes = 11_612;
 const assetIntegrityBodyStartExpectedBytes = 5_148;
 const assetIntegrityHeaderExpectedSha256 =
@@ -37,9 +38,9 @@ const assetIntegrityBodyExpectedSha256 =
 const sharedHelperExpectedBytes = 457;
 const sharedHelperExpectedSha256 =
   "6648599f751d88c67bbf4d481b5d1817260c13fcd030f521aa6ea1e71fcd6492";
-const mutationGuardExpectedBytes = 12_805;
+const mutationGuardExpectedBytes = 13_086;
 const mutationGuardExpectedSha256 =
-  "f737bb45e8cec521e68236294773bc84238a8b992157d125e94d19c6d318c4ab";
+  "6b0ba6d9565d9c82cd945f374eee5e39d0ce93e7e9d0bb4b9bb0f32f1aecbaf1";
 const expectedAssetIntegrityTestNames = [
   "all referenced local files exist",
   "preview assets are not stale or orphaned",
@@ -278,8 +279,8 @@ test("asset integrity contracts live in one focused module", async () => {
 
   assert.equal(
     monolithStats.size,
-    monolithExpectedBytes,
-    `${monolithFile} must be exactly ${monolithExpectedBytes} bytes at the reviewed asset integrity extraction boundary`
+    siteQualityExpectedBytes,
+    `${monolithFile} must be exactly ${siteQualityExpectedBytes} bytes at the reviewed asset integrity extraction boundary`
   );
   assert.equal(
     assetIntegrityStats.size,

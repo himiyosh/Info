@@ -15,6 +15,7 @@ import { test } from "node:test";
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const helperDirectory = path.join(repoRoot, "tests/helpers");
+const boundaryAuthorityFile = "site-quality-boundary.mjs";
 const guardFile = "asset-integrity-contracts-structure.test.mjs";
 const mutationGuardFile =
   "asset-integrity-contracts-structure-mutations.test.mjs";
@@ -52,12 +53,14 @@ const [
   guardSource,
   mutationGuardSource,
   assetIntegritySource,
+  boundaryAuthoritySource,
   sharedHelperSource,
   monolithSource
 ] = await Promise.all([
   readFile(path.join(qualityDirectory, guardFile), "utf8"),
   readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
   readFile(path.join(qualityDirectory, assetIntegrityFile), "utf8"),
+  readFile(path.join(helperDirectory, boundaryAuthorityFile), "utf8"),
   readFile(path.join(helperDirectory, sharedHelperFile), "utf8"),
   readFile(path.join(qualityDirectory, monolithFile), "utf8")
 ]);
@@ -171,6 +174,10 @@ async function runGuardMutation({
       writeFile(
         path.join(fixtureQualityDirectory, monolithFile),
         monolith
+      ),
+      writeFile(
+        path.join(fixtureHelperDirectory, boundaryAuthorityFile),
+        boundaryAuthoritySource
       ),
       writeFile(
         path.join(fixtureHelperDirectory, sharedHelperFile),

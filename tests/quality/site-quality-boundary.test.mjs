@@ -28,8 +28,8 @@ const isolatedMutationFixtureFiles = [
   "project-catalogue-structure-mutations.test.mjs",
   "public-discovery-contracts-structure-mutations.test.mjs"
 ];
-const authorityImport =
-  'import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";';
+const authorityImportPattern =
+  /^import { siteQualityExpectedBytes } from "\.\.\/helpers\/site-quality-boundary\.mjs";$/gm;
 const legacyDeclarationPattern = /\bconst\s+monolithExpectedBytes\s*=/g;
 const authorityDeclarationPattern =
   /\bexport\s+const\s+siteQualityExpectedBytes\s*=/g;
@@ -44,10 +44,6 @@ const boundaryAssertionPattern =
 
 function countMatches(source, pattern) {
   return [...source.matchAll(pattern)].length;
-}
-
-function countOccurrences(source, fragment) {
-  return source.split(fragment).length - 1;
 }
 
 async function readModuleSources(directory, relativeDirectory) {
@@ -106,7 +102,7 @@ test(
       const guardPath = path.join("tests/quality", guardFile);
       const guardSource = sourceByPath.get(guardPath);
       assert.ok(guardSource, `Missing focused structure guard: ${guardPath}`);
-      if (countOccurrences(guardSource, authorityImport) !== 1) {
+      if (countMatches(guardSource, authorityImportPattern) !== 1) {
         problems.push(
           `${guardPath} must import siteQualityExpectedBytes exactly once from ${authorityPath}`
         );

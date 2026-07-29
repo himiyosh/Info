@@ -5,6 +5,8 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
+
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const monolithFile = "site-quality.test.mjs";
@@ -28,10 +30,9 @@ const globalInventoryChildMode =
     globalInventoryEnvironmentValue ||
   process.env[mobileNavigationInventoryEnvironment] ===
     globalInventoryEnvironmentValue;
-const monolithExpectedBytes = 43_522;
-const mutationGuardExpectedBytes = 6_616;
+const mutationGuardExpectedBytes = 7_118;
 const mutationGuardExpectedSha256 =
-  "f11d9742929828c4711e29fc9b79179cd42d810f7b530142c8fdc722a3736936";
+  "c958650e9485c9d4cee1c4bec2d2996ca919e419684933bef6097556969d1d54";
 const mobileNavigationExpectedBytes = 6_211;
 const mobileNavigationBodyStartExpectedBytes = 273;
 const mobileNavigationHeaderExpectedSha256 =
@@ -245,8 +246,8 @@ test("mobile navigation contracts live in one focused module", async () => {
 
   assert.equal(
     monolithStats.size,
-    monolithExpectedBytes,
-    `${monolithFile} must be exactly ${monolithExpectedBytes} bytes at the reviewed mobile navigation extraction boundary`
+    siteQualityExpectedBytes,
+    `${monolithFile} must be exactly ${siteQualityExpectedBytes} bytes at the reviewed mobile navigation extraction boundary`
   );
   assert.equal(
     mobileNavigationStats.size,

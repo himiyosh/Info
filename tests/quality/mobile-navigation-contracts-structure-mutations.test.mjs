@@ -14,6 +14,8 @@ import { test } from "node:test";
 
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
+const helperDirectory = path.join(repoRoot, "tests/helpers");
+const boundaryAuthorityFile = "site-quality-boundary.mjs";
 const guardFile = "mobile-navigation-contracts-structure.test.mjs";
 const mutationGuardFile =
   "mobile-navigation-contracts-structure-mutations.test.mjs";
@@ -35,11 +37,13 @@ const runtimeFixturePaths = [
   "modern.css"
 ];
 const [
+  boundaryAuthoritySource,
   guardSource,
   mutationGuardSource,
   mobileNavigationSource,
   monolithSource
 ] = await Promise.all([
+  readFile(path.join(helperDirectory, boundaryAuthorityFile), "utf8"),
   readFile(path.join(qualityDirectory, guardFile), "utf8"),
   readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
   readFile(path.join(qualityDirectory, mobileNavigationFile), "utf8"),
@@ -105,9 +109,13 @@ async function runGuardMutation({
     path.join(os.tmpdir(), "info-mobile-navigation-guard-")
   );
   const fixtureQualityDirectory = path.join(fixtureRoot, "tests/quality");
+  const fixtureHelperDirectory = path.join(fixtureRoot, "tests/helpers");
 
   try {
-    await mkdir(fixtureQualityDirectory, { recursive: true });
+    await Promise.all([
+      mkdir(fixtureQualityDirectory, { recursive: true }),
+      mkdir(fixtureHelperDirectory, { recursive: true })
+    ]);
     await linkRuntimeFixtures(fixtureRoot);
     await Promise.all([
       writeFile(path.join(fixtureQualityDirectory, guardFile), guardSource),
@@ -122,6 +130,10 @@ async function runGuardMutation({
       writeFile(
         path.join(fixtureQualityDirectory, monolithFile),
         monolithFixtureSource
+      ),
+      writeFile(
+        path.join(fixtureHelperDirectory, boundaryAuthorityFile),
+        boundaryAuthoritySource
       )
     ]);
 
