@@ -26,7 +26,7 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const monolithExpectedBytes = 53_111;
+const monolithExpectedBytes = 48_391;
 const assetIntegrityExpectedBytes = 11_612;
 const assetIntegrityBodyStartExpectedBytes = 5_148;
 const assetIntegrityHeaderExpectedSha256 =
@@ -39,7 +39,7 @@ const sharedHelperExpectedSha256 =
   "6648599f751d88c67bbf4d481b5d1817260c13fcd030f521aa6ea1e71fcd6492";
 const mutationGuardExpectedBytes = 13_054;
 const mutationGuardExpectedSha256 =
-  "8540762b7142f3af86b9bc82d53fdf4406e21490dceaff977b03ffd101628f80";
+  "4a9f819ed4ef981af471c9abe7b5ea5a28530deac9cb70ecbb964bb6bc102c2b";
 const expectedAssetIntegrityTestNames = [
   "all referenced local files exist",
   "preview assets are not stale or orphaned",

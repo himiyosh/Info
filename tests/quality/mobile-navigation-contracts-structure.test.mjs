@@ -28,7 +28,7 @@ const globalInventoryChildMode =
     globalInventoryEnvironmentValue ||
   process.env[mobileNavigationInventoryEnvironment] ===
     globalInventoryEnvironmentValue;
-const monolithExpectedBytes = 53_111;
+const monolithExpectedBytes = 48_391;
 const mutationGuardExpectedBytes = 6_616;
 const mutationGuardExpectedSha256 =
   "f11d9742929828c4711e29fc9b79179cd42d810f7b530142c8fdc722a3736936";
