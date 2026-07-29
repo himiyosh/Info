@@ -33,13 +33,17 @@ const publicDiscoveryHeaderExpectedSha256 =
 const publicDiscoveryBodyExpectedBytes = 4_720;
 const publicDiscoveryBodyExpectedSha256 =
   "c29e8f3a93bff0d813f57d1d36072bcca00d78cd3a8ad1a93a0c41726ac9f802";
-const mutationGuardExpectedBytes = 13_061;
+const mutationGuardExpectedBytes = 15_048;
 const mutationGuardExpectedSha256 =
-  "cc10dac11caf1341c3546b152e003a087dcb20e8de436ef992c55514eb3db92e";
+  "7cf564870aa6d58d12443f36db2276f123e16b3fa7ea2c077b3d30d8f30b1a36";
 const expectedPublicDiscoveryTestNames = [
   "required SEO and social metadata exist and are consistent",
   "static project summaries preserve canonical primary, source, proof, and fragment access",
   "JoJo deck entries stay distinct and aligned with live deck routes"
+];
+const requiredOwnershipMutationTestNames = [
+  "public discovery structure guard rejects canonical names leaking into the monolith",
+  "public discovery structure guard rejects adjacent monolith contracts leaking into the focused module"
 ];
 const adjacentMonolithTestNames = [
   "JavaScript files are parseable",
@@ -151,6 +155,22 @@ test("public discovery contracts live in one focused module", async () => {
     .filter((entry) => entry.isFile() && entry.name.endsWith(".test.mjs"))
     .map((entry) => entry.name)
     .sort();
+  const mutationTestNames = [
+    ...mutationGuardSource.matchAll(/^mutationTest\(\n  "([^"]+)",/gm)
+  ].map((match) => match[1]);
+  const requiredOwnershipMutationNameCounts = Object.fromEntries(
+    requiredOwnershipMutationTestNames.map((testName) => [
+      testName,
+      mutationTestNames.filter((name) => name === testName).length
+    ])
+  );
+  assert.deepEqual(
+    requiredOwnershipMutationNameCounts,
+    Object.fromEntries(
+      requiredOwnershipMutationTestNames.map((testName) => [testName, 1])
+    ),
+    `${mutationGuardFile} must register each required executable ownership mutation exactly once`
+  );
   const monolithCanonicalNameCounts = Object.fromEntries(
     expectedPublicDiscoveryTestNames.map((testName) => [
       testName,
