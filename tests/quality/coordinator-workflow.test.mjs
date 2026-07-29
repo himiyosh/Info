@@ -100,13 +100,13 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
-    /Require a contiguous standalone marker/,
-    "The merge gate must require a contiguous exact full-head verdict marker"
+    /Require one exact trimmed marker line outside Markdown fenced code blocks/,
+    "The merge gate must require an exact full-head verdict line outside code fences"
   );
   assert.match(
     source,
-    /`independent-review head=<40-character current head SHA> verdict=pass by=<full lowercase UUID>` is the only clearance form/,
-    "Only the contiguous pass marker may provide clearance"
+    /complete line must exactly equal `independent-review head=<40-character current head SHA> verdict=pass by=<full lowercase UUID>` for clearance/,
+    "Only the exact trimmed pass marker line may provide clearance"
   );
   assert.match(
     source,
@@ -115,18 +115,28 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
-    /detached verdict prose/,
-    "Detached verdict syntax must not complete a legacy marker"
+    /Negations, prohibitions, questions, list or table examples, inline code, fenced code/,
+    "Prose and code examples must not provide review evidence"
   );
   assert.match(
     source,
-    /Each active marker must express exactly one verdict\. After the complete marker, a second standalone `pass` or `fail` introduced by whitespace, English `or`, or one of the symbolic separators `\|`, `\/`, `,`, `、`, `;`, and `；` invalidates that marker/,
-    "A second verdict after any documented separator must not satisfy the review gate"
+    /Prose may appear before or after the marker on separate lines in the same body; the entire body need not contain only the marker/,
+    "Review prose must remain valid outside the exact marker line"
   );
   assert.match(
     source,
-    /A delimiter remains valid when it begins non-verdict explanatory prose, including a Markdown table cell, rather than a second verdict/,
-    "Ordinary punctuation must remain compatible with explanatory prose and Markdown tables"
+    /lines with any same-line prefix, suffix, punctuation, or prose do not satisfy the gate/,
+    "Marker lines must reject all same-line context"
+  );
+  assert.match(
+    source,
+    /Each active marker must express exactly one verdict/,
+    "Each marker must carry exactly one outcome"
+  );
+  assert.match(
+    source,
+    /A later continuation that begins with a bare lowercase `pass` or `fail` token.*English `or`.*symbolic separators `\|`, `\/`, `,`, `、`, `;`, and `；`.*potential second decision and returns missing/,
+    "A later second verdict after any documented separator must not satisfy the review gate"
   );
   assert.match(source, /Any fail wins over any pass regardless of order or surface/, "Fail evidence must dominate pass evidence");
   assert.match(

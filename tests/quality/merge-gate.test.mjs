@@ -57,7 +57,7 @@ function mergeGateInput(overrides = {}) {
     mergeStateStatus: "CLEAN",
     statusCheckRollup: [checkRun()],
     reviews: [],
-    comments: [{ body: `Review recorded: ${marker()}` }],
+    comments: [{ body: ["Review recorded.", marker()].join("\n") }],
     ...overrides
   };
 }
@@ -245,19 +245,13 @@ test("second-verdict separator forms propagate as missing through the aggregate 
   assert.match(result.stderr, /verdict=pass not found/);
 });
 
-test("non-verdict delimiters and Markdown table cells preserve aggregate pass clearance", () => {
+test("separate-line prose preserves aggregate pass clearance", () => {
   const bodies = [
-    `${marker()}, review complete.`,
-    `${marker()}、レビュー完了。`,
-    `${marker()}; review complete.`,
-    `${marker()} | Review complete |`,
-    `${marker()} / review complete.`,
-    `${marker()} or continue with the merge gate.`,
-    `(${marker()}).`,
-    `| Result | ${marker()} | Review complete |`
+    [marker(), "Review complete."].join("\n"),
+    ["Review complete.", marker(), "No blockers remain."].join("\n"),
+    ["Review complete.", `\t${marker()}\t`, "**Result:** clear."].join("\r\n")
   ];
 
-  // A delimiter is blocked only when it begins a second valid verdict token, preserving prose and Markdown cells.
   for (const body of bodies) {
     const input = mergeGateInput({ comments: [{ body }] });
     const evaluated = evaluateMergeGate(input, HEAD);
@@ -266,10 +260,29 @@ test("non-verdict delimiters and Markdown table cells preserve aggregate pass cl
     assert.equal(evaluated.independentReview.verdict, "pass", body);
   }
 
-  assert.equal(
-    runCli(mergeGateInput({ comments: [{ body: bodies.at(-1) }] })).status,
-    0
-  );
+  assert.equal(runCli(mergeGateInput({ comments: [{ body: bodies.at(-1) }] })).status, 0);
+});
+
+test("inline marker references remain blocked through the aggregate gate", () => {
+  const bodies = [
+    `${marker()}, review complete.`,
+    `Should we post ${marker()}?`,
+    `| Result | ${marker()} |`,
+    `\`${marker()}\``
+  ];
+
+  for (const body of bodies) {
+    const evaluated = evaluateMergeGate(
+      mergeGateInput({ comments: [{ body }] }),
+      HEAD
+    );
+    assert.equal(evaluated.ok, false, body);
+    assert.equal(evaluated.independentReview.verdict, "missing", body);
+  }
+
+  const result = runCli(mergeGateInput({ comments: [{ body: bodies[0] }] }));
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /expected one exact trimmed marker line outside fenced code blocks/);
 });
 
 test("legacy successful and unsuccessful status contexts are handled explicitly", () => {
@@ -410,14 +423,16 @@ test("quality wiring and documentation expose the executable review and offline 
   for (const source of [readme, agent]) {
     assert.match(source, /check-merge-gate\.mjs --head/);
     assert.match(source, /state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments/);
-    assert.match(source, /contiguous/i);
+    assert.match(source, /exact trimmed marker line/i);
+    assert.match(source, /outside Markdown fenced code blocks/i);
     assert.match(source, /verdict=pass/);
     assert.match(source, /by=<full lowercase UUID>/);
+    assert.match(source, /Prose may appear before or after the marker on separate lines/i);
+    assert.match(source, /same-line prefix, suffix, punctuation, or prose do not satisfy/i);
     assert.match(source, /exactly one verdict/i);
-    assert.match(source, /second standalone `pass` or `fail` introduced by whitespace/i);
+    assert.match(source, /later continuation that begins with a bare lowercase `pass` or `fail` token/i);
     assert.match(source, /English `or`/);
     assert.match(source, /symbolic separators `\|`, `\/`, `,`, `、`, `;`, and `；`/);
-    assert.match(source, /delimiter remains valid.*non-verdict explanatory prose.*Markdown table cell/i);
     assert.match(source, /fail wins/i);
     assert.match(source, /RETRACTED-independent-review/);
     assert.match(source, /retraction reason/i);
@@ -435,22 +450,22 @@ test("reviewer-facing docs explain safe verdict continuation authoring", async (
   for (const source of [readme, agent]) {
     assert.match(
       source,
-      /Treat the exact marker's `verdict=pass` or `verdict=fail` as the complete review outcome itself/,
+      /Treat the exact marker line's `verdict=pass` or `verdict=fail` as the complete review outcome itself/,
       "The marker verdict must communicate the complete review outcome"
     );
     assert.match(
       source,
-      /Do not begin continuation prose after the marker.*spaces, tabs, or a new paragraph.*bare lowercase `pass` or `fail` token/,
-      "Bare verdict tokens must not begin same-line or multiline continuation prose"
+      /Do not append punctuation or continuation prose to the marker line/,
+      "The exact marker line must not contain suffix content"
     );
     assert.match(
       source,
-      /potential second decision and returns missing \(exit 1\).*blocking `verdict=fail` result \(exit 3\).*operational deadlock/,
+      /later continuation that begins with a bare lowercase `pass` or `fail` token.*potential second decision and returns missing \(exit 1\).*blocking `verdict=fail` result \(exit 3\).*operational deadlock/,
       "The conservative parser behavior and fail-to-missing deadlock must remain explicit"
     );
     assert.match(
       source,
-      /begin explanatory text with a descriptive phrase, label, punctuation, Markdown formatting, or a non-bare word/,
+      /Put explanatory text on another line beginning with a descriptive phrase, label, Markdown formatting, or a non-bare word/,
       "Reviewers must receive safe alternatives for explanatory prose"
     );
     assert.match(

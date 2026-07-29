@@ -108,7 +108,13 @@ function assertMissingEvidence(body) {
 test("pass-only comments evidence satisfies the exact-head verdict", () => {
   const input = {
     reviews: [],
-    comments: [{ body: `Independent check complete: ${marker("pass")}` }]
+    comments: [
+      {
+        body: ["Independent check complete.", `  ${marker("pass")}\t`, "No blockers found."].join(
+          "\n"
+        )
+      }
+    ]
   };
 
   assert.deepEqual(findIndependentReviewEvidence(input, HEAD), {
@@ -117,6 +123,10 @@ test("pass-only comments evidence satisfies the exact-head verdict", () => {
     by: REVIEWER_ID
   });
   assert.deepEqual(evaluateIndependentReviewEvidence(input, HEAD).verdict, "pass");
+  assert.equal(
+    collectIndependentReviewEvidence(input, HEAD)[0].offset,
+    input.comments[0].body.indexOf(marker("pass"))
+  );
 
   const result = runCli(input);
   assert.equal(result.status, 0, result.stderr);
@@ -254,6 +264,50 @@ test("a fenced-code marker cannot satisfy the exact-head verdict", () => {
   assertMissingEvidence(["Documentation example:", "```text", marker("pass"), "```"].join("\n"));
 });
 
+test("marker mentions that are not complete trimmed lines remain unsatisfied", () => {
+  const bodies = [
+    `Should we post ${marker("pass")}?`,
+    `- ${marker("pass")}`,
+    `> ${marker("pass")}`,
+    `| Result | ${marker("pass")} |`,
+    `(${marker("pass")})`,
+    `${marker("pass")}.`,
+    `${marker("pass")} Review complete.`
+  ];
+
+  for (const body of bodies) {
+    const input = { reviews: [], comments: [{ body }] };
+    assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, "missing", body);
+    assert.equal(collectIndependentReviewEvidence(input, HEAD).length, 0, body);
+  }
+
+  assert.equal(runCli({ reviews: [], comments: [{ body: bodies.at(-1) }] }).status, 1);
+});
+
+test("only marker lines outside backtick, tilde, and nested fences are collected", () => {
+  const body = [
+    "```text",
+    marker("fail"),
+    "```",
+    "~~~text",
+    marker("fail"),
+    "~~~~",
+    "- ```text",
+    `  ${marker("fail")}`,
+    "  ```",
+    "Review result follows.",
+    `\t${marker("pass")}\t`
+  ].join("\n");
+  const evaluated = evaluateIndependentReviewEvidence(
+    { reviews: [{ body }], comments: [] },
+    HEAD
+  );
+
+  assert.equal(evaluated.verdict, "pass");
+  assert.equal(evaluated.evidence.length, 1);
+  assert.equal(evaluated.passEvidence[0].offset, body.lastIndexOf(marker("pass")));
+});
+
 test("detached verdict syntax in explanation prose or code cannot satisfy a legacy marker", () => {
   const input = {
     reviews: [
@@ -374,30 +428,29 @@ test("short, legacy, malformed-verdict, and substring markers do not produce fal
   assert.equal(hasIndependentReviewEvidence(input, HEAD), false);
 });
 
-test("non-verdict punctuation and prose preserve single pass and fail verdicts", () => {
+test("trimmed marker lines preserve prose elsewhere in the same body", () => {
   const cases = [
-    { body: `${marker("pass")}, review complete.`, verdict: "pass" },
-    { body: `${marker("pass")}、レビュー完了。`, verdict: "pass" },
-    { body: `${marker("pass")}; failures: none.`, verdict: "pass" },
-    { body: `${marker("pass")}| passing checks complete.`, verdict: "pass" },
-    { body: `${marker("pass")}/ review complete.`, verdict: "pass" },
-    { body: `${marker("pass")} or continue with the merge gate.`, verdict: "pass" },
-    { body: `(${marker("pass")}).`, verdict: "pass" },
-    { body: `${marker("pass")}!`, verdict: "pass" },
-    { body: `| Result | ${marker("pass")} | Review complete |`, verdict: "pass" },
-    { body: `${marker("fail")}, blocking issue remains.`, verdict: "fail" },
-    { body: `${marker("fail")}、修正が必要です。`, verdict: "fail" },
-    { body: `${marker("fail")}; blocking issue remains.`, verdict: "fail" }
+    {
+      body: ["Review complete.", marker("pass"), "No blockers remain."].join("\n"),
+      verdict: "pass"
+    },
+    {
+      body: ["Review complete.", ` \t${marker("pass")}\t `, "**Result:** clear."].join("\r\n"),
+      verdict: "pass"
+    },
+    {
+      body: [marker("fail"), "**Blocker:** a required fix remains."].join("\n"),
+      verdict: "fail"
+    }
   ];
 
-  // A delimiter is blocked only when it begins a second valid verdict token, preserving prose and Markdown cells.
   for (const { body, verdict } of cases) {
     const input = { reviews: [{ body }], comments: [] };
     assert.equal(evaluateIndependentReviewEvidence(input, HEAD).verdict, verdict, body);
   }
 
-  assert.equal(runCli({ reviews: [{ body: cases[8].body }], comments: [] }).status, 0);
-  assert.equal(runCli({ reviews: [{ body: cases[10].body }], comments: [] }).status, 3);
+  assert.equal(runCli({ reviews: [{ body: cases[1].body }], comments: [] }).status, 0);
+  assert.equal(runCli({ reviews: [{ body: cases[2].body }], comments: [] }).status, 3);
 });
 
 test("current open PR mode passes only exact-head pass evidence and skips closed snapshots", () => {
