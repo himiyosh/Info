@@ -287,6 +287,28 @@ mutationTest("project catalogue structure guard inventories canonical registrati
   );
 });
 
+mutationTest("project catalogue structure guard binds mutation wrapper source", async () => {
+  const wrapperMarker =
+    'mutationTest("project catalogue structure guard accepts the reviewed unchanged extraction", async () => {' +
+    "\n  const result = await runGuardMutation();";
+  const mutationGuardWithHiddenCanonical = replaceOnce(
+    mutationGuardSource,
+    wrapperMarker,
+    wrapperMarker
+      .replace("async ()", "async (context)")
+      .replace(
+        "\n  const result",
+        "\n  const hiddenCanonicalName = catalogueTestNames[0].slice(0);" +
+          "\n  await context.test(hiddenCanonicalName, () => {});" +
+          "\n  const result"
+      )
+  );
+  await assertMutationRejected(
+    { mutationGuard: mutationGuardWithHiddenCanonical },
+    /mutation guard source SHA-256/
+  );
+});
+
 mutationTest("project catalogue structure guard rejects focused-module padding", async () => {
   await assertMutationRejected(
     { catalogue: `${catalogueSource} ` },
