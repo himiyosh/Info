@@ -75,6 +75,7 @@ async function linkRuntimeFixtures(rootDirectory) {
 
 async function runGuardMutation({
   catalogue = catalogueSource,
+  extraQualityFiles = {},
   monolith = monolithSource
 } = {}) {
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), "info-catalogue-guard-"));
@@ -86,7 +87,12 @@ async function runGuardMutation({
     await Promise.all([
       writeFile(path.join(fixtureQualityDirectory, guardFile), guardSource),
       writeFile(path.join(fixtureQualityDirectory, catalogueFile), catalogue),
-      writeFile(path.join(fixtureQualityDirectory, monolithFile), monolith)
+      writeFile(path.join(fixtureQualityDirectory, monolithFile), monolith),
+      ...Object.entries(extraQualityFiles).map(([file, source]) => {
+        assert.equal(path.basename(file), file, "Extra quality fixtures must use a file name");
+        assert.ok(file.endsWith(".test.mjs"), "Extra quality fixtures must be test modules");
+        return writeFile(path.join(fixtureQualityDirectory, file), source);
+      })
     ]);
 
     const result = spawnSync(
@@ -187,6 +193,44 @@ test("project catalogue structure guard rejects computed duplicate canonical nam
   await assertMutationRejected(
     { catalogue: computedDuplicate },
     /exact runtime test-name inventory/
+  );
+});
+
+test("project catalogue structure guard rejects single-quoted canonical duplicates in another module", async () => {
+  const singleQuotedDuplicate = [
+    "import { test } from 'node:test';",
+    "",
+    `test(${JSON.stringify(catalogueTestNames[0]).replaceAll('"', "'")}, () => {});`,
+    ""
+  ].join("\n");
+  await assertMutationRejected(
+    {
+      extraQualityFiles: {
+        "single-quoted-catalogue-duplicate.test.mjs": singleQuotedDuplicate
+      }
+    },
+    /canonical catalogue test names must be registered exactly once globally/
+  );
+});
+
+test("project catalogue structure guard rejects split computed aliased duplicates in another module", async () => {
+  const [firstNamePrefix, firstNameSuffix] = catalogueTestNames[0].split(
+    " localization"
+  );
+  const computedAliasedDuplicate = [
+    'import { test as registerTest } from "node:test";',
+    "",
+    `const canonicalName = ${JSON.stringify(`${firstNamePrefix} `)} + ${JSON.stringify(`localization${firstNameSuffix}`)};`,
+    "registerTest(canonicalName, () => {});",
+    ""
+  ].join("\n");
+  await assertMutationRejected(
+    {
+      extraQualityFiles: {
+        "computed-catalogue-duplicate.test.mjs": computedAliasedDuplicate
+      }
+    },
+    /canonical catalogue test names must be registered exactly once globally/
   );
 });
 
