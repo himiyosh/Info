@@ -8,11 +8,12 @@ import { test } from "node:test";
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const monolithFile = "site-quality.test.mjs";
-const publishingIntegrityFile = "publishing-integrity.test.mjs";
+const mobileNavigationFile = "mobile-navigation-contracts.test.mjs";
 const workflowSecurityInventoryEnvironment = "INFO_WORKFLOW_SECURITY_INVENTORY";
 const localizationInventoryEnvironment = "INFO_LOCALIZATION_INVENTORY";
 const catalogueInventoryEnvironment = "INFO_PROJECT_CATALOGUE_INVENTORY";
 const publishingIntegrityInventoryEnvironment = "INFO_PUBLISHING_INTEGRITY_INVENTORY";
+const mobileNavigationInventoryEnvironment = "INFO_MOBILE_NAVIGATION_INVENTORY";
 const globalInventoryEnvironmentValue = "complete-runtime-v1";
 const globalInventoryChildMode =
   process.env[workflowSecurityInventoryEnvironment] ===
@@ -22,18 +23,23 @@ const globalInventoryChildMode =
   process.env[catalogueInventoryEnvironment] ===
     globalInventoryEnvironmentValue ||
   process.env[publishingIntegrityInventoryEnvironment] ===
+    globalInventoryEnvironmentValue ||
+  process.env[mobileNavigationInventoryEnvironment] ===
     globalInventoryEnvironmentValue;
 const monolithExpectedBytes = 64_652;
-const publishingIntegrityExpectedBytes = 4_245;
-const publishingIntegrityBodyStartExpectedBytes = 981;
-const publishingIntegrityBodyExpectedBytes = 3_264;
-const publishingIntegrityBodyExpectedSha256 =
-  "bdbb764c443a43753325ec95d8c48a417426dc021f862104393b83a885742464";
-const expectedPublishingIntegrityTestNames = [
-  "Pages artifact whitelist is strict and covers all locally referenced production files",
-  "robots.txt and sitemap.xml are consistent"
+const mobileNavigationExpectedBytes = 6_211;
+const mobileNavigationBodyStartExpectedBytes = 273;
+const mobileNavigationHeaderExpectedSha256 =
+  "0e56555309f1cd482e5b0a071cf213f6859415387ac7983795e29915a1781fb3";
+const mobileNavigationBodyExpectedBytes = 5_938;
+const mobileNavigationBodyExpectedSha256 =
+  "228bade1b831e0c6d50a4a656b5ec3f73bf4744f8618b91e4fe540d91129491e";
+const expectedMobileNavigationTestNames = [
+  "mobile navigation enhancement is progressive and keeps no-JS links usable",
+  "open mobile navigation wraps keyboard focus at its disclosure boundaries",
+  "modern mobile navigation stays scroll-contained in short safe-area viewports"
 ];
-const publishingIntegrityBodyStartMarker = `test(${JSON.stringify(expectedPublishingIntegrityTestNames[0])}`;
+const mobileNavigationBodyStartMarker = `test(${JSON.stringify(expectedMobileNavigationTestNames[0])}`;
 const junitSummaryKeys = [
   "tests",
   "suites",
@@ -86,6 +92,8 @@ function runTestModules(
       globalInventoryEnvironmentValue;
     childProcessEnv[publishingIntegrityInventoryEnvironment] =
       globalInventoryEnvironmentValue;
+    childProcessEnv[mobileNavigationInventoryEnvironment] =
+      globalInventoryEnvironmentValue;
   }
   const args = [
     "--test",
@@ -104,45 +112,45 @@ function runTestModules(
   assert.equal(
     result.status,
     0,
-    `Quality test modules must execute successfully for publishing integrity inventory:\n${result.stdout}${result.stderr}`
+    `Quality test modules must execute successfully for mobile navigation inventory:\n${result.stdout}${result.stderr}`
   );
   return parseJunitReport(result.stdout);
 }
 
-function runPublishingIntegrityTests({ only = false } = {}) {
+function runMobileNavigationTests({ only = false } = {}) {
   return runTestModules(
-    [path.posix.join("tests", "quality", publishingIntegrityFile)],
+    [path.posix.join("tests", "quality", mobileNavigationFile)],
     { only }
   );
 }
 
-function runGlobalPublishingIntegrityInventory(qualityTestFiles) {
+function runGlobalMobileNavigationInventory(qualityTestFiles) {
   const runtimeFiles = qualityTestFiles.map((file) =>
     path.posix.join("tests", "quality", file)
   );
   return runTestModules(runtimeFiles, { globalInventory: true });
 }
 
-test("publishing integrity contracts live in one focused module", async () => {
+test("mobile navigation contracts live in one focused module", async () => {
   const [
     entries,
     monolithSource,
     monolithStats,
-    publishingIntegritySource,
-    publishingIntegrityStats
+    mobileNavigationSource,
+    mobileNavigationStats
   ] = await Promise.all([
     readdir(qualityDirectory, { withFileTypes: true }),
     readFile(path.join(qualityDirectory, monolithFile), "utf8"),
     stat(path.join(qualityDirectory, monolithFile)),
-    readFile(path.join(qualityDirectory, publishingIntegrityFile), "utf8"),
-    stat(path.join(qualityDirectory, publishingIntegrityFile))
+    readFile(path.join(qualityDirectory, mobileNavigationFile), "utf8"),
+    stat(path.join(qualityDirectory, mobileNavigationFile))
   ]);
   const qualityTestFiles = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith(".test.mjs"))
     .map((entry) => entry.name)
     .sort();
   const monolithCanonicalNameCounts = Object.fromEntries(
-    expectedPublishingIntegrityTestNames.map((testName) => [
+    expectedMobileNavigationTestNames.map((testName) => [
       testName,
       [...monolithSource.matchAll(new RegExp(JSON.stringify(testName), "g"))].length
     ])
@@ -150,43 +158,43 @@ test("publishing integrity contracts live in one focused module", async () => {
 
   assert.deepEqual(
     {
-      focusedModulePresent: qualityTestFiles.includes(publishingIntegrityFile),
+      focusedModulePresent: qualityTestFiles.includes(mobileNavigationFile),
       monolithCanonicalNameCounts
     },
     {
       focusedModulePresent: true,
       monolithCanonicalNameCounts: Object.fromEntries(
-        expectedPublishingIntegrityTestNames.map((testName) => [testName, 0])
+        expectedMobileNavigationTestNames.map((testName) => [testName, 0])
       )
     },
-    `${publishingIntegrityFile} must exclusively own the two canonical publishing integrity contracts`
+    `${mobileNavigationFile} must exclusively own the three canonical mobile navigation contracts`
   );
 
-  const runtimeReport = runPublishingIntegrityTests();
+  const runtimeReport = runMobileNavigationTests();
   assert.deepEqual(
     runtimeReport.names,
-    expectedPublishingIntegrityTestNames,
-    `${publishingIntegrityFile} must retain the exact runtime test-name inventory`
+    expectedMobileNavigationTestNames,
+    `${mobileNavigationFile} must retain the exact runtime test-name inventory`
   );
   assert.deepEqual(
     runtimeReport.summary,
     {
-      tests: expectedPublishingIntegrityTestNames.length,
+      tests: expectedMobileNavigationTestNames.length,
       suites: 0,
-      pass: expectedPublishingIntegrityTestNames.length,
+      pass: expectedMobileNavigationTestNames.length,
       fail: 0,
       cancelled: 0,
       skipped: 0,
       todo: 0
     },
-    `${publishingIntegrityFile} must execute both contracts without skip or todo`
+    `${mobileNavigationFile} must execute all three contracts without skip or todo`
   );
 
-  const onlyReport = runPublishingIntegrityTests({ only: true });
+  const onlyReport = runMobileNavigationTests({ only: true });
   assert.deepEqual(
     onlyReport,
     {
-      names: [path.posix.join("tests", "quality", publishingIntegrityFile)],
+      names: [path.posix.join("tests", "quality", mobileNavigationFile)],
       summary: {
         tests: 1,
         suites: 0,
@@ -197,13 +205,13 @@ test("publishing integrity contracts live in one focused module", async () => {
         todo: 0
       }
     },
-    `${publishingIntegrityFile} must not register test.only or an only option`
+    `${mobileNavigationFile} must not register test.only or an only option`
   );
 
   if (!globalInventoryChildMode) {
-    const globalReport = runGlobalPublishingIntegrityInventory(qualityTestFiles);
+    const globalReport = runGlobalMobileNavigationInventory(qualityTestFiles);
     const globalCounts = Object.fromEntries(
-      expectedPublishingIntegrityTestNames.map((testName) => [
+      expectedMobileNavigationTestNames.map((testName) => [
         testName,
         globalReport.names.filter((name) => name === testName).length
       ])
@@ -211,51 +219,56 @@ test("publishing integrity contracts live in one focused module", async () => {
     assert.deepEqual(
       globalCounts,
       Object.fromEntries(
-        expectedPublishingIntegrityTestNames.map((testName) => [testName, 1])
+        expectedMobileNavigationTestNames.map((testName) => [testName, 1])
       ),
-      "canonical publishing integrity test names must be registered exactly once globally"
+      "canonical mobile navigation test names must be registered exactly once globally"
     );
   }
 
   assert.equal(
     monolithStats.size,
     monolithExpectedBytes,
-    `${monolithFile} must be exactly ${monolithExpectedBytes} bytes at the reviewed publishing integrity extraction boundary`
+    `${monolithFile} must be exactly ${monolithExpectedBytes} bytes at the reviewed mobile navigation extraction boundary`
   );
   assert.equal(
-    publishingIntegrityStats.size,
-    publishingIntegrityExpectedBytes,
-    `${publishingIntegrityFile} must be exactly ${publishingIntegrityExpectedBytes} bytes at the reviewed extraction boundary`
+    mobileNavigationStats.size,
+    mobileNavigationExpectedBytes,
+    `${mobileNavigationFile} must be exactly ${mobileNavigationExpectedBytes} bytes at the reviewed extraction boundary`
   );
 
-  const bodyStart = publishingIntegritySource.indexOf(
-    publishingIntegrityBodyStartMarker
+  const bodyStart = mobileNavigationSource.indexOf(
+    mobileNavigationBodyStartMarker
   );
   assert.notEqual(
     bodyStart,
     -1,
-    `${publishingIntegrityFile} must retain the first publishing integrity test`
+    `${mobileNavigationFile} must retain the first mobile navigation test`
   );
   assert.equal(
     bodyStart,
-    publishingIntegritySource.lastIndexOf(publishingIntegrityBodyStartMarker),
-    `${publishingIntegrityFile} must contain one unambiguous publishing integrity body start`
+    mobileNavigationSource.lastIndexOf(mobileNavigationBodyStartMarker),
+    `${mobileNavigationFile} must contain one unambiguous mobile navigation body start`
   );
-  const publishingIntegrityHeader = publishingIntegritySource.slice(0, bodyStart);
-  const publishingIntegrityBody = publishingIntegritySource.slice(bodyStart);
+  const mobileNavigationHeader = mobileNavigationSource.slice(0, bodyStart);
+  const mobileNavigationBody = mobileNavigationSource.slice(bodyStart);
   assert.equal(
-    Buffer.byteLength(publishingIntegrityHeader),
-    publishingIntegrityBodyStartExpectedBytes,
-    `${publishingIntegrityFile} assertion body must start at byte ${publishingIntegrityBodyStartExpectedBytes}`
-  );
-  assert.equal(
-    Buffer.byteLength(publishingIntegrityBody),
-    publishingIntegrityBodyExpectedBytes,
-    `${publishingIntegrityFile} assertion body must be exactly ${publishingIntegrityBodyExpectedBytes} bytes`
+    Buffer.byteLength(mobileNavigationHeader),
+    mobileNavigationBodyStartExpectedBytes,
+    `${mobileNavigationFile} assertion body must start at byte ${mobileNavigationBodyStartExpectedBytes}`
   );
   assert.equal(
-    sha256(publishingIntegrityBody),
-    publishingIntegrityBodyExpectedSha256,
-    `${publishingIntegrityFile} assertion body SHA-256 must match the reviewed extraction`
+    sha256(mobileNavigationHeader),
+    mobileNavigationHeaderExpectedSha256,
+    `${mobileNavigationFile} header SHA-256 must match the reviewed extraction`
+  );
+  assert.equal(
+    Buffer.byteLength(mobileNavigationBody),
+    mobileNavigationBodyExpectedBytes,
+    `${mobileNavigationFile} assertion body must be exactly ${mobileNavigationBodyExpectedBytes} bytes`
+  );
+  assert.equal(
+    sha256(mobileNavigationBody),
+    mobileNavigationBodyExpectedSha256,
+    `${mobileNavigationFile} assertion body SHA-256 must match the reviewed extraction`
   );
 });
