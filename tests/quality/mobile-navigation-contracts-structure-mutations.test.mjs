@@ -76,6 +76,16 @@ function padWithComment(source, targetBytes) {
   return `${source}/*${"x".repeat(remainingBytes - 4)}*/`;
 }
 
+function replaceOnce(source, marker, replacement) {
+  assert.notEqual(source.indexOf(marker), -1, `Missing mutation marker: ${marker}`);
+  assert.equal(
+    source.indexOf(marker),
+    source.lastIndexOf(marker),
+    `Ambiguous mutation marker: ${marker}`
+  );
+  return source.replace(marker, replacement);
+}
+
 async function linkRuntimeFixtures(rootDirectory) {
   await Promise.all(
     runtimeFixturePaths.map((relativePath) =>
@@ -88,7 +98,8 @@ async function linkRuntimeFixtures(rootDirectory) {
 }
 
 async function runGuardMutation({
-  mobileNavigation = mobileNavigationSource
+  mobileNavigation = mobileNavigationSource,
+  mutationGuard = mutationGuardSource
 } = {}) {
   const fixtureRoot = await mkdtemp(
     path.join(os.tmpdir(), "info-mobile-navigation-guard-")
@@ -102,7 +113,7 @@ async function runGuardMutation({
       writeFile(path.join(fixtureQualityDirectory, guardFile), guardSource),
       writeFile(
         path.join(fixtureQualityDirectory, mutationGuardFile),
-        mutationGuardSource
+        mutationGuard
       ),
       writeFile(
         path.join(fixtureQualityDirectory, mobileNavigationFile),
@@ -172,5 +183,37 @@ mutationTest(
       result.output,
       /mobile-navigation-contracts\.test\.mjs header SHA-256 must match the reviewed extraction/
     );
+  }
+);
+
+mutationTest(
+  "mobile navigation structure guard binds the unchanged-control mutation wrapper source",
+  async () => {
+    const wrapperMarker = [
+      "mutationTest(",
+      '  "mobile navigation structure guard accepts the reviewed unchanged extraction",',
+      "  async () => {",
+      "    const result = await runGuardMutation();"
+    ].join("\n");
+    const mutationGuardWithHiddenCanonical = replaceOnce(
+      mutationGuardSource,
+      wrapperMarker,
+      wrapperMarker
+        .replace("async ()", "async (context)")
+        .replace(
+          "\n    const result",
+          "\n    await context.test(mobileNavigationTestNames[0], () => {});\n    const result"
+        )
+    );
+
+    const result = await runGuardMutation({
+      mutationGuard: mutationGuardWithHiddenCanonical
+    });
+    assert.notEqual(
+      result.status,
+      0,
+      `The actual structure guard accepted the modified mutation wrapper:\n${result.output}`
+    );
+    assert.match(result.output, /mutation guard source SHA-256/);
   }
 );

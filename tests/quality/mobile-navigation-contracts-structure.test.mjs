@@ -8,6 +8,8 @@ import { test } from "node:test";
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const monolithFile = "site-quality.test.mjs";
+const mutationGuardFile =
+  "mobile-navigation-contracts-structure-mutations.test.mjs";
 const mobileNavigationFile = "mobile-navigation-contracts.test.mjs";
 const workflowSecurityInventoryEnvironment = "INFO_WORKFLOW_SECURITY_INVENTORY";
 const localizationInventoryEnvironment = "INFO_LOCALIZATION_INVENTORY";
@@ -27,6 +29,9 @@ const globalInventoryChildMode =
   process.env[mobileNavigationInventoryEnvironment] ===
     globalInventoryEnvironmentValue;
 const monolithExpectedBytes = 64_652;
+const mutationGuardExpectedBytes = 6_616;
+const mutationGuardExpectedSha256 =
+  "f11d9742929828c4711e29fc9b79179cd42d810f7b530142c8fdc722a3736936";
 const mobileNavigationExpectedBytes = 6_211;
 const mobileNavigationBodyStartExpectedBytes = 273;
 const mobileNavigationHeaderExpectedSha256 =
@@ -136,12 +141,14 @@ test("mobile navigation contracts live in one focused module", async () => {
     entries,
     monolithSource,
     monolithStats,
+    mutationGuardSource,
     mobileNavigationSource,
     mobileNavigationStats
   ] = await Promise.all([
     readdir(qualityDirectory, { withFileTypes: true }),
     readFile(path.join(qualityDirectory, monolithFile), "utf8"),
     stat(path.join(qualityDirectory, monolithFile)),
+    readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
     readFile(path.join(qualityDirectory, mobileNavigationFile), "utf8"),
     stat(path.join(qualityDirectory, mobileNavigationFile))
   ]);
@@ -206,6 +213,17 @@ test("mobile navigation contracts live in one focused module", async () => {
       }
     },
     `${mobileNavigationFile} must not register test.only or an only option`
+  );
+
+  assert.equal(
+    sha256(mutationGuardSource),
+    mutationGuardExpectedSha256,
+    `${mutationGuardFile} mutation guard source SHA-256 must match the reviewed fixture`
+  );
+  assert.equal(
+    Buffer.byteLength(mutationGuardSource),
+    mutationGuardExpectedBytes,
+    `${mutationGuardFile} must be exactly ${mutationGuardExpectedBytes} bytes`
   );
 
   if (!globalInventoryChildMode) {
