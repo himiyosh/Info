@@ -14,12 +14,10 @@ import { test } from "node:test";
 
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
-const helperDirectory = path.join(repoRoot, "tests/helpers");
-const guardFile = "asset-integrity-contracts-structure.test.mjs";
+const guardFile = "public-discovery-contracts-structure.test.mjs";
 const mutationGuardFile =
-  "asset-integrity-contracts-structure-mutations.test.mjs";
-const assetIntegrityFile = "asset-integrity-contracts.test.mjs";
-const sharedHelperFile = "asset-reference-parsing.mjs";
+  "public-discovery-contracts-structure-mutations.test.mjs";
+const publicDiscoveryFile = "public-discovery-contracts.test.mjs";
 const monolithFile = "site-quality.test.mjs";
 const globalInventoryEnvironments = [
   "INFO_WORKFLOW_SECURITY_INVENTORY",
@@ -27,7 +25,8 @@ const globalInventoryEnvironments = [
   "INFO_PROJECT_CATALOGUE_INVENTORY",
   "INFO_PUBLISHING_INTEGRITY_INVENTORY",
   "INFO_MOBILE_NAVIGATION_INVENTORY",
-  "INFO_ASSET_INTEGRITY_INVENTORY"
+  "INFO_ASSET_INTEGRITY_INVENTORY",
+  "INFO_PUBLIC_DISCOVERY_INVENTORY"
 ];
 const globalInventoryEnvironmentValue = "complete-runtime-v1";
 const globalInventoryChildMode = globalInventoryEnvironments.some(
@@ -37,60 +36,53 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
 const mutationTest = globalInventoryChildMode ? test.skip : test;
 const childProcessEnv = { ...process.env, NO_COLOR: "1" };
 delete childProcessEnv.NODE_TEST_CONTEXT;
-const runtimeFixturePaths = [
-  "favicon.svg",
-  "i18n.js",
-  "index.html",
-  "modern.css",
-  "projects.json",
-  "script.js",
-  "sitemap.xml",
-  "styles.css",
-  "tokens.css"
-];
+const runtimeFixturePaths = ["index.html", "projects.json"];
 const [
   guardSource,
   mutationGuardSource,
-  assetIntegritySource,
-  sharedHelperSource,
+  publicDiscoverySource,
   monolithSource
 ] = await Promise.all([
   readFile(path.join(qualityDirectory, guardFile), "utf8"),
   readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
-  readFile(path.join(qualityDirectory, assetIntegrityFile), "utf8"),
-  readFile(path.join(helperDirectory, sharedHelperFile), "utf8"),
+  readFile(path.join(qualityDirectory, publicDiscoveryFile), "utf8"),
   readFile(path.join(qualityDirectory, monolithFile), "utf8")
 ]);
-const assetIntegrityTestNames = [
-  ...assetIntegritySource.matchAll(/^test\("([^"]+)",/gm)
+const publicDiscoveryTestNames = [
+  ...publicDiscoverySource.matchAll(/^test\("([^"]+)",/gm)
 ].map((match) => match[1]);
-const assetIntegrityBodyStart = assetIntegritySource.indexOf(
-  `test(${JSON.stringify(assetIntegrityTestNames[0])}`
+const publicDiscoveryBodyStart = publicDiscoverySource.indexOf(
+  `test(${JSON.stringify(publicDiscoveryTestNames[0])}`
 );
-const assetIntegrityHeader = assetIntegritySource.slice(
+const publicDiscoveryHeader = publicDiscoverySource.slice(
   0,
-  assetIntegrityBodyStart
+  publicDiscoveryBodyStart
 );
-const assetIntegrityBodyBytes =
-  Buffer.byteLength(assetIntegritySource) - assetIntegrityBodyStart;
-const adjacentHeroAnimationTestName =
-  "hero image has no entrance animation and decorative keyframes are removed";
+const publicDiscoveryBodyBytes =
+  Buffer.byteLength(publicDiscoverySource) - publicDiscoveryBodyStart;
+const adjacentMonolithTestNames = [
+  "JavaScript files are parseable",
+  "rejected continuous curiosity field recovery remains absent",
+  "new-tab links include bilingual accessibility announcement text"
+];
 
 assert.equal(
-  assetIntegrityTestNames.length,
-  4,
-  "Mutation fixtures require the fixed four-test inventory"
+  publicDiscoveryTestNames.length,
+  3,
+  "Mutation fixtures require the fixed three-test inventory"
 );
 assert.notEqual(
-  assetIntegrityBodyStart,
+  publicDiscoveryBodyStart,
   -1,
-  "Mutation fixtures require the asset integrity body boundary"
+  "Mutation fixtures require the public discovery body boundary"
 );
 const monolithFixtureSource = padWithComment(
   [
     'import { test } from "node:test";',
     "",
-    `test(${JSON.stringify(adjacentHeroAnimationTestName)}, () => {});`,
+    ...adjacentMonolithTestNames.map(
+      (name) => `test(${JSON.stringify(name)}, () => {});`
+    ),
     ""
   ].join("\n"),
   Buffer.byteLength(monolithSource)
@@ -128,43 +120,22 @@ async function linkRuntimeFixtures(rootDirectory) {
       )
     )
   );
-  await symlink(
-    path.join(repoRoot, "assets"),
-    path.join(rootDirectory, "assets"),
-    "dir"
-  );
-  await symlink(
-    path.join(repoRoot, "en"),
-    path.join(rootDirectory, "en"),
-    "dir"
-  );
-  const githubDirectory = path.join(rootDirectory, ".github");
-  await mkdir(githubDirectory);
-  await symlink(
-    path.join(repoRoot, ".github/pages-artifact-whitelist.txt"),
-    path.join(githubDirectory, "pages-artifact-whitelist.txt")
-  );
 }
 
 async function runGuardMutation({
-  assetIntegrity = assetIntegritySource,
   extraQualityFiles = {},
   guard = guardSource,
-  mutationGuard = mutationGuardSource,
   monolith = monolithFixtureSource,
-  sharedHelper = sharedHelperSource
+  mutationGuard = mutationGuardSource,
+  publicDiscovery = publicDiscoverySource
 } = {}) {
   const fixtureRoot = await mkdtemp(
-    path.join(os.tmpdir(), "info-asset-integrity-guard-")
+    path.join(os.tmpdir(), "info-public-discovery-guard-")
   );
   const fixtureQualityDirectory = path.join(fixtureRoot, "tests/quality");
-  const fixtureHelperDirectory = path.join(fixtureRoot, "tests/helpers");
 
   try {
-    await Promise.all([
-      mkdir(fixtureQualityDirectory, { recursive: true }),
-      mkdir(fixtureHelperDirectory, { recursive: true })
-    ]);
+    await mkdir(fixtureQualityDirectory, { recursive: true });
     await linkRuntimeFixtures(fixtureRoot);
     await Promise.all([
       writeFile(path.join(fixtureQualityDirectory, guardFile), guard),
@@ -173,16 +144,12 @@ async function runGuardMutation({
         mutationGuard
       ),
       writeFile(
-        path.join(fixtureQualityDirectory, assetIntegrityFile),
-        assetIntegrity
+        path.join(fixtureQualityDirectory, publicDiscoveryFile),
+        publicDiscovery
       ),
       writeFile(
         path.join(fixtureQualityDirectory, monolithFile),
         monolith
-      ),
-      writeFile(
-        path.join(fixtureHelperDirectory, sharedHelperFile),
-        sharedHelper
       ),
       ...Object.entries(extraQualityFiles).map(([file, source]) => {
         assert.equal(
@@ -229,7 +196,7 @@ async function assertMutationRejected(mutation, expectedMessage) {
 }
 
 mutationTest(
-  "asset integrity structure guard accepts the reviewed unchanged extraction",
+  "public discovery structure guard accepts the reviewed unchanged extraction",
   async () => {
     const result = await runGuardMutation();
     assert.equal(result.status, 0, result.output);
@@ -237,91 +204,125 @@ mutationTest(
 );
 
 mutationTest(
-  "asset integrity structure guard rejects computed duplicate registrations",
+  "public discovery structure guard rejects computed duplicate registrations",
   async () => {
     const duplicateRegistration = appendSource(
-      assetIntegritySource,
+      publicDiscoverySource,
       [
-        `const duplicateAssetIntegrityName = ${JSON.stringify(assetIntegrityTestNames[0])};`,
-        "test(duplicateAssetIntegrityName, () => {});"
+        `const duplicatePublicDiscoveryName = ${JSON.stringify(publicDiscoveryTestNames[0])};`,
+        "test(duplicatePublicDiscoveryName, () => {});"
       ].join("\n")
     );
     await assertMutationRejected(
-      { assetIntegrity: duplicateRegistration },
+      { publicDiscovery: duplicateRegistration },
       /exact runtime test-name inventory/
     );
   }
 );
 
 mutationTest(
-  "asset integrity structure guard rejects hidden global duplicates",
+  "public discovery structure guard rejects dynamic test registrations",
   async () => {
-    const [namePrefix, nameSuffix] = assetIntegrityTestNames[0].split(
-      " local files"
+    const dynamicRegistration = appendSource(
+      publicDiscoverySource,
+      [
+        'const dynamicPublicDiscoveryName = ["dynamic", "public", "discovery", "contract"].join(" ");',
+        "test(dynamicPublicDiscoveryName, () => {});"
+      ].join("\n")
+    );
+    await assertMutationRejected(
+      { publicDiscovery: dynamicRegistration },
+      /exact runtime test-name inventory/
+    );
+  }
+);
+
+mutationTest(
+  "public discovery structure guard rejects hidden global duplicates",
+  async () => {
+    const [namePrefix, nameSuffix] = publicDiscoveryTestNames[0].split(
+      " social metadata"
     );
     const hiddenDuplicate = [
       'import { test as registerTest } from "node:test";',
       "",
-      `const canonicalName = ${JSON.stringify(`${namePrefix} `)} + ${JSON.stringify(`local files${nameSuffix}`)};`,
+      `const canonicalName = ${JSON.stringify(`${namePrefix} `)} + ${JSON.stringify(`social metadata${nameSuffix}`)};`,
       "registerTest(canonicalName, () => {});",
       ""
     ].join("\n");
     await assertMutationRejected(
       {
         extraQualityFiles: {
-          "hidden-asset-integrity-duplicate.test.mjs": hiddenDuplicate
+          "hidden-public-discovery-duplicate.test.mjs": hiddenDuplicate
         }
       },
-      /canonical asset integrity test names must be registered exactly once globally/
+      /canonical public discovery test names must be registered exactly once globally/
     );
   }
 );
 
 mutationTest(
-  "asset integrity structure guard rejects skipped canonical contracts",
+  "public discovery structure guard rejects runtime-disabled canonical contracts",
   async () => {
     const firstRegistration =
-      `test(${JSON.stringify(assetIntegrityTestNames[0])}, async () => {`;
+      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
+    const runtimeDisabled = replaceOnce(
+      publicDiscoverySource,
+      firstRegistration,
+      `${firstRegistration.slice(0, -"() => {".length)}(context) => {\n  context.skip("mutation");\n  return;`
+    );
+    await assertMutationRejected(
+      { publicDiscovery: runtimeDisabled },
+      /must execute all three contracts without skip or todo/
+    );
+  }
+);
+
+mutationTest(
+  "public discovery structure guard rejects skipped canonical contracts",
+  async () => {
+    const firstRegistration =
+      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
     await assertMutationRejected(
       {
-        assetIntegrity: replaceOnce(
-          assetIntegritySource,
+        publicDiscovery: replaceOnce(
+          publicDiscoverySource,
           firstRegistration,
           firstRegistration.replace("test(", "test.skip(")
         )
       },
-      /must execute all four contracts without skip or todo/
+      /must execute all three contracts without skip or todo/
     );
   }
 );
 
 mutationTest(
-  "asset integrity structure guard rejects todo canonical contracts",
+  "public discovery structure guard rejects todo canonical contracts",
   async () => {
     const firstRegistration =
-      `test(${JSON.stringify(assetIntegrityTestNames[0])}, async () => {`;
+      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
     await assertMutationRejected(
       {
-        assetIntegrity: replaceOnce(
-          assetIntegritySource,
+        publicDiscovery: replaceOnce(
+          publicDiscoverySource,
           firstRegistration,
           firstRegistration.replace("test(", "test.todo(")
         )
       },
-      /must execute all four contracts without skip or todo/
+      /must execute all three contracts without skip or todo/
     );
   }
 );
 
 mutationTest(
-  "asset integrity structure guard rejects exclusive canonical contracts",
+  "public discovery structure guard rejects exclusive canonical contracts",
   async () => {
     const firstRegistration =
-      `test(${JSON.stringify(assetIntegrityTestNames[0])}, async () => {`;
+      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
     await assertMutationRejected(
       {
-        assetIntegrity: replaceOnce(
-          assetIntegritySource,
+        publicDiscovery: replaceOnce(
+          publicDiscoverySource,
           firstRegistration,
           firstRegistration.replace("test(", "test.only(")
         )
@@ -332,17 +333,17 @@ mutationTest(
 );
 
 mutationTest(
-  "asset integrity structure guard rejects focused-module padding",
+  "public discovery structure guard rejects focused-module padding",
   async () => {
     await assertMutationRejected(
-      { assetIntegrity: `${assetIntegritySource} ` },
-      /asset-integrity-contracts\.test\.mjs must be exactly 11612 bytes/
+      { publicDiscovery: `${publicDiscoverySource} ` },
+      /public-discovery-contracts\.test\.mjs must be exactly 4993 bytes/
     );
   }
 );
 
 mutationTest(
-  "asset integrity structure guard rejects monolith padding",
+  "public discovery structure guard rejects monolith padding",
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
@@ -352,73 +353,63 @@ mutationTest(
 );
 
 mutationTest(
-  "asset integrity structure guard rejects shared-helper padding",
-  async () => {
-    await assertMutationRejected(
-      { sharedHelper: `${sharedHelperSource} ` },
-      /asset-reference-parsing\.mjs must be exactly 457 bytes/
-    );
-  }
-);
-
-mutationTest(
-  "asset integrity structure guard rejects a same-length inert header wrapper",
+  "public discovery structure guard rejects a same-length inert header wrapper",
   async () => {
     const inertHeader = `${padWithComment(
       'import { test as t } from "node:test"; const test=(name)=>t(name,()=>{});\n',
-      assetIntegrityBodyStart - 1
+      publicDiscoveryBodyStart - 1
     )}\n`;
     const headerWrapperBypass =
-      `${inertHeader}${assetIntegritySource.slice(assetIntegrityBodyStart)}`;
+      `${inertHeader}${publicDiscoverySource.slice(publicDiscoveryBodyStart)}`;
 
     assert.equal(
       Buffer.byteLength(headerWrapperBypass),
-      Buffer.byteLength(assetIntegritySource)
+      Buffer.byteLength(publicDiscoverySource)
     );
     assert.equal(
-      headerWrapperBypass.slice(assetIntegrityBodyStart),
-      assetIntegritySource.slice(assetIntegrityBodyStart)
+      headerWrapperBypass.slice(publicDiscoveryBodyStart),
+      publicDiscoverySource.slice(publicDiscoveryBodyStart)
     );
 
     await assertMutationRejected(
-      { assetIntegrity: headerWrapperBypass },
-      /asset-integrity-contracts\.test\.mjs header SHA-256 must match the reviewed extraction/
+      { publicDiscovery: headerWrapperBypass },
+      /public-discovery-contracts\.test\.mjs header SHA-256 must match the reviewed extraction/
     );
   }
 );
 
 mutationTest(
-  "asset integrity structure guard rejects empty stubs plus unrelated extraction",
+  "public discovery structure guard rejects empty stubs plus unrelated extraction",
   async () => {
     const stubBody = [
-      ...assetIntegrityTestNames.map(
+      ...publicDiscoveryTestNames.map(
         (name) => `test(${JSON.stringify(name)}, () => {});`
       ),
       "",
-      "const unrelatedHeroAnimationExtraction = true;",
+      "const unrelatedNewTabAccessibilityExtraction = true;",
       ""
     ].join("\n");
     const unrelatedExtraction =
-      `${assetIntegrityHeader}${padWithComment(stubBody, assetIntegrityBodyBytes)}`;
+      `${publicDiscoveryHeader}${padWithComment(stubBody, publicDiscoveryBodyBytes)}`;
 
     assert.equal(
       Buffer.byteLength(unrelatedExtraction),
-      Buffer.byteLength(assetIntegritySource)
+      Buffer.byteLength(publicDiscoverySource)
     );
 
     await assertMutationRejected(
-      { assetIntegrity: unrelatedExtraction },
+      { publicDiscovery: unrelatedExtraction },
       /assertion body SHA-256/
     );
   }
 );
 
 mutationTest(
-  "asset integrity structure guard binds skipped mutation callbacks",
+  "public discovery structure guard binds skipped mutation callbacks",
   async () => {
     const wrapperMarker = [
       "mutationTest(",
-      '  "asset integrity structure guard accepts the reviewed unchanged extraction",',
+      '  "public discovery structure guard accepts the reviewed unchanged extraction",',
       "  async () => {",
       "    const result = await runGuardMutation();"
     ].join("\n");
@@ -429,7 +420,7 @@ mutationTest(
         .replace("async ()", "async (context)")
         .replace(
           "\n    const result",
-          "\n    const hiddenCanonicalName = assetIntegrityTestNames[0].slice(0);" +
+          "\n    const hiddenCanonicalName = publicDiscoveryTestNames[0].slice(0);" +
             "\n    await context.test(hiddenCanonicalName, () => {});" +
             "\n    const result"
         )
