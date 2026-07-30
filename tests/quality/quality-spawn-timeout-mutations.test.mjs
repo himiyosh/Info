@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  link,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -15,6 +24,11 @@ const qualityDirectory = path.join(repoRoot, "tests/quality");
 const helperDirectory = path.join(repoRoot, "tests/helpers");
 const spawnHelperFile = "quality-spawn.mjs";
 const guardFile = "quality-spawn-timeout.test.mjs";
+// npm test already saturates a two-core runner with ten nested full-suite
+// spawns, so each fixture run is restricted to the coverage contract, which
+// reads sources and spawns nothing of its own.
+const coverageTestName =
+  "nested quality-suite spawns share the reviewed spawn-timeout helper";
 const regressionTargetFile = "asset-integrity-contracts-structure.test.mjs";
 const regressionTargetLabel = "asset integrity inventory";
 const workflowRelativePath = ".github/workflows/quality-baseline.yml";
@@ -61,12 +75,16 @@ const hiddenSpawnerSource = [
   "});",
   ""
 ].join("\n");
-const [guardSource, regressionTargetSource, spawnHelperSource] =
+const [guardSource, regressionTargetSource, spawnHelperSource, qualityEntries] =
   await Promise.all([
     readFile(path.join(qualityDirectory, guardFile), "utf8"),
     readFile(path.join(qualityDirectory, regressionTargetFile), "utf8"),
-    readFile(path.join(helperDirectory, spawnHelperFile), "utf8")
+    readFile(path.join(helperDirectory, spawnHelperFile), "utf8"),
+    readdir(qualityDirectory, { withFileTypes: true })
   ]);
+const qualityFixtureFiles = qualityEntries
+  .filter((entry) => entry.isFile())
+  .map((entry) => entry.name);
 
 function replaceOnce(source, marker, replacement) {
   assert.notEqual(
@@ -92,6 +110,18 @@ const regressedTargetSource = replaceOnce(
   legacySpawnAssertion
 );
 
+// Unmutated fixture files are hard-linked rather than copied so the harness
+// adds almost no work to an already saturated runner. Anything this fixture
+// writes must therefore never be linked first, or the write would reach the
+// repository file through the shared inode.
+async function materialize(sourcePath, destinationPath) {
+  try {
+    await link(sourcePath, destinationPath);
+  } catch {
+    await copyFile(sourcePath, destinationPath);
+  }
+}
+
 async function runGuardMutation({
   guard = guardSource,
   qualityOverrides = {},
@@ -102,20 +132,33 @@ async function runGuardMutation({
   );
   const fixtureQualityDirectory = path.join(fixtureRoot, "tests/quality");
   const fixtureHelperDirectory = path.join(fixtureRoot, "tests/helpers");
+  const writtenQualityFiles = new Set([
+    guardFile,
+    ...Object.keys(qualityOverrides),
+    ...Object.keys(extraQualityFiles)
+  ]);
 
   try {
     await Promise.all([
+      mkdir(fixtureQualityDirectory, { recursive: true }),
       mkdir(fixtureHelperDirectory, { recursive: true }),
       mkdir(path.join(fixtureRoot, path.dirname(workflowRelativePath)), {
         recursive: true
       })
     ]);
     await Promise.all([
-      cp(qualityDirectory, fixtureQualityDirectory, { recursive: true }),
-      cp(
+      materialize(
         path.join(repoRoot, workflowRelativePath),
         path.join(fixtureRoot, workflowRelativePath)
-      )
+      ),
+      ...qualityFixtureFiles
+        .filter((file) => !writtenQualityFiles.has(file))
+        .map((file) =>
+          materialize(
+            path.join(qualityDirectory, file),
+            path.join(fixtureQualityDirectory, file)
+          )
+        )
     ]);
     await Promise.all([
       writeFile(
@@ -142,7 +185,11 @@ async function runGuardMutation({
 
     const result = spawnSync(
       process.execPath,
-      ["--test", path.join("tests/quality", guardFile)],
+      [
+        "--test",
+        `--test-name-pattern=^${coverageTestName}$`,
+        path.join("tests/quality", guardFile)
+      ],
       {
         cwd: fixtureRoot,
         encoding: "utf8",
