@@ -36,7 +36,7 @@ const publicDiscoveryBodyExpectedSha256 =
   "c29e8f3a93bff0d813f57d1d36072bcca00d78cd3a8ad1a93a0c41726ac9f802";
 const mutationGuardExpectedBytes = 15_550;
 const mutationGuardExpectedSha256 =
-  "f0c8e325a2789fb7495fc0972dacbbe2939abc80851797b8e815740c8f1fc86f";
+  "5bb5054fbf4ec20f9f6aca93d8f53329f8fdae2e389967f4c2e11a1126cc04d6";
 const expectedPublicDiscoveryTestNames = [
   "required SEO and social metadata exist and are consistent",
   "static project summaries preserve canonical primary, source, proof, and fragment access",

@@ -10,9 +10,9 @@ import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const monolithFile = "site-quality.test.mjs";
-const reducedMotionFile = "reduced-motion-contracts.test.mjs";
+const focusContrastFile = "focus-contrast-contracts.test.mjs";
 const mutationGuardFile =
-  "reduced-motion-contracts-structure-mutations.test.mjs";
+  "focus-contrast-contracts-structure-mutations.test.mjs";
 const globalInventoryEnvironments = [
   "INFO_WORKFLOW_SECURITY_INVENTORY",
   "INFO_LOCALIZATION_INVENTORY",
@@ -22,63 +22,69 @@ const globalInventoryEnvironments = [
   "INFO_ASSET_INTEGRITY_INVENTORY",
   "INFO_PUBLIC_DISCOVERY_INVENTORY",
   "INFO_BASELINE_MOTION_SAFETY_INVENTORY",
-  "INFO_REDUCED_MOTION_INVENTORY"
+  "INFO_REDUCED_MOTION_INVENTORY",
+  "INFO_FOCUS_CONTRAST_INVENTORY"
 ];
 const globalInventoryEnvironmentValue = "complete-runtime-v1";
 const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const reducedMotionExpectedBytes = 5_080;
-const reducedMotionBodyStartExpectedBytes = 273;
-const reducedMotionHeaderExpectedSha256 =
+const focusContrastExpectedBytes = 7_773;
+const focusContrastBodyStartExpectedBytes = 273;
+const focusContrastHeaderExpectedSha256 =
   "0e56555309f1cd482e5b0a071cf213f6859415387ac7983795e29915a1781fb3";
-const reducedMotionBodyExpectedBytes = 4_807;
-const reducedMotionBodyExpectedSha256 =
-  "7085243afd368abb5e2e4449284c8cc85ee7435b8301e546523bbc10e2bbeeef";
-const reviewedSourceSliceExpectedBytes = 4_808;
+const focusContrastBodyExpectedBytes = 7_500;
+const focusContrastBodyExpectedSha256 =
+  "a6c0d2aa616c89b50121f5d7947e1bd05f826fcbd08b4a70f1d037d006cb8e15";
+const reviewedSourceSliceExpectedBytes = 7_501;
 const reviewedSourceSliceExpectedSha256 =
-  "337f1f315eb90c87704d76dd85d0df8f2371ebb1809b3201d6efaa8ede22303b";
-const mutationGuardExpectedBytes = 16_849;
+  "7a4034411d7b56a35233d7e547d6f767c644852344a7b3eb7fd0545a12cbdf40";
+const mutationGuardExpectedBytes = 20_121;
 const mutationGuardExpectedSha256 =
-  "3de5ad98a453739c5819180103b8f29a6997ba6214bd289fadf17c70a9a8c3dc";
-const expectedReducedMotionTestNames = [
-  "reduced motion nulls every new spatial transform, disables non-essential motion, and keeps the wordmark-mark rotation invariant",
-  "reduced motion preference is live: a runtime change arms/disarms motion without duplicate observers"
+  "33a3b225aa94f974bf329fc66be05c6e2664f4f28d45f6a69197acc6c7b2bac8";
+const expectedFocusContrastTestNames = [
+  "final modern focus-ring overrides match the actual project and contact surfaces",
+  "focus-ring / backdrop token pairings meet WCAG 1.4.11 non-text contrast (>= 3:1)",
+  "increased contrast strengthens muted roles and UI boundaries without changing the base theme"
 ];
-const reducedMotionNamePattern =
-  `^(?:${expectedReducedMotionTestNames
+const focusContrastNamePattern =
+  `^(?:${expectedFocusContrastTestNames
     .map((testName) => testName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
     .join("|")})$`;
 const requiredMutationTestNames = [
-  "reduced motion structure guard accepts the reviewed unchanged extraction",
-  "reduced motion structure guard rejects canonical names leaking into the monolith",
-  "reduced motion structure guard rejects adjacent monolith contracts leaking into the focused module",
-  "reduced motion structure guard rejects OKLCH helpers leaking into the focused module",
-  "reduced motion structure guard rejects computed duplicate registrations",
-  "reduced motion structure guard rejects dynamically assembled duplicate registrations",
-  "reduced motion structure guard rejects hidden global duplicates",
-  "reduced motion structure guard rejects skipped canonical contracts",
-  "reduced motion structure guard rejects todo canonical contracts",
-  "reduced motion structure guard rejects exclusive canonical contracts",
-  "reduced motion structure guard rejects runtime-disabled canonical contracts",
-  "reduced motion structure guard rejects focused-module padding",
-  "reduced motion structure guard rejects monolith padding",
-  "reduced motion structure guard rejects a same-length inert header wrapper",
-  "reduced motion structure guard rejects empty stubs plus unrelated extraction",
-  "reduced motion structure guard binds skipped mutation callbacks"
+  "focus contrast structure guard accepts the reviewed unchanged extraction",
+  "focus contrast structure guard rejects canonical names leaking into the monolith",
+  "focus contrast structure guard rejects adjacent monolith contracts leaking into the focused module",
+  "focus contrast structure guard rejects OKLCH helpers leaking into the monolith",
+  "focus contrast structure guard rejects computed duplicate registrations",
+  "focus contrast structure guard rejects dynamically assembled duplicate registrations",
+  "focus contrast structure guard rejects hidden global duplicates",
+  "focus contrast structure guard rejects skipped canonical contracts",
+  "focus contrast structure guard rejects todo canonical contracts",
+  "focus contrast structure guard rejects exclusive canonical contracts",
+  "focus contrast structure guard rejects runtime-disabled canonical contracts",
+  "focus contrast structure guard binds the final focus selector assertion",
+  "focus contrast structure guard binds the on-dark focus exclusion assertion",
+  "focus contrast structure guard binds the WCAG non-text contrast assertion",
+  "focus contrast structure guard binds the increased-contrast improvement assertion",
+  "focus contrast structure guard rejects focused-module padding",
+  "focus contrast structure guard rejects monolith padding",
+  "focus contrast structure guard rejects a same-length inert header wrapper",
+  "focus contrast structure guard rejects empty stubs plus unrelated extraction",
+  "focus contrast structure guard binds skipped mutation callbacks"
 ];
 const adjacentMonolithTestNames = [
   "micro-parallax is capped at +/-5px, applied to the frame not the img, and disabled under reduced motion",
   "color-scheme metadata matches the shipped dark-only theme"
 ];
-const extractedFocusContrastHelperNames = [
+const focusContrastHelperNames = [
   "parseOklchTokens",
   "relativeLuminanceFromOklch",
   "oklchContrastRatio"
 ];
-const reducedMotionBodyStartMarker =
-  `test(${JSON.stringify(expectedReducedMotionTestNames[0])}`;
+const focusContrastBodyStartMarker =
+  "// OKLCH -> linear sRGB -> WCAG relative luminance, used to compute real";
 const junitSummaryKeys = [
   "tests",
   "suites",
@@ -137,7 +143,7 @@ function runTestModules(
       "--test",
       ...(only ? ["--test-only"] : []),
       ...(globalInventory
-        ? [`--test-name-pattern=${reducedMotionNamePattern}`]
+        ? [`--test-name-pattern=${focusContrastNamePattern}`]
         : []),
       "--test-reporter=junit",
       ...files
@@ -154,39 +160,39 @@ function runTestModules(
   assert.equal(
     result.status,
     0,
-    `Quality test modules must execute successfully for reduced-motion inventory:\n${result.stdout}${result.stderr}`
+    `Quality test modules must execute successfully for focus/contrast inventory:\n${result.stdout}${result.stderr}`
   );
   return parseJunitReport(result.stdout);
 }
 
-function runReducedMotionTests({ only = false } = {}) {
+function runFocusContrastTests({ only = false } = {}) {
   return runTestModules(
-    [path.posix.join("tests", "quality", reducedMotionFile)],
+    [path.posix.join("tests", "quality", focusContrastFile)],
     { only }
   );
 }
 
-function runGlobalReducedMotionInventory(qualityTestFiles) {
+function runGlobalFocusContrastInventory(qualityTestFiles) {
   const runtimeFiles = qualityTestFiles.map((file) =>
     path.posix.join("tests", "quality", file)
   );
   return runTestModules(runtimeFiles, { globalInventory: true });
 }
 
-test("reduced motion contracts live in one focused module", async () => {
+test("focus and contrast contracts live in one focused module", async () => {
   const [
     entries,
     monolithSource,
     monolithStats,
-    reducedMotionSource,
-    reducedMotionStats,
+    focusContrastSource,
+    focusContrastStats,
     mutationGuardSource
   ] = await Promise.all([
     readdir(qualityDirectory, { withFileTypes: true }),
     readFile(path.join(qualityDirectory, monolithFile), "utf8"),
     stat(path.join(qualityDirectory, monolithFile)),
-    readFile(path.join(qualityDirectory, reducedMotionFile), "utf8"),
-    stat(path.join(qualityDirectory, reducedMotionFile)),
+    readFile(path.join(qualityDirectory, focusContrastFile), "utf8"),
+    stat(path.join(qualityDirectory, focusContrastFile)),
     readFile(path.join(qualityDirectory, mutationGuardFile), "utf8")
   ]);
   const qualityTestFiles = entries
@@ -210,7 +216,7 @@ test("reduced motion contracts live in one focused module", async () => {
     `${mutationGuardFile} must register each required executable mutation exactly once`
   );
   const monolithCanonicalNameCounts = Object.fromEntries(
-    expectedReducedMotionTestNames.map((testName) => [
+    expectedFocusContrastTestNames.map((testName) => [
       testName,
       countLiteralOccurrences(monolithSource, JSON.stringify(testName))
     ])
@@ -218,16 +224,16 @@ test("reduced motion contracts live in one focused module", async () => {
 
   assert.deepEqual(
     {
-      focusedModulePresent: qualityTestFiles.includes(reducedMotionFile),
+      focusedModulePresent: qualityTestFiles.includes(focusContrastFile),
       monolithCanonicalNameCounts
     },
     {
       focusedModulePresent: true,
       monolithCanonicalNameCounts: Object.fromEntries(
-        expectedReducedMotionTestNames.map((testName) => [testName, 0])
+        expectedFocusContrastTestNames.map((testName) => [testName, 0])
       )
     },
-    `${reducedMotionFile} must exclusively own the two canonical reduced-motion contracts`
+    `${focusContrastFile} must exclusively own the three canonical focus/contrast contracts`
   );
 
   const adjacentNameLocations = Object.fromEntries(
@@ -235,7 +241,7 @@ test("reduced motion contracts live in one focused module", async () => {
       testName,
       {
         focusedModuleCount: countLiteralOccurrences(
-          reducedMotionSource,
+          focusContrastSource,
           JSON.stringify(testName)
         ),
         monolithCount: countLiteralOccurrences(
@@ -256,11 +262,11 @@ test("reduced motion contracts live in one focused module", async () => {
         }
       ])
     ),
-    "adjacent parallax and color-scheme contracts must remain exclusively in the monolith"
+    "the adjacent parallax and color-scheme contracts must remain exclusively in the monolith"
   );
 
   const helperDefinitionLocations = Object.fromEntries(
-    extractedFocusContrastHelperNames.map((helperName) => {
+    focusContrastHelperNames.map((helperName) => {
       const definitionPattern = new RegExp(
         `\\bfunction\\s+${helperName}\\s*\\(`,
         "g"
@@ -269,7 +275,7 @@ test("reduced motion contracts live in one focused module", async () => {
         helperName,
         {
           focusedModuleCount: [
-            ...reducedMotionSource.matchAll(definitionPattern)
+            ...focusContrastSource.matchAll(definitionPattern)
           ].length,
           monolithCount: [...monolithSource.matchAll(definitionPattern)].length
         }
@@ -279,42 +285,42 @@ test("reduced motion contracts live in one focused module", async () => {
   assert.deepEqual(
     helperDefinitionLocations,
     Object.fromEntries(
-      extractedFocusContrastHelperNames.map((helperName) => [
+      focusContrastHelperNames.map((helperName) => [
         helperName,
         {
-          focusedModuleCount: 0,
+          focusedModuleCount: 1,
           monolithCount: 0
         }
       ])
     ),
-    "OKLCH contrast helpers must not remain in the monolith or leak into reduced-motion-contracts.test.mjs"
+    `OKLCH contrast helpers must remain exclusively in ${focusContrastFile}`
   );
 
-  const runtimeReport = runReducedMotionTests();
+  const runtimeReport = runFocusContrastTests();
   assert.deepEqual(
     runtimeReport.names,
-    expectedReducedMotionTestNames,
-    `${reducedMotionFile} must retain the exact runtime test-name inventory`
+    expectedFocusContrastTestNames,
+    `${focusContrastFile} must retain the exact runtime test-name inventory`
   );
   assert.deepEqual(
     runtimeReport.summary,
     {
-      tests: expectedReducedMotionTestNames.length,
+      tests: expectedFocusContrastTestNames.length,
       suites: 0,
-      pass: expectedReducedMotionTestNames.length,
+      pass: expectedFocusContrastTestNames.length,
       fail: 0,
       cancelled: 0,
       skipped: 0,
       todo: 0
     },
-    `${reducedMotionFile} must execute both contracts without skip or todo`
+    `${focusContrastFile} must execute all three contracts without skip or todo`
   );
 
-  const onlyReport = runReducedMotionTests({ only: true });
+  const onlyReport = runFocusContrastTests({ only: true });
   assert.deepEqual(
     onlyReport,
     {
-      names: [path.posix.join("tests", "quality", reducedMotionFile)],
+      names: [path.posix.join("tests", "quality", focusContrastFile)],
       summary: {
         tests: 1,
         suites: 0,
@@ -325,7 +331,7 @@ test("reduced motion contracts live in one focused module", async () => {
         todo: 0
       }
     },
-    `${reducedMotionFile} must not register test.only or an only option`
+    `${focusContrastFile} must not register test.only or an only option`
   );
 
   assert.equal(
@@ -341,9 +347,9 @@ test("reduced motion contracts live in one focused module", async () => {
 
   if (!globalInventoryChildMode) {
     const globalReport =
-      runGlobalReducedMotionInventory(qualityTestFiles);
+      runGlobalFocusContrastInventory(qualityTestFiles);
     const globalCounts = Object.fromEntries(
-      expectedReducedMotionTestNames.map((testName) => [
+      expectedFocusContrastTestNames.map((testName) => [
         testName,
         globalReport.names.filter((name) => name === testName).length
       ])
@@ -351,59 +357,59 @@ test("reduced motion contracts live in one focused module", async () => {
     assert.deepEqual(
       globalCounts,
       Object.fromEntries(
-        expectedReducedMotionTestNames.map((testName) => [testName, 1])
+        expectedFocusContrastTestNames.map((testName) => [testName, 1])
       ),
-      "canonical reduced-motion test names must be registered exactly once globally"
+      "canonical focus/contrast test names must be registered exactly once globally"
     );
   }
 
   assert.equal(
     monolithStats.size,
     siteQualityExpectedBytes,
-    `${monolithFile} must be exactly ${siteQualityExpectedBytes} bytes at the reviewed reduced-motion extraction boundary`
+    `${monolithFile} must be exactly ${siteQualityExpectedBytes} bytes at the reviewed focus/contrast extraction boundary`
   );
   assert.equal(
-    reducedMotionStats.size,
-    reducedMotionExpectedBytes,
-    `${reducedMotionFile} must be exactly ${reducedMotionExpectedBytes} bytes at the reviewed extraction boundary`
+    focusContrastStats.size,
+    focusContrastExpectedBytes,
+    `${focusContrastFile} must be exactly ${focusContrastExpectedBytes} bytes at the reviewed extraction boundary`
   );
 
-  const bodyStart = reducedMotionSource.indexOf(
-    reducedMotionBodyStartMarker
+  const bodyStart = focusContrastSource.indexOf(
+    focusContrastBodyStartMarker
   );
   assert.notEqual(
     bodyStart,
     -1,
-    `${reducedMotionFile} must retain the first reduced-motion test`
+    `${focusContrastFile} must retain the OKLCH helper boundary`
   );
   assert.equal(
     bodyStart,
-    reducedMotionSource.lastIndexOf(reducedMotionBodyStartMarker),
-    `${reducedMotionFile} must contain one unambiguous reduced-motion body start`
+    focusContrastSource.lastIndexOf(focusContrastBodyStartMarker),
+    `${focusContrastFile} must contain one unambiguous focus/contrast body start`
   );
-  const reducedMotionHeader = reducedMotionSource.slice(0, bodyStart);
-  const reducedMotionBody = reducedMotionSource.slice(bodyStart);
+  const focusContrastHeader = focusContrastSource.slice(0, bodyStart);
+  const focusContrastBody = focusContrastSource.slice(bodyStart);
   assert.equal(
-    Buffer.byteLength(reducedMotionHeader),
-    reducedMotionBodyStartExpectedBytes,
-    `${reducedMotionFile} assertion body must start at byte ${reducedMotionBodyStartExpectedBytes}`
-  );
-  assert.equal(
-    sha256(reducedMotionHeader),
-    reducedMotionHeaderExpectedSha256,
-    `${reducedMotionFile} header SHA-256 must match the reviewed extraction`
+    Buffer.byteLength(focusContrastHeader),
+    focusContrastBodyStartExpectedBytes,
+    `${focusContrastFile} assertion body must start at byte ${focusContrastBodyStartExpectedBytes}`
   );
   assert.equal(
-    Buffer.byteLength(reducedMotionBody),
-    reducedMotionBodyExpectedBytes,
-    `${reducedMotionFile} assertion body must be exactly ${reducedMotionBodyExpectedBytes} bytes`
+    sha256(focusContrastHeader),
+    focusContrastHeaderExpectedSha256,
+    `${focusContrastFile} header SHA-256 must match the reviewed extraction`
   );
   assert.equal(
-    sha256(reducedMotionBody),
-    reducedMotionBodyExpectedSha256,
-    `${reducedMotionFile} assertion body SHA-256 must match the reviewed extraction`
+    Buffer.byteLength(focusContrastBody),
+    focusContrastBodyExpectedBytes,
+    `${focusContrastFile} assertion body must be exactly ${focusContrastBodyExpectedBytes} bytes`
   );
-  const reconstructedSourceSlice = `${reducedMotionBody}\n`;
+  assert.equal(
+    sha256(focusContrastBody),
+    focusContrastBodyExpectedSha256,
+    `${focusContrastFile} assertion body SHA-256 must match the reviewed extraction`
+  );
+  const reconstructedSourceSlice = `${focusContrastBody}\n`;
   assert.equal(
     Buffer.byteLength(reconstructedSourceSlice),
     reviewedSourceSliceExpectedBytes,
