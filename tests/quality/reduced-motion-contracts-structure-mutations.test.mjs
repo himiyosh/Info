@@ -68,10 +68,9 @@ const reducedMotionBodyBytes =
   Buffer.byteLength(reducedMotionSource) - reducedMotionBodyStart;
 const adjacentMonolithTestNames = [
   "micro-parallax is capped at +/-5px, applied to the frame not the img, and disabled under reduced motion",
-  "final modern focus-ring overrides match the actual project and contact surfaces",
-  "focus-ring / backdrop token pairings meet WCAG 1.4.11 non-text contrast (>= 3:1)"
+  "color-scheme metadata matches the shipped dark-only theme"
 ];
-const adjacentMonolithHelperNames = [
+const extractedFocusContrastHelperNames = [
   "parseOklchTokens",
   "relativeLuminanceFromOklch",
   "oklchContrastRatio"
@@ -93,10 +92,6 @@ const monolithFixtureSource = padWithComment(
     "",
     ...adjacentMonolithTestNames.map(
       (testName) => `test(${JSON.stringify(testName)}, () => {});`
-    ),
-    "",
-    ...adjacentMonolithHelperNames.map(
-      (helperName) => `function ${helperName}() {}`
     ),
     ""
   ].join("\n"),
@@ -280,7 +275,7 @@ mutationTest(
     );
     await assertMutationRejected(
       { reducedMotion: adjacentContractLeak },
-      /adjacent parallax and focus contracts must remain exclusively in the monolith/
+      /adjacent parallax and color-scheme contracts must remain exclusively in the monolith/
     );
   }
 );
@@ -293,7 +288,7 @@ mutationTest(
     const helperDefinitionLeak = replaceOncePreservingBytes(
       reducedMotionSource,
       reviewedComment,
-      `  function ${adjacentMonolithHelperNames[0]}() {}`
+      `  function ${extractedFocusContrastHelperNames[0]}() {}`
     );
     assert.equal(
       Buffer.byteLength(helperDefinitionLeak),
@@ -301,7 +296,7 @@ mutationTest(
     );
     await assertMutationRejected(
       { reducedMotion: helperDefinitionLeak },
-      /OKLCH contrast helpers must remain exclusively in the monolith/
+      /OKLCH contrast helpers must not remain in the monolith or leak into reduced-motion-contracts\.test\.mjs/
     );
   }
 );
@@ -459,7 +454,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
-      /site-quality\.test\.mjs must be exactly 38714 bytes/
+      /site-quality\.test\.mjs must be exactly 31213 bytes/
     );
   }
 );

@@ -335,7 +335,7 @@ mutationTest("project catalogue structure guard rejects focused-module padding",
 mutationTest("project catalogue structure guard rejects monolith padding", async () => {
   await assertMutationRejected(
     { monolith: `${monolithFixtureSource} ` },
-    /site-quality\.test\.mjs must be exactly 38714 bytes/
+    /site-quality\.test\.mjs must be exactly 31213 bytes/
   );
 });
 

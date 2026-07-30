@@ -14,6 +14,7 @@ const monolithPath = path.join(qualityDirectory, "site-quality.test.mjs");
 const focusedGuardFiles = [
   "asset-integrity-contracts-structure.test.mjs",
   "baseline-motion-safety-structure.test.mjs",
+  "focus-contrast-contracts-structure.test.mjs",
   "localization-contracts-structure.test.mjs",
   "mobile-navigation-contracts-structure.test.mjs",
   "project-catalogue-structure.test.mjs",
@@ -25,6 +26,7 @@ const focusedGuardFiles = [
 const isolatedMutationFixtureFiles = [
   "asset-integrity-contracts-structure-mutations.test.mjs",
   "baseline-motion-safety-structure-mutations.test.mjs",
+  "focus-contrast-contracts-structure-mutations.test.mjs",
   "mobile-navigation-contracts-structure-mutations.test.mjs",
   "project-catalogue-structure-mutations.test.mjs",
   "public-discovery-contracts-structure-mutations.test.mjs",
