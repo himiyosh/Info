@@ -17,6 +17,10 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function metaContent(html, attribute, value) {
   return html.match(
     new RegExp(`<meta\\b[^>]*${attribute}="${value}"[^>]*content="([^"]*)"[^>]*>`, "i")
@@ -44,10 +48,7 @@ function shareHelperApi(source) {
 }
 
 test("project share controls build localized static routes without changing permalink fragments", async () => {
-  const [scriptSource, permalinkTests] = await Promise.all([
-    readUtf8("script.js"),
-    readUtf8("tests/quality/project-permalinks.test.mjs")
-  ]);
+  const scriptSource = await readUtf8("script.js");
   const { createProjectShareUrl } = shareHelperApi(scriptSource);
 
   assert.equal(
@@ -63,7 +64,7 @@ test("project share controls build localized static routes without changing perm
     /project slug/
   );
   assert.match(scriptSource, /permalink\.setAttribute\("href", `#\$\{article\.id\}`\)/);
-  assert.match(permalinkTests, /#project-\$\{project\.slug\}/);
+  assert.match(scriptSource, /createProjectShareUrl\(\s*project\.slug,/);
 });
 
 test("every project has exact Japanese and English share-page metadata and fallback content", async () => {
@@ -86,7 +87,7 @@ test("every project has exact Japanese and English share-page metadata and fallb
 
       assert.match(page, /Generated from templates\/share\.html and projects\.json/);
       assert.match(page, new RegExp(`<html lang="${language}"`));
-      assert.match(page, new RegExp(`<title>${escapeHtml(project.title[language])} \\| himiyosh</title>`));
+      assert.match(page, new RegExp(`<title>${escapeRegExp(escapeHtml(project.title[language]))} \\| himiyosh</title>`));
       assert.equal(metaContent(page, "name", "description"), escapeHtml(project.description[language]));
       assert.equal(metaContent(page, "name", "robots"), "noindex,follow");
       assert.equal(metaContent(page, "property", "og:type"), "website");
@@ -113,23 +114,23 @@ test("every project has exact Japanese and English share-page metadata and fallb
         `${canonicalRoot}${alternateRoutePath}`
       );
       assert.equal(linkHref(page, "alternate", "x-default"), `${canonicalRoot}share/${project.slug}/`);
-      assert.match(page, new RegExp(`<h1[^>]*>${escapeHtml(project.title[language])}</h1>`));
-      assert.match(page, new RegExp(`<p class="share-project-kind">${escapeHtml(project.kind[language])}</p>`));
-      assert.match(page, new RegExp(`<p class="share-project-description">${escapeHtml(project.description[language])}</p>`));
+      assert.match(page, new RegExp(`<h1[^>]*>${escapeRegExp(escapeHtml(project.title[language]))}</h1>`));
+      assert.match(page, new RegExp(`<p class="share-project-kind">${escapeRegExp(escapeHtml(project.kind[language]))}</p>`));
+      assert.match(page, new RegExp(`<p class="share-project-description">${escapeRegExp(escapeHtml(project.description[language]))}</p>`));
       assert.match(
         page,
-        new RegExp(`<img[^>]*src="[^"]*${project.image}"[^>]*alt="${escapeHtml(project.imageAlt[language])}"[^>]*width="960"[^>]*height="540"`)
+        new RegExp(`<img[^>]*src="[^"]*${escapeRegExp(project.image)}"[^>]*alt="${escapeRegExp(escapeHtml(project.imageAlt[language]))}"[^>]*width="960"[^>]*height="540"`)
       );
-      assert.match(page, new RegExp(`href="${portfolioUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
-      assert.match(page, new RegExp(`href="${project.link.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
+      assert.match(page, new RegExp(`href="${escapeRegExp(portfolioUrl)}"`));
+      assert.match(page, new RegExp(`href="${escapeRegExp(project.link)}"`));
     }
   }
 
   assert.equal(projects.length, 9);
 });
 
-test("share-page generator exposes exact inventory and escapes hostile localized metadata", async () => {
-  const { renderProjectSharePage, sharePages } = await import(
+test("share-page generator exposes exact inventory, stale detection, and escaped metadata", async () => {
+  const { findStaleShareOutputs, renderProjectSharePage, sharePages } = await import(
     `../../scripts/generate-static-pages.mjs?share-pages=${Date.now()}`
   );
   const projects = JSON.parse(await readUtf8("projects.json"));
@@ -142,10 +143,17 @@ test("share-page generator exposes exact inventory and escapes hostile localized
     sharePages.map(({ outputPath }) => outputPath).sort(),
     expectedPaths.sort()
   );
+  assert.deepEqual(
+    findStaleShareOutputs(
+      [...expectedPaths, "share/retired-project/index.html"],
+      expectedPaths
+    ),
+    ["share/retired-project/index.html"]
+  );
 
   const hostileProject = {
     slug: "safe-slug",
-    title: { ja: `A & "B" <C>`, en: "Safe" },
+    title: { ja: `A & "B" <C> {{siteRoot}}`, en: "Safe" },
     kind: { ja: "種類", en: "Kind" },
     description: { ja: `説明 & "引用" <script>`, en: "Description" },
     image: "assets/portfolio-preview.jpg",
@@ -154,17 +162,19 @@ test("share-page generator exposes exact inventory and escapes hostile localized
     link: "https://example.com/project"
   };
   const rendered = renderProjectSharePage(hostileProject, 0, "ja");
-  assert.match(rendered, /A &amp; &quot;B&quot; &lt;C&gt; \| himiyosh/);
+  assert.match(rendered, /A &amp; &quot;B&quot; &lt;C&gt; \{\{siteRoot\}\} \| himiyosh/);
+  assert.doesNotMatch(rendered, /A &amp; &quot;B&quot; &lt;C&gt; \.\.\//);
   assert.match(rendered, /説明 &amp; &quot;引用&quot; &lt;script&gt;/);
   assert.doesNotMatch(rendered, /<script>/);
   assert.doesNotMatch(rendered, /javascript:/i);
 });
 
 test("artifact whitelist publishes only exact share routes and sitemap excludes them", async () => {
-  const [projects, whitelist, sitemap] = await Promise.all([
+  const [projects, whitelist, sitemap, workflow] = await Promise.all([
     readUtf8("projects.json").then(JSON.parse),
     readUtf8(".github/pages-artifact-whitelist.txt"),
-    readUtf8("sitemap.xml")
+    readUtf8("sitemap.xml"),
+    readUtf8(".github/workflows/pages.yml")
   ]);
   const entries = whitelist
     .split(/\r?\n/)
@@ -185,5 +195,8 @@ test("artifact whitelist publishes only exact share routes and sitemap excludes 
   for (const route of expectedRoutes) {
     assert.doesNotMatch(sitemap, new RegExp(`<loc>${canonicalRoot}${route}/</loc>`));
   }
+  assert.match(
+    workflow,
+    /mkdir -p "_site\/\$\(dirname "\$artifact_path"\)"\s+cp -R "\$artifact_path" "_site\/\$artifact_path"/
+  );
 });
-

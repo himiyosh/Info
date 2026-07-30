@@ -44,6 +44,21 @@ function createStableProjectShareUrl(hash, stableRouteUrl) {
   return target.href;
 }
 
+function createProjectShareUrl(slug, stableRouteUrl) {
+  if (
+    typeof slug !== "string" ||
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)
+  ) {
+    throw new TypeError("Project share URLs require a valid project slug.");
+  }
+
+  const stableRoute = new URL(stableRouteUrl);
+  stableRoute.search = "";
+  stableRoute.hash = "";
+  stableRoute.pathname = `${stableRoute.pathname.replace(/\/?$/, "/")}share/${slug}/`;
+  return stableRoute.href;
+}
+
 function isShareCancellation(error) {
   return Boolean(
     error &&
@@ -1429,8 +1444,8 @@ document.addEventListener("DOMContentLoaded", () => {
           permalink,
           status: shareStatus,
           getUrl: () =>
-            createStableProjectShareUrl(
-              permalink.getAttribute("href"),
+            createProjectShareUrl(
+              project.slug,
               window.siteI18n.stableUrl(window.siteI18n.language)
             ),
           share:

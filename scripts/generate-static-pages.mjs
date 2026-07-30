@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  readFile,
+  readdir,
+  rmdir,
+  unlink,
+  writeFile
+} from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,12 +17,32 @@ const { translations } = require("../i18n.js");
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const templatePath = path.join(repoRoot, "templates/index.html");
 const notFoundTemplatePath = path.join(repoRoot, "templates/404.html");
+const shareTemplatePath = path.join(repoRoot, "templates/share.html");
 const projectsPath = path.join(repoRoot, "projects.json");
 const canonicalProjects = JSON.parse(await readFile(projectsPath, "utf8"));
+const canonicalShareTemplate = await readFile(shareTemplatePath, "utf8");
 const checkOnly = process.argv.includes("--check");
 const canonicalRoot = "https://himiyosh.github.io/Info/";
 const projectSlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const projectImagePattern = /^assets\/[a-z0-9]+(?:-[a-z0-9]+)*\.jpg$/;
 const reservedProjectSlugs = new Set(["top", "about", "projects", "contact", "main-content"]);
+const shareLanguages = Object.freeze({
+  ja: {
+    alternateLanguage: "en",
+    locale: "ja_JP",
+    alternateLocale: "en_US",
+    routePrefix: "",
+    siteRoot: "../../"
+  },
+  en: {
+    alternateLanguage: "ja",
+    locale: "en_US",
+    alternateLocale: "ja_JP",
+    routePrefix: "en/",
+    siteRoot: "../../../"
+  }
+});
+const ownedShareRoots = ["share", "en/share"];
 export const pages = [
   {
     language: "ja",
@@ -37,6 +64,24 @@ export const pages = [
 export const notFoundPage = {
   outputPath: "404.html"
 };
+
+function buildSharePages(projects) {
+  if (!Array.isArray(projects) || projects.length === 0) {
+    throw new TypeError("projects.json must contain a non-empty array.");
+  }
+  const seenSlugs = new Set();
+  return projects.flatMap((project, index) => {
+    const slug = projectTargetId(project, index, seenSlugs).replace("project-", "");
+    return Object.keys(shareLanguages).map((language) => ({
+      language,
+      project,
+      projectIndex: index,
+      outputPath: `${shareLanguages[language].routePrefix}share/${slug}/index.html`
+    }));
+  });
+}
+
+export const sharePages = buildSharePages(canonicalProjects);
 
 function escapeHtml(value) {
   return String(value)
@@ -71,9 +116,20 @@ function projectUrl(project, index, field, { httpsOnly = false } = {}) {
   } catch {
     throw new TypeError(`Project ${field} at index ${index} must be an absolute URL.`);
   }
+
   const allowedProtocols = httpsOnly ? ["https:"] : ["http:", "https:"];
   if (!allowedProtocols.includes(url.protocol)) {
     throw new TypeError(`Project ${field} at index ${index} uses an unsupported protocol.`);
+  }
+  return value;
+}
+
+function projectImage(project, index) {
+  const value = projectString(project, index, "image");
+  if (!projectImagePattern.test(value)) {
+    throw new TypeError(
+      `Project image at index ${index} must be a root-relative assets JPEG path.`
+    );
   }
   return value;
 }
@@ -256,6 +312,70 @@ export function renderPage(template, page, projects = canonicalProjects) {
   );
 }
 
+export function renderProjectSharePage(
+  project,
+  index,
+  language,
+  template = canonicalShareTemplate
+) {
+  const languageConfig = shareLanguages[language];
+  if (!languageConfig) {
+    throw new TypeError(`Unsupported project share language: ${language}`);
+  }
+
+  const slug = projectString(project, index, "slug");
+  if (!projectSlugPattern.test(slug) || reservedProjectSlugs.has(slug)) {
+    throw new TypeError(`Project slug at index ${index} must use an available lowercase kebab-case value.`);
+  }
+  const title = localizedProjectString(project, index, "title", language);
+  const description = localizedProjectString(project, index, "description", language);
+  const image = projectImage(project, index);
+  const alternateLanguage = languageConfig.alternateLanguage;
+  const routePath = `${languageConfig.routePrefix}share/${slug}/`;
+  const alternateRoutePath =
+    `${shareLanguages[alternateLanguage].routePrefix}share/${slug}/`;
+  const values = {
+    language,
+    title,
+    pageTitle: `${title} | himiyosh`,
+    description,
+    kind: localizedProjectString(project, index, "kind", language),
+    image,
+    imageAlt: localizedProjectString(project, index, "imageAlt", language),
+    action: localizedProjectString(project, index, "action", language),
+    primaryUrl: projectUrl(project, index, "link"),
+    canonicalUrl: `${canonicalRoot}${routePath}`,
+    alternateLanguage,
+    alternateUrl: `${canonicalRoot}${alternateRoutePath}`,
+    japaneseUrl: `${canonicalRoot}share/${slug}/`,
+    englishUrl: `${canonicalRoot}en/share/${slug}/`,
+    imageUrl: `${canonicalRoot}${image}`,
+    locale: languageConfig.locale,
+    alternateLocale: languageConfig.alternateLocale,
+    portfolioUrl: `${canonicalRoot}${languageConfig.routePrefix}#project-${slug}`,
+    permalinkAction: localizedTranslation(language, "projects.permalinkAction"),
+    permalinkLabel: localizedTranslation(language, "projects.permalinkLabel", { title }),
+    opensInNewTab: localizedTranslation(language, "accessibility.opensInNewTab"),
+    siteRoot: languageConfig.siteRoot
+  };
+
+  const unresolved = [...template.matchAll(/\{\{([^}]+)\}\}/g)]
+    .map((match) => match[1])
+    .filter((key) => !Object.hasOwn(values, key));
+  if (unresolved.length > 0) {
+    throw new Error(
+      `Unresolved template values for ${routePath}: ${[...new Set(unresolved)].join(", ")}`
+    );
+  }
+  const output = template.replace(/\{\{([a-zA-Z0-9]+)\}\}/g, (_match, key) => {
+    return escapeHtml(values[key]);
+  });
+  return output.replace(
+    "<!DOCTYPE html>",
+    "<!DOCTYPE html>\n<!-- Generated from templates/share.html and projects.json. Run npm run generate:pages. -->"
+  );
+}
+
 export function renderNotFoundPage(template) {
   let output = template.replace(
     /\{\{t:(ja|en):([a-zA-Z0-9.]+)\}\}/g,
@@ -276,6 +396,48 @@ export function renderNotFoundPage(template) {
   );
 }
 
+async function listOwnedShareOutputs() {
+  const outputs = [];
+  for (const root of ownedShareRoots) {
+    const absoluteRoot = path.join(repoRoot, root);
+    const entries = await readdir(absoluteRoot, { withFileTypes: true }).catch((error) => {
+      if (error.code === "ENOENT") {
+        return [];
+      }
+      throw error;
+    });
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !projectSlugPattern.test(entry.name)) {
+        throw new Error(`Unexpected generated share entry: ${root}/${entry.name}`);
+      }
+      const projectDirectory = path.join(absoluteRoot, entry.name);
+      const projectEntries = await readdir(projectDirectory, { withFileTypes: true });
+      if (
+        projectEntries.length !== 1 ||
+        projectEntries[0].name !== "index.html" ||
+        !projectEntries[0].isFile()
+      ) {
+        throw new Error(`Unexpected generated share contents: ${root}/${entry.name}`);
+      }
+      outputs.push(`${root}/${entry.name}/index.html`);
+    }
+  }
+  return outputs;
+}
+
+export function findStaleShareOutputs(existingOutputs, expectedOutputs) {
+  const expectedSet = new Set(expectedOutputs);
+  return existingOutputs.filter((outputPath) => !expectedSet.has(outputPath));
+}
+
+async function removeStaleShareOutputs(staleOutputs) {
+  for (const outputPath of staleOutputs) {
+    const absoluteOutput = path.join(repoRoot, outputPath);
+    await unlink(absoluteOutput);
+    await rmdir(path.dirname(absoluteOutput));
+  }
+}
+
 export async function main() {
   if (!translations?.ja || !translations?.en) {
     throw new Error("i18n.js must export Japanese and English translations.");
@@ -286,6 +448,17 @@ export async function main() {
     readFile(notFoundTemplatePath, "utf8")
   ]);
   const staleOutputs = [];
+  const expectedShareOutputs = sharePages.map(({ outputPath }) => outputPath);
+  const existingShareOutputs = await listOwnedShareOutputs();
+  const removedProjectOutputs = findStaleShareOutputs(
+    existingShareOutputs,
+    expectedShareOutputs
+  );
+  if (checkOnly) {
+    staleOutputs.push(...removedProjectOutputs);
+  } else {
+    await removeStaleShareOutputs(removedProjectOutputs);
+  }
   const outputs = [
     ...pages.map((page) => ({
       outputPath: page.outputPath,
@@ -294,7 +467,11 @@ export async function main() {
     {
       outputPath: notFoundPage.outputPath,
       expected: renderNotFoundPage(notFoundTemplate)
-    }
+    },
+    ...sharePages.map(({ language, outputPath, project, projectIndex }) => ({
+      outputPath,
+      expected: renderProjectSharePage(project, projectIndex, language)
+    }))
   ];
 
   for (const output of outputs) {

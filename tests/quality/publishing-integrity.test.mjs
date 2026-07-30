@@ -35,7 +35,10 @@ function localPathFromReference(reference) {
     return null;
   }
 
-  return reference.replace(/^\.\//, "");
+  const normalizedReference = reference.replace(/^\.\//, "");
+  return normalizedReference.endsWith("/")
+    ? `${normalizedReference}index.html`
+    : normalizedReference;
 }
 
 test("Pages artifact whitelist is strict and covers all locally referenced production files", async () => {
@@ -47,10 +50,11 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
   const expectedWhitelist = new Set([
     "index.html",
     "404.html",
-    "en",
+    "en/index.html",
     "tokens.css",
     "styles.css",
     "modern.css",
+    "share.css",
     "script.js",
     "i18n.js",
     "projects.json",
@@ -58,7 +62,11 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
     "favicon.svg",
     "robots.txt",
     "sitemap.xml",
-    "ads.txt"
+    "ads.txt",
+    ...projects.flatMap(({ slug }) => [
+      `share/${slug}`,
+      `en/share/${slug}`
+    ])
   ]);
 
   assert.deepEqual(
