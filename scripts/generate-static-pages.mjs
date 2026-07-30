@@ -124,6 +124,23 @@ function projectUrl(project, index, field, { httpsOnly = false } = {}) {
   return value;
 }
 
+function optionalProjectPair(project, index, localizedField, urlField, language) {
+  const hasLocalizedField = Object.hasOwn(project, localizedField);
+  const hasUrlField = Object.hasOwn(project, urlField);
+  if (hasLocalizedField !== hasUrlField) {
+    throw new TypeError(
+      `Project ${localizedField} and ${urlField} at index ${index} must be provided together.`
+    );
+  }
+  if (!hasLocalizedField) {
+    return null;
+  }
+  return {
+    text: localizedProjectString(project, index, localizedField, language),
+    url: projectUrl(project, index, urlField, { httpsOnly: true })
+  };
+}
+
 function projectImage(project, index) {
   const value = projectString(project, index, "image");
   if (!projectImagePattern.test(value)) {
@@ -197,20 +214,14 @@ export function renderProjectFallbackSummaries(projects, language, indentation =
       const description = localizedProjectString(project, index, "description", language);
       const action = localizedProjectString(project, index, "action", language);
       const link = projectUrl(project, index, "link");
-      const hasSourceAction = Object.hasOwn(project, "sourceAction");
-      const hasSourceLink = Object.hasOwn(project, "sourceLink");
-      const hasProof = Object.hasOwn(project, "proof");
-      const hasProofLink = Object.hasOwn(project, "proofLink");
-      if (hasSourceAction !== hasSourceLink) {
-        throw new TypeError(
-          `Project sourceAction and sourceLink at index ${index} must be provided together.`
-        );
-      }
-      if (hasProof !== hasProofLink) {
-        throw new TypeError(
-          `Project proof and proofLink at index ${index} must be provided together.`
-        );
-      }
+      const source = optionalProjectPair(
+        project,
+        index,
+        "sourceAction",
+        "sourceLink",
+        language
+      );
+      const proof = optionalProjectPair(project, index, "proof", "proofLink", language);
 
       const summary = [
         `${indentation}<li>`,
@@ -244,11 +255,11 @@ export function renderProjectFallbackSummaries(projects, language, indentation =
         `${indentation}    <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="${titleId}">`,
         fallbackActionMarkup(link, action, "primary", language, `${indentation}      `)
       );
-      if (hasSourceAction) {
+      if (source) {
         summary.push(
           fallbackActionMarkup(
-            projectUrl(project, index, "sourceLink", { httpsOnly: true }),
-            localizedProjectString(project, index, "sourceAction", language),
+            source.url,
+            source.text,
             "secondary",
             language,
             `${indentation}      `
@@ -257,15 +268,15 @@ export function renderProjectFallbackSummaries(projects, language, indentation =
       }
       summary.push(`${indentation}    </p>`);
 
-      if (hasProof) {
+      if (proof) {
         summary.push(
           `${indentation}    <section class="project-proof projects-fallback-proof">`,
           `${indentation}      <p class="project-proof-text">`,
           `${indentation}        <span class="project-proof-label">${escapeHtml(localizedTranslation(language, "projects.proofLabel"))}</span>`,
-          `${indentation}        <span>${escapeHtml(localizedProjectString(project, index, "proof", language))}</span>`,
+          `${indentation}        <span>${escapeHtml(proof.text)}</span>`,
           `${indentation}      </p>`,
           fallbackActionMarkup(
-            projectUrl(project, index, "proofLink", { httpsOnly: true }),
+            proof.url,
             localizedTranslation(language, "projects.proofAction"),
             "evidence",
             language,
@@ -312,6 +323,34 @@ export function renderPage(template, page, projects = canonicalProjects) {
   );
 }
 
+function shareExternalActionMarkup(href, label, variant, language, indentation) {
+  return [
+    `${indentation}<a class="share-project-link share-project-link--${variant}" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">`,
+    `${indentation}  <span>${escapeHtml(label)}</span>`,
+    `${indentation}  <span class="sr-only">${escapeHtml(localizedTranslation(language, "accessibility.opensInNewTab"))}</span>`,
+    `${indentation}  <span aria-hidden="true">↗</span>`,
+    `${indentation}</a>`
+  ].join("\n");
+}
+
+function shareProofMarkup(proof, language, indentation) {
+  return [
+    `${indentation}<section class="share-project-proof" aria-labelledby="share-project-proof-label">`,
+    `${indentation}  <p class="share-project-proof-text">`,
+    `${indentation}    <span class="share-project-proof-label" id="share-project-proof-label">${escapeHtml(localizedTranslation(language, "projects.proofLabel"))}</span>`,
+    `${indentation}    <span class="share-project-proof-statement">${escapeHtml(proof.text)}</span>`,
+    `${indentation}  </p>`,
+    shareExternalActionMarkup(
+      proof.url,
+      localizedTranslation(language, "projects.proofAction"),
+      "evidence",
+      language,
+      `${indentation}  `
+    ),
+    `${indentation}</section>`
+  ].join("\n");
+}
+
 export function renderProjectSharePage(
   project,
   index,
@@ -330,6 +369,14 @@ export function renderProjectSharePage(
   const title = localizedProjectString(project, index, "title", language);
   const description = localizedProjectString(project, index, "description", language);
   const image = projectImage(project, index);
+  const source = optionalProjectPair(
+    project,
+    index,
+    "sourceAction",
+    "sourceLink",
+    language
+  );
+  const proof = optionalProjectPair(project, index, "proof", "proofLink", language);
   const alternateLanguage = languageConfig.alternateLanguage;
   const routePath = `${languageConfig.routePrefix}share/${slug}/`;
   const alternateRoutePath =
@@ -358,18 +405,37 @@ export function renderProjectSharePage(
     opensInNewTab: localizedTranslation(language, "accessibility.opensInNewTab"),
     siteRoot: languageConfig.siteRoot
   };
+  const rawTemplateKeys = new Set(["sourceActionMarkup", "proofMarkup"]);
 
   const unresolved = [...template.matchAll(/\{\{([^}]+)\}\}/g)]
     .map((match) => match[1])
-    .filter((key) => !Object.hasOwn(values, key));
+    .filter((key) => !Object.hasOwn(values, key) && !rawTemplateKeys.has(key));
   if (unresolved.length > 0) {
     throw new Error(
       `Unresolved template values for ${routePath}: ${[...new Set(unresolved)].join(", ")}`
     );
   }
-  const output = template.replace(/\{\{([a-zA-Z0-9]+)\}\}/g, (_match, key) => {
-    return escapeHtml(values[key]);
+  let output = template.replace(/\{\{([a-zA-Z0-9]+)\}\}/g, (match, key) => {
+    return rawTemplateKeys.has(key) ? match : escapeHtml(values[key]);
   });
+  output = output.replace(
+    /^([ \t]*)\{\{sourceActionMarkup\}\}[ \t]*(?:\r?\n|$)/m,
+    (_match, indentation) =>
+      source
+        ? `${shareExternalActionMarkup(
+            source.url,
+            source.text,
+            "source",
+            language,
+            indentation
+          )}\n`
+        : ""
+  );
+  output = output.replace(
+    /^([ \t]*)\{\{proofMarkup\}\}[ \t]*(?:\r?\n|$)/m,
+    (_match, indentation) =>
+      proof ? `${shareProofMarkup(proof, language, indentation)}\n` : ""
+  );
   return output.replace(
     "<!DOCTYPE html>",
     "<!DOCTYPE html>\n<!-- Generated from templates/share.html and projects.json. Run npm run generate:pages. -->"
