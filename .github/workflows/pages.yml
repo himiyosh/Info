@@ -43,6 +43,7 @@ jobs:
             if [ -z "$artifact_path" ] || [ "${artifact_path#\#}" != "$artifact_path" ]; then
               continue
             fi
+            mkdir -p "_site/$(dirname "$artifact_path")"
             cp -R "$artifact_path" "_site/$artifact_path"
           done < .github/pages-artifact-whitelist.txt
 

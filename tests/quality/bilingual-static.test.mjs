@@ -468,7 +468,8 @@ test("Pages publishes the English route but excludes canonical generation intern
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#"));
-  assert.ok(whitelist.includes("en"));
+  assert.ok(whitelist.includes("en/index.html"));
+  assert.ok(!whitelist.includes("en"), "English publication must use exact owned paths");
   for (const internalPath of ["templates", "scripts", "tests", ".github", "package.json"]) {
     assert.ok(!whitelist.includes(internalPath), `${internalPath} must not be published`);
   }
