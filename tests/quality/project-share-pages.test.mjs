@@ -24,6 +24,17 @@ function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function attributeValue(tag, name) {
+  const match = tag.match(
+    new RegExp(`\\s${escapeRegExp(name)}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i")
+  );
+  return match ? match[1] ?? match[2] : undefined;
+}
+
+function normalizeText(value) {
+  return value.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+}
+
 function metaContent(html, attribute, value) {
   return html.match(
     new RegExp(`<meta\\b[^>]*${attribute}="${value}"[^>]*content="([^"]*)"[^>]*>`, "i")
@@ -91,6 +102,7 @@ test("every project has exact Japanese and English share-page metadata and fallb
   const projects = JSON.parse(await readUtf8("projects.json"));
   const sourceCoverage = { ja: 0, en: 0 };
   const proofCoverage = { ja: 0, en: 0 };
+  const languageLinkInventory = [];
 
   for (const [projectIndex, project] of projects.entries()) {
     for (const language of ["ja", "en"]) {
@@ -141,6 +153,44 @@ test("every project has exact Japanese and English share-page metadata and fallb
         `${canonicalRoot}${alternateRoutePath}`
       );
       assert.equal(linkHref(page, "alternate", "x-default"), `${canonicalRoot}share/${project.slug}/`);
+      const languageNavigation = page.match(
+        /(<nav\b(?=[^>]*\bclass="[^"]*\bshare-language-navigation\b[^"]*")[^>]*>)([\s\S]*?)<\/nav>/i
+      );
+      assert.ok(languageNavigation, `${routePath} must expose visible language navigation`);
+      assert.equal(
+        attributeValue(languageNavigation[1], "aria-label"),
+        translations[language].nav.switchLanguage
+      );
+      const languageLinks = [...languageNavigation[2].matchAll(
+        /(<a\b(?=[^>]*\bclass="[^"]*\bshare-language-link\b[^"]*")[^>]*>)([\s\S]*?)<\/a>/gi
+      )];
+      assert.equal(languageLinks.length, 1, `${routePath} must expose one language link`);
+      const [, languageLinkOpeningTag, languageLinkBody] = languageLinks[0];
+      const targetLabel = languageLinkBody.match(/(<span\b[^>]*>)([\s\S]*?)<\/span>/i);
+      assert.ok(targetLabel, `${routePath} must mark the visible target-language label`);
+      assert.equal(attributeValue(languageLinkOpeningTag, "lang"), undefined);
+      assert.equal(attributeValue(languageLinkOpeningTag, "hreflang"), alternateLanguage);
+      assert.equal(
+        attributeValue(languageLinkOpeningTag, "href"),
+        `${canonicalRoot}${alternateRoutePath}`
+      );
+      assert.equal(attributeValue(targetLabel[1], "lang"), alternateLanguage);
+      assert.equal(normalizeText(targetLabel[2]), translations[language].nav.toggleShort);
+      assert.doesNotMatch(attributeValue(languageLinkOpeningTag, "href"), /[?#]/);
+      assert.doesNotMatch(languageNavigation[0], /[\u{1F1E6}-\u{1F1FF}]/u);
+      assert.doesNotMatch(languageLinkOpeningTag, /\b(?:data-|onclick)\b/i);
+      assert.doesNotMatch(page, /<script\b/i);
+      assert.doesNotMatch(
+        page,
+        /\b(?:localStorage|sessionStorage|navigator\.languages?|location\.(?:assign|replace)|http-equiv=["']refresh)/i
+      );
+      languageLinkInventory.push({
+        from: routePath,
+        href: `${canonicalRoot}${alternateRoutePath}`,
+        label: translations[language].nav.toggleShort,
+        lang: alternateLanguage,
+        hreflang: alternateLanguage
+      });
       assert.match(page, new RegExp(`<h1[^>]*>${escapeRegExp(escapeHtml(project.title[language]))}</h1>`));
       assert.match(page, new RegExp(`<p class="share-project-kind">${escapeRegExp(escapeHtml(project.kind[language]))}</p>`));
       assert.match(page, new RegExp(`<p class="share-project-description">${escapeRegExp(escapeHtml(project.description[language]))}</p>`));
@@ -200,6 +250,26 @@ test("every project has exact Japanese and English share-page metadata and fallb
   }
 
   assert.equal(projects.length, 9);
+  assert.equal(languageLinkInventory.length, 18);
+  assert.deepEqual(
+    languageLinkInventory,
+    projects.flatMap(({ slug }) => [
+      {
+        from: `share/${slug}/`,
+        href: `${canonicalRoot}en/share/${slug}/`,
+        label: translations.ja.nav.toggleShort,
+        lang: "en",
+        hreflang: "en"
+      },
+      {
+        from: `en/share/${slug}/`,
+        href: `${canonicalRoot}share/${slug}/`,
+        label: translations.en.nav.toggleShort,
+        lang: "ja",
+        hreflang: "ja"
+      }
+    ])
+  );
   assert.deepEqual(sourceCoverage, { ja: 6, en: 6 });
   assert.deepEqual(proofCoverage, { ja: 8, en: 8 });
 
@@ -287,14 +357,54 @@ test("share-page generator exposes exact inventory, stale detection, escaped con
   );
 });
 
-test("share trust context stays semantically distinct within the responsive Graphite Blue layout", async () => {
+test("share language and trust context stay distinct within the responsive Graphite Blue layout", async () => {
   const [template, stylesheet] = await Promise.all([
     readUtf8("templates/share.html"),
     readUtf8("share.css")
   ]);
 
+  const languageNavigationIndex = template.indexOf(
+    '<nav class="share-language-navigation"'
+  );
+  assert.ok(languageNavigationIndex > -1);
+  assert.ok(languageNavigationIndex < template.indexOf("<article"));
+  assert.match(
+    template,
+    /<nav class="share-language-navigation" aria-label="\{\{languageNavigationLabel\}\}">/
+  );
+  assert.match(
+    template,
+    /<a class="share-language-link" href="\{\{alternateUrl\}\}" hreflang="\{\{alternateLanguage\}\}">/
+  );
+  assert.match(
+    template,
+    /<span lang="\{\{alternateLanguage\}\}">\{\{languageToggleShort\}\}<\/span>/
+  );
+  const projectActions = template.match(
+    /<nav class="share-project-actions"[\s\S]*?<\/nav>/
+  )?.[0];
+  assert.ok(projectActions);
+  assert.doesNotMatch(projectActions, /share-language/);
   assert.match(template, /^\s*\{\{sourceActionMarkup\}\}\s*$/m);
   assert.match(template, /^\s*\{\{proofMarkup\}\}\s*$/m);
+  assert.match(stylesheet, /\.share-shell\s*\{[^}]*min-width:\s*0;[^}]*display:\s*grid;/);
+  assert.match(
+    stylesheet,
+    /\.share-language-navigation\s*\{[^}]*min-width:\s*0;[^}]*display:\s*flex;[^}]*justify-content:\s*flex-end;/
+  );
+  assert.match(
+    stylesheet,
+    /\.share-project-link,\s*\.share-language-link\s*\{[^}]*min-height:\s*44px;[^}]*white-space:\s*nowrap;/
+  );
+  assert.match(
+    stylesheet,
+    /\.share-language-link\s*\{[^}]*min-width:\s*44px;[^}]*max-width:\s*100%;/
+  );
+  assert.match(
+    stylesheet,
+    /\.share-project-link:focus-visible,\s*\.share-language-link:focus-visible\s*\{[^}]*outline:\s*var\(--rule-strong\) solid var\(--color-focus\);[^}]*outline-offset:\s*var\(--space-3xs\);/
+  );
+  assert.match(stylesheet, /html,\s*body\s*\{[^}]*overflow-x:\s*clip;/);
   assert.match(stylesheet, /\.share-project-proof\s*\{/);
   assert.match(stylesheet, /\.share-project-proof-statement\s*\{/);
   assert.match(stylesheet, /\.share-project-link--evidence\s*\{/);
