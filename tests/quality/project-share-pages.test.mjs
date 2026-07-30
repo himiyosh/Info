@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import path from "node:path";
 import vm from "node:vm";
 import { test } from "node:test";
 
+const require = createRequire(import.meta.url);
+const { translations } = require("../../i18n.js");
 const repoRoot = process.cwd();
 const canonicalRoot = "https://himiyosh.github.io/Info/";
 const readUtf8 = (relativePath) => readFile(path.join(repoRoot, relativePath), "utf8");
@@ -32,6 +35,20 @@ function linkHref(html, rel, hreflang = null) {
   return html.match(
     new RegExp(`<link\\b[^>]*rel="${rel}"${languageAttribute}[^>]*href="([^"]+)"[^>]*>`, "i")
   )?.[1];
+}
+
+function externalActionPattern(variant, href, label, opensInNewTab) {
+  return new RegExp(
+    [
+      `<a class="share-project-link share-project-link--${variant}"`,
+      ` href="${escapeRegExp(escapeHtml(href))}"`,
+      ` target="_blank" rel="noopener noreferrer">`,
+      `\\s*<span>${escapeRegExp(escapeHtml(label))}</span>`,
+      `\\s*<span class="sr-only">${escapeRegExp(escapeHtml(opensInNewTab))}</span>`,
+      `\\s*<span aria-hidden="true">↗</span>`,
+      `\\s*</a>`
+    ].join("")
+  );
 }
 
 function shareHelperApi(source) {
@@ -68,9 +85,14 @@ test("project share controls build localized static routes without changing perm
 });
 
 test("every project has exact Japanese and English share-page metadata and fallback content", async () => {
+  const { renderProjectSharePage } = await import(
+    `../../scripts/generate-static-pages.mjs?share-context=${Date.now()}`
+  );
   const projects = JSON.parse(await readUtf8("projects.json"));
+  const sourceCoverage = { ja: 0, en: 0 };
+  const proofCoverage = { ja: 0, en: 0 };
 
-  for (const project of projects) {
+  for (const [projectIndex, project] of projects.entries()) {
     for (const language of ["ja", "en"]) {
       const routePrefix = language === "ja" ? "" : "en/";
       const routePath = `${routePrefix}share/${project.slug}/`;
@@ -85,6 +107,11 @@ test("every project has exact Japanese and English share-page metadata and fallb
         `${canonicalRoot}${language === "en" ? "en/" : ""}#project-${project.slug}`;
       const imageUrl = `${canonicalRoot}${project.image}`;
 
+      assert.equal(
+        page,
+        renderProjectSharePage(project, projectIndex, language),
+        `${routePath} must be the deterministic canonical render`
+      );
       assert.match(page, /Generated from templates\/share\.html and projects\.json/);
       assert.match(page, new RegExp(`<html lang="${language}"`));
       assert.match(page, new RegExp(`<title>${escapeRegExp(escapeHtml(project.title[language]))} \\| himiyosh</title>`));
@@ -122,14 +149,69 @@ test("every project has exact Japanese and English share-page metadata and fallb
         new RegExp(`<img[^>]*src="[^"]*${escapeRegExp(project.image)}"[^>]*alt="${escapeRegExp(escapeHtml(project.imageAlt[language]))}"[^>]*width="960"[^>]*height="540"`)
       );
       assert.match(page, new RegExp(`href="${escapeRegExp(portfolioUrl)}"`));
-      assert.match(page, new RegExp(`href="${escapeRegExp(project.link)}"`));
+      assert.match(
+        page,
+        externalActionPattern(
+          "primary",
+          project.link,
+          project.action[language],
+          translations[language].accessibility.opensInNewTab
+        )
+      );
+
+      if (project.sourceAction && project.sourceLink) {
+        sourceCoverage[language] += 1;
+        assert.match(
+          page,
+          externalActionPattern(
+            "source",
+            project.sourceLink,
+            project.sourceAction[language],
+            translations[language].accessibility.opensInNewTab
+          )
+        );
+      } else {
+        assert.doesNotMatch(page, /share-project-link--source/);
+      }
+
+      if (project.proof && project.proofLink) {
+        proofCoverage[language] += 1;
+        assert.match(
+          page,
+          new RegExp(
+            `<section class="share-project-proof"[^>]*>[\\s\\S]*` +
+              `<span class="share-project-proof-label"[^>]*>` +
+              `${escapeRegExp(escapeHtml(translations[language].projects.proofLabel))}</span>[\\s\\S]*` +
+              `<span class="share-project-proof-statement">` +
+              `${escapeRegExp(escapeHtml(project.proof[language]))}</span>[\\s\\S]*` +
+              externalActionPattern(
+                "evidence",
+                project.proofLink,
+                translations[language].projects.proofAction,
+                translations[language].accessibility.opensInNewTab
+              ).source +
+              `[\\s\\S]*</section>`
+          )
+        );
+      } else {
+        assert.doesNotMatch(page, /share-project-proof|share-project-link--evidence/);
+      }
     }
   }
 
   assert.equal(projects.length, 9);
+  assert.deepEqual(sourceCoverage, { ja: 6, en: 6 });
+  assert.deepEqual(proofCoverage, { ja: 8, en: 8 });
+
+  const privateProject = projects.find(({ slug }) => slug === "ucfitness");
+  assert.ok(privateProject);
+  assert.equal(Object.hasOwn(privateProject, "sourceAction"), false);
+  assert.equal(Object.hasOwn(privateProject, "sourceLink"), false);
+  assert.equal(Object.hasOwn(privateProject, "proof"), false);
+  assert.equal(Object.hasOwn(privateProject, "proofLink"), false);
 });
 
-test("share-page generator exposes exact inventory, stale detection, and escaped metadata", async () => {
+test("share-page generator exposes exact inventory, stale detection, escaped context, and pair validation", async () => {
   const { findStaleShareOutputs, renderProjectSharePage, sharePages } = await import(
     `../../scripts/generate-static-pages.mjs?share-pages=${Date.now()}`
   );
@@ -159,14 +241,65 @@ test("share-page generator exposes exact inventory, stale detection, and escaped
     image: "assets/portfolio-preview.jpg",
     imageAlt: { ja: `画像 "代替" <説明>`, en: "Image alt" },
     action: { ja: "開く", en: "Open" },
-    link: "https://example.com/project"
+    link: "https://example.com/project",
+    sourceAction: { ja: `ソース & "表示" <確認>`, en: "View source" },
+    sourceLink: `https://example.com/source?query="<source>"&mode='safe'`,
+    proof: { ja: `根拠 & "引用" <確認>`, en: "Evidence" },
+    proofLink:
+      "https://github.com/example/public-repo/blob/0123456789abcdef0123456789abcdef01234567/README.md#L1-L2"
   };
   const rendered = renderProjectSharePage(hostileProject, 0, "ja");
   assert.match(rendered, /A &amp; &quot;B&quot; &lt;C&gt; \{\{siteRoot\}\} \| himiyosh/);
   assert.doesNotMatch(rendered, /A &amp; &quot;B&quot; &lt;C&gt; \.\.\//);
   assert.match(rendered, /説明 &amp; &quot;引用&quot; &lt;script&gt;/);
+  assert.match(rendered, /ソース &amp; &quot;表示&quot; &lt;確認&gt;/);
+  assert.match(rendered, /根拠 &amp; &quot;引用&quot; &lt;確認&gt;/);
+  assert.match(
+    rendered,
+    /href="https:\/\/example\.com\/source\?query=&quot;&lt;source&gt;&quot;&amp;mode=&#39;safe&#39;"/
+  );
+  assert.match(rendered, /href="https:\/\/github\.com\/example\/public-repo\/blob\/0123456789abcdef0123456789abcdef01234567\/README\.md#L1-L2"/);
   assert.doesNotMatch(rendered, /<script>/);
   assert.doesNotMatch(rendered, /javascript:/i);
+
+  const sourceWithoutLink = structuredClone(hostileProject);
+  delete sourceWithoutLink.sourceLink;
+  assert.throws(
+    () => renderProjectSharePage(sourceWithoutLink, 0, "ja"),
+    /sourceAction and sourceLink.+provided together/
+  );
+
+  const proofWithoutText = structuredClone(hostileProject);
+  delete proofWithoutText.proof;
+  assert.throws(
+    () => renderProjectSharePage(proofWithoutText, 0, "ja"),
+    /proof and proofLink.+provided together/
+  );
+
+  assert.throws(
+    () =>
+      renderProjectSharePage(
+        { ...hostileProject, sourceLink: "javascript:alert(1)" },
+        0,
+        "ja"
+      ),
+    /sourceLink.+unsupported protocol/
+  );
+});
+
+test("share trust context stays semantically distinct within the responsive Graphite Blue layout", async () => {
+  const [template, stylesheet] = await Promise.all([
+    readUtf8("templates/share.html"),
+    readUtf8("share.css")
+  ]);
+
+  assert.match(template, /^\s*\{\{sourceActionMarkup\}\}\s*$/m);
+  assert.match(template, /^\s*\{\{proofMarkup\}\}\s*$/m);
+  assert.match(stylesheet, /\.share-project-proof\s*\{/);
+  assert.match(stylesheet, /\.share-project-proof-statement\s*\{/);
+  assert.match(stylesheet, /\.share-project-link--evidence\s*\{/);
+  assert.match(stylesheet, /\.share-project-actions\s*\{[\s\S]*flex-wrap:\s*wrap/);
+  assert.match(stylesheet, /@media \(min-width:\s*48rem\)/);
 });
 
 test("artifact whitelist publishes only exact share routes and sitemap excludes them", async () => {
