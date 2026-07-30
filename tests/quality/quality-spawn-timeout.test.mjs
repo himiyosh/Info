@@ -20,23 +20,61 @@ const spawnHelperPath = path.join("tests/helpers", spawnHelperFile);
 const spawnHelperUrl = pathToFileURL(path.join(repoRoot, spawnHelperPath)).href;
 const workflowPath = ".github/workflows/quality-baseline.yml";
 // This contract owns the timeout literals it exercises, so it is the one quality
-// module exempt from the "no local spawn timeout" rule it enforces elsewhere.
+// module exempt from the rules it enforces. Never widen the exemption: every
+// other nested spawner, including this contract's own mutation fixture, is
+// listed in nestedSpawnerFiles and is checked.
 const contractFile = "quality-spawn-timeout.test.mjs";
-const nestedRunMarker = "\"--test\"";
+// Authoritative inventory. Detection below must reproduce it exactly, so adding
+// a nested spawner, deleting one, or hiding one from detection all fail this
+// contract until the inventory is updated deliberately.
+const nestedSpawnerFiles = [
+  "asset-integrity-contracts-structure-mutations.test.mjs",
+  "asset-integrity-contracts-structure.test.mjs",
+  "baseline-motion-safety-structure-mutations.test.mjs",
+  "baseline-motion-safety-structure.test.mjs",
+  "focus-contrast-contracts-structure-mutations.test.mjs",
+  "focus-contrast-contracts-structure.test.mjs",
+  "localization-contracts-structure.test.mjs",
+  "mobile-navigation-contracts-structure-mutations.test.mjs",
+  "mobile-navigation-contracts-structure.test.mjs",
+  "project-catalogue-structure-mutations.test.mjs",
+  "project-catalogue-structure.test.mjs",
+  "public-discovery-contracts-structure-mutations.test.mjs",
+  "public-discovery-contracts-structure.test.mjs",
+  "publishing-integrity-structure.test.mjs",
+  "quality-spawn-timeout-mutations.test.mjs",
+  "reduced-motion-contracts-structure-mutations.test.mjs",
+  "reduced-motion-contracts-structure.test.mjs",
+  "workflow-security-structure.test.mjs"
+];
+const fixtureWriterFiles = [
+  "asset-integrity-contracts-structure-mutations.test.mjs",
+  "baseline-motion-safety-structure-mutations.test.mjs",
+  "focus-contrast-contracts-structure-mutations.test.mjs",
+  "mobile-navigation-contracts-structure-mutations.test.mjs",
+  "project-catalogue-structure-mutations.test.mjs",
+  "public-discovery-contracts-structure-mutations.test.mjs",
+  "quality-spawn-timeout-mutations.test.mjs",
+  "reduced-motion-contracts-structure-mutations.test.mjs"
+];
+const spawnCallPattern = /\bspawnSync\s*\(/;
+const spawnCallCountPattern = /\bspawnSync\s*\(/g;
+const nestedRunFlagPattern = /['"]--test['"]/;
+const fixtureRootPattern =
+  /\bconst\s+fixtureHelperDirectory\s*=\s*path\.join\(\s*fixtureRoot\s*,\s*['"]tests\/helpers['"]\s*\)/;
 const helperImportPattern =
-  /import\s*\{([^}]*)\}\s*from\s*"\.\.\/helpers\/quality-spawn\.mjs";/g;
+  /import\s*\{([^}]*)\}\s*from\s*['"]\.\.\/helpers\/quality-spawn\.mjs['"]/g;
 const expectedHelperImports = [
   "assertQualitySpawnCompleted",
   "qualitySpawnTimeoutMs"
 ];
-const timeoutPropertyPattern = /\btimeout:\s*([^,\n}]+)/g;
-const fixtureRootDeclaration =
-  'const fixtureHelperDirectory = path.join(fixtureRoot, "tests/helpers");';
-const legacyErrorAssertionPattern = /\bassert\.ifError\s*\(/g;
-const spawnCallPattern = /\bspawnSync\s*\(/g;
+const timeoutPropertyPattern = /\btimeout\s*:\s*([^,\n}]+)/g;
+const legacyErrorAssertionPattern = /\bassert\s*\.\s*ifError\s*\(/g;
 const spawnAssertionPattern = /\bassertQualitySpawnCompleted\s*\(/g;
+const spawnHelperNamePattern =
+  /\bconst\s+spawnHelperFile\s*=\s*['"]quality-spawn\.mjs['"]\s*;/;
 const fixtureHelperCopyPattern =
-  /writeFile\(\s*path\.join\(fixtureHelperDirectory, spawnHelperFile\),\s*spawnHelperSource\s*\)/;
+  /writeFile\(\s*path\.join\(\s*fixtureHelperDirectory\s*,\s*spawnHelperFile\s*\)\s*,\s*spawnHelperSource\s*\)/;
 const jobBudgetPattern = /^\s*timeout-minutes:\s*(\d+)\s*$/gm;
 // The nested full-suite runs timed out at this budget on the two-core CI runner
 // (Quality baseline run 30548611558 failed twice with spawnSync ETIMEDOUT).
@@ -71,38 +109,51 @@ test(
   "nested quality-suite spawns share the reviewed spawn-timeout helper",
   async () => {
     const entries = await readdir(qualityDirectory, { withFileTypes: true });
-    const moduleSources = await Promise.all(
-      entries
-        .filter(
-          (entry) =>
-            entry.isFile() &&
-            entry.name.endsWith(".test.mjs") &&
-            entry.name !== contractFile
-        )
-        .map(async (entry) => [
-          path.posix.join("tests/quality", entry.name),
-          await readFile(path.join(qualityDirectory, entry.name), "utf8")
-        ])
+    const moduleSources = new Map(
+      await Promise.all(
+        entries
+          .filter(
+            (entry) =>
+              entry.isFile() &&
+              entry.name.endsWith(".test.mjs") &&
+              entry.name !== contractFile
+          )
+          .map(async (entry) => [
+            entry.name,
+            await readFile(path.join(qualityDirectory, entry.name), "utf8")
+          ])
+      )
     );
-    const nestedSpawners = moduleSources.filter(
-      ([, source]) =>
-        source.includes("spawnSync(") && source.includes(nestedRunMarker)
+    const detectedSpawners = [...moduleSources]
+      .filter(
+        ([, source]) =>
+          spawnCallPattern.test(source) && nestedRunFlagPattern.test(source)
+      )
+      .map(([file]) => file)
+      .sort();
+    const detectedFixtureWriters = [...moduleSources]
+      .filter(([, source]) => fixtureRootPattern.test(source))
+      .map(([file]) => file)
+      .sort();
+
+    assert.deepEqual(
+      detectedSpawners,
+      nestedSpawnerFiles,
+      "nestedSpawnerFiles must list exactly the tests/quality modules that spawn a nested node --test run; a module that stopped matching detection is hiding from this contract, not exempt from it"
     );
-    const fixtureWriters = moduleSources.filter(([, source]) =>
-      source.includes(fixtureRootDeclaration)
+    assert.deepEqual(
+      detectedFixtureWriters,
+      fixtureWriterFiles,
+      "fixtureWriterFiles must list exactly the tests/quality modules that build an isolated fixture root"
     );
+
     const problems = [];
 
-    assert.ok(
-      nestedSpawners.length >= 10,
-      `Expected the focused structure guards to still spawn nested quality runs; found ${nestedSpawners.length}`
-    );
-    assert.ok(
-      fixtureWriters.length >= 7,
-      `Expected the isolated mutation fixtures to still build fixture roots; found ${fixtureWriters.length}`
-    );
+    for (const file of nestedSpawnerFiles) {
+      const source = moduleSources.get(file);
+      const modulePath = path.posix.join("tests/quality", file);
+      assert.ok(source, `Missing inventoried nested spawner: ${modulePath}`);
 
-    for (const [modulePath, source] of nestedSpawners) {
       const importNames = [...source.matchAll(helperImportPattern)].map(
         (match) =>
           match[1]
@@ -135,7 +186,7 @@ test(
         );
       }
 
-      const spawnCalls = countMatches(source, spawnCallPattern);
+      const spawnCalls = countMatches(source, spawnCallCountPattern);
       if (countMatches(source, spawnAssertionPattern) < spawnCalls) {
         problems.push(
           `${modulePath} must route all ${spawnCalls} spawnSync result(s) through assertQualitySpawnCompleted`
@@ -143,9 +194,13 @@ test(
       }
     }
 
-    for (const [modulePath, source] of fixtureWriters) {
+    for (const file of fixtureWriterFiles) {
+      const source = moduleSources.get(file);
+      const modulePath = path.posix.join("tests/quality", file);
+      assert.ok(source, `Missing inventoried fixture writer: ${modulePath}`);
+
       if (
-        !source.includes(`const spawnHelperFile = "${spawnHelperFile}";`) ||
+        !spawnHelperNamePattern.test(source) ||
         !fixtureHelperCopyPattern.test(source)
       ) {
         problems.push(
