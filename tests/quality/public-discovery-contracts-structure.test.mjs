@@ -5,6 +5,10 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import {
+  assertQualitySpawnCompleted,
+  qualitySpawnTimeoutMs
+} from "../helpers/quality-spawn.mjs";
 import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
 
 const repoRoot = process.cwd();
@@ -34,9 +38,9 @@ const publicDiscoveryHeaderExpectedSha256 =
 const publicDiscoveryBodyExpectedBytes = 4_720;
 const publicDiscoveryBodyExpectedSha256 =
   "c29e8f3a93bff0d813f57d1d36072bcca00d78cd3a8ad1a93a0c41726ac9f802";
-const mutationGuardExpectedBytes = 15_550;
+const mutationGuardExpectedBytes = 15_985;
 const mutationGuardExpectedSha256 =
-  "5bb5054fbf4ec20f9f6aca93d8f53329f8fdae2e389967f4c2e11a1126cc04d6";
+  "dd1560dd84d6cc728c2a3700aa7f5ea1fa82084fe911407d20146b1d199eae86";
 const expectedPublicDiscoveryTestNames = [
   "required SEO and social metadata exist and are consistent",
   "static project summaries preserve canonical primary, source, proof, and fragment access",
@@ -110,10 +114,10 @@ function runTestModules(
     cwd: repoRoot,
     encoding: "utf8",
     env: childProcessEnv,
-    timeout: 60_000
+    timeout: qualitySpawnTimeoutMs
   });
 
-  assert.ifError(result.error);
+  assertQualitySpawnCompleted(result, "public discovery inventory");
   assert.equal(
     result.status,
     0,

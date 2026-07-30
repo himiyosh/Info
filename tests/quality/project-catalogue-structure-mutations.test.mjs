@@ -12,10 +12,16 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
+import {
+  assertQualitySpawnCompleted,
+  qualitySpawnTimeoutMs
+} from "../helpers/quality-spawn.mjs";
+
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const helperDirectory = path.join(repoRoot, "tests/helpers");
 const boundaryAuthorityFile = "site-quality-boundary.mjs";
+const spawnHelperFile = "quality-spawn.mjs";
 const guardFile = "project-catalogue-structure.test.mjs";
 const mutationGuardFile = "project-catalogue-structure-mutations.test.mjs";
 const catalogueFile = "project-catalogue.test.mjs";
@@ -35,12 +41,14 @@ const runtimeFixturePaths = [
 ];
 const [
   boundaryAuthoritySource,
+  spawnHelperSource,
   guardSource,
   mutationGuardSource,
   catalogueSource,
   monolithSource
 ] = await Promise.all([
   readFile(path.join(helperDirectory, boundaryAuthorityFile), "utf8"),
+  readFile(path.join(helperDirectory, spawnHelperFile), "utf8"),
   readFile(path.join(qualityDirectory, guardFile), "utf8"),
   readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
   readFile(path.join(qualityDirectory, catalogueFile), "utf8"),
@@ -117,6 +125,10 @@ async function runGuardMutation({
         path.join(fixtureHelperDirectory, boundaryAuthorityFile),
         boundaryAuthoritySource
       ),
+      writeFile(
+        path.join(fixtureHelperDirectory, spawnHelperFile),
+        spawnHelperSource
+      ),
       ...Object.entries(extraQualityFiles).map(([file, source]) => {
         assert.equal(path.basename(file), file, "Extra quality fixtures must use a file name");
         assert.ok(file.endsWith(".test.mjs"), "Extra quality fixtures must be test modules");
@@ -131,10 +143,13 @@ async function runGuardMutation({
         cwd: fixtureRoot,
         encoding: "utf8",
         env: childProcessEnv,
-        timeout: 30_000
+        timeout: qualitySpawnTimeoutMs
       }
     );
-    assert.ifError(result.error);
+    assertQualitySpawnCompleted(
+      result,
+      "the project catalogue structure guard fixture"
+    );
     return {
       output: `${result.stdout}${result.stderr}`,
       status: result.status

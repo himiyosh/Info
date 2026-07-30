@@ -5,6 +5,10 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import {
+  assertQualitySpawnCompleted,
+  qualitySpawnTimeoutMs
+} from "../helpers/quality-spawn.mjs";
 import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
 
 const repoRoot = process.cwd();
@@ -38,9 +42,9 @@ const assetIntegrityBodyExpectedSha256 =
 const sharedHelperExpectedBytes = 457;
 const sharedHelperExpectedSha256 =
   "6648599f751d88c67bbf4d481b5d1817260c13fcd030f521aa6ea1e71fcd6492";
-const mutationGuardExpectedBytes = 13_086;
+const mutationGuardExpectedBytes = 13_520;
 const mutationGuardExpectedSha256 =
-  "9e52dd88a100f51880ee6a1a7e15396ea121db8110361a4384c0a3f61acb7bdb";
+  "bff6843533d7d8b92beef537190662c8a4cbc2079df68aad1f2b4447a3ca4990";
 const expectedAssetIntegrityTestNames = [
   "all referenced local files exist",
   "preview assets are not stale or orphaned",
@@ -108,10 +112,10 @@ function runTestModules(
     cwd: repoRoot,
     encoding: "utf8",
     env: childProcessEnv,
-    timeout: 60_000
+    timeout: qualitySpawnTimeoutMs
   });
 
-  assert.ifError(result.error);
+  assertQualitySpawnCompleted(result, "asset integrity inventory");
   assert.equal(
     result.status,
     0,
