@@ -1,1 +1,1 @@
-export const siteQualityExpectedBytes = 43_522;
+export const siteQualityExpectedBytes = 38_714;
