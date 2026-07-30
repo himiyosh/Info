@@ -387,7 +387,10 @@ test("share language and trust context stay distinct within the responsive Graph
   assert.doesNotMatch(projectActions, /share-language/);
   assert.match(template, /^\s*\{\{sourceActionMarkup\}\}\s*$/m);
   assert.match(template, /^\s*\{\{proofMarkup\}\}\s*$/m);
-  assert.match(stylesheet, /\.share-shell\s*\{[^}]*min-width:\s*0;[^}]*display:\s*grid;/);
+  assert.match(
+    stylesheet,
+    /\.share-page\s*\{[^}]*display:\s*grid;[^}]*align-content:\s*center;[^}]*gap:\s*var\(--space-sm\);/
+  );
   assert.match(
     stylesheet,
     /\.share-language-navigation\s*\{[^}]*min-width:\s*0;[^}]*display:\s*flex;[^}]*justify-content:\s*flex-end;/

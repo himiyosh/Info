@@ -394,6 +394,8 @@ export function renderProjectSharePage(
     canonicalUrl: `${canonicalRoot}${routePath}`,
     alternateLanguage,
     alternateUrl: `${canonicalRoot}${alternateRoutePath}`,
+    languageNavigationLabel: localizedTranslation(language, "nav.switchLanguage"),
+    languageToggleShort: localizedTranslation(language, "nav.toggleShort"),
     japaneseUrl: `${canonicalRoot}share/${slug}/`,
     englishUrl: `${canonicalRoot}en/share/${slug}/`,
     imageUrl: `${canonicalRoot}${image}`,
