@@ -16,10 +16,10 @@ const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const helperDirectory = path.join(repoRoot, "tests/helpers");
 const boundaryAuthorityFile = "site-quality-boundary.mjs";
-const guardFile = "public-discovery-contracts-structure.test.mjs";
+const guardFile = "reduced-motion-contracts-structure.test.mjs";
 const mutationGuardFile =
-  "public-discovery-contracts-structure-mutations.test.mjs";
-const publicDiscoveryFile = "public-discovery-contracts.test.mjs";
+  "reduced-motion-contracts-structure-mutations.test.mjs";
+const reducedMotionFile = "reduced-motion-contracts.test.mjs";
 const monolithFile = "site-quality.test.mjs";
 const globalInventoryEnvironments = [
   "INFO_WORKFLOW_SECURITY_INVENTORY",
@@ -28,7 +28,9 @@ const globalInventoryEnvironments = [
   "INFO_PUBLISHING_INTEGRITY_INVENTORY",
   "INFO_MOBILE_NAVIGATION_INVENTORY",
   "INFO_ASSET_INTEGRITY_INVENTORY",
-  "INFO_PUBLIC_DISCOVERY_INVENTORY"
+  "INFO_PUBLIC_DISCOVERY_INVENTORY",
+  "INFO_BASELINE_MOTION_SAFETY_INVENTORY",
+  "INFO_REDUCED_MOTION_INVENTORY"
 ];
 const globalInventoryEnvironmentValue = "complete-runtime-v1";
 const globalInventoryChildMode = globalInventoryEnvironments.some(
@@ -38,54 +40,63 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
 const mutationTest = globalInventoryChildMode ? test.skip : test;
 const childProcessEnv = { ...process.env, NO_COLOR: "1" };
 delete childProcessEnv.NODE_TEST_CONTEXT;
-const runtimeFixturePaths = ["index.html", "projects.json"];
+const runtimeFixturePaths = ["modern.css", "script.js", "styles.css"];
 const [
   boundaryAuthoritySource,
   guardSource,
   mutationGuardSource,
-  publicDiscoverySource,
+  reducedMotionSource,
   monolithSource
 ] = await Promise.all([
   readFile(path.join(helperDirectory, boundaryAuthorityFile), "utf8"),
   readFile(path.join(qualityDirectory, guardFile), "utf8"),
   readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
-  readFile(path.join(qualityDirectory, publicDiscoveryFile), "utf8"),
+  readFile(path.join(qualityDirectory, reducedMotionFile), "utf8"),
   readFile(path.join(qualityDirectory, monolithFile), "utf8")
 ]);
-const publicDiscoveryTestNames = [
-  ...publicDiscoverySource.matchAll(/^test\("([^"]+)",/gm)
+const reducedMotionTestNames = [
+  ...reducedMotionSource.matchAll(/^test\("([^"]+)",/gm)
 ].map((match) => match[1]);
-const publicDiscoveryBodyStart = publicDiscoverySource.indexOf(
-  `test(${JSON.stringify(publicDiscoveryTestNames[0])}`
+const reducedMotionBodyStart = reducedMotionSource.indexOf(
+  `test(${JSON.stringify(reducedMotionTestNames[0])}`
 );
-const publicDiscoveryHeader = publicDiscoverySource.slice(
+const reducedMotionHeader = reducedMotionSource.slice(
   0,
-  publicDiscoveryBodyStart
+  reducedMotionBodyStart
 );
-const publicDiscoveryBodyBytes =
-  Buffer.byteLength(publicDiscoverySource) - publicDiscoveryBodyStart;
+const reducedMotionBodyBytes =
+  Buffer.byteLength(reducedMotionSource) - reducedMotionBodyStart;
 const adjacentMonolithTestNames = [
-  "JavaScript files are parseable",
-  "rejected continuous curiosity field recovery remains absent",
-  "new-tab links include bilingual accessibility announcement text"
+  "micro-parallax is capped at +/-5px, applied to the frame not the img, and disabled under reduced motion",
+  "final modern focus-ring overrides match the actual project and contact surfaces",
+  "focus-ring / backdrop token pairings meet WCAG 1.4.11 non-text contrast (>= 3:1)"
+];
+const adjacentMonolithHelperNames = [
+  "parseOklchTokens",
+  "relativeLuminanceFromOklch",
+  "oklchContrastRatio"
 ];
 
 assert.equal(
-  publicDiscoveryTestNames.length,
-  3,
-  "Mutation fixtures require the fixed three-test inventory"
+  reducedMotionTestNames.length,
+  2,
+  "Mutation fixtures require the fixed two-test inventory"
 );
 assert.notEqual(
-  publicDiscoveryBodyStart,
+  reducedMotionBodyStart,
   -1,
-  "Mutation fixtures require the public discovery body boundary"
+  "Mutation fixtures require the reduced-motion body boundary"
 );
 const monolithFixtureSource = padWithComment(
   [
     'import { test } from "node:test";',
     "",
     ...adjacentMonolithTestNames.map(
-      (name) => `test(${JSON.stringify(name)}, () => {});`
+      (testName) => `test(${JSON.stringify(testName)}, () => {});`
+    ),
+    "",
+    ...adjacentMonolithHelperNames.map(
+      (helperName) => `function ${helperName}() {}`
     ),
     ""
   ].join("\n"),
@@ -116,7 +127,8 @@ function padWithComment(source, targetBytes) {
 }
 
 function replaceOncePreservingBytes(source, marker, replacement) {
-  const remainingBytes = Buffer.byteLength(marker) - Buffer.byteLength(replacement);
+  const remainingBytes =
+    Buffer.byteLength(marker) - Buffer.byteLength(replacement);
   assert.ok(
     remainingBytes >= 0,
     "Mutation replacement must not exceed its reviewed marker"
@@ -140,14 +152,13 @@ async function linkRuntimeFixtures(rootDirectory) {
 }
 
 async function runGuardMutation({
+  reducedMotion = reducedMotionSource,
   extraQualityFiles = {},
-  guard = guardSource,
-  monolith = monolithFixtureSource,
   mutationGuard = mutationGuardSource,
-  publicDiscovery = publicDiscoverySource
+  monolith = monolithFixtureSource
 } = {}) {
   const fixtureRoot = await mkdtemp(
-    path.join(os.tmpdir(), "info-public-discovery-guard-")
+    path.join(os.tmpdir(), "info-reduced-motion-guard-")
   );
   const fixtureQualityDirectory = path.join(fixtureRoot, "tests/quality");
   const fixtureHelperDirectory = path.join(fixtureRoot, "tests/helpers");
@@ -159,14 +170,14 @@ async function runGuardMutation({
     ]);
     await linkRuntimeFixtures(fixtureRoot);
     await Promise.all([
-      writeFile(path.join(fixtureQualityDirectory, guardFile), guard),
+      writeFile(path.join(fixtureQualityDirectory, guardFile), guardSource),
       writeFile(
         path.join(fixtureQualityDirectory, mutationGuardFile),
         mutationGuard
       ),
       writeFile(
-        path.join(fixtureQualityDirectory, publicDiscoveryFile),
-        publicDiscovery
+        path.join(fixtureQualityDirectory, reducedMotionFile),
+        reducedMotion
       ),
       writeFile(
         path.join(fixtureQualityDirectory, monolithFile),
@@ -221,7 +232,7 @@ async function assertMutationRejected(mutation, expectedMessage) {
 }
 
 mutationTest(
-  "public discovery structure guard accepts the reviewed unchanged extraction",
+  "reduced motion structure guard accepts the reviewed unchanged extraction",
   async () => {
     const result = await runGuardMutation();
     assert.equal(result.status, 0, result.output);
@@ -229,14 +240,14 @@ mutationTest(
 );
 
 mutationTest(
-  "public discovery structure guard rejects canonical names leaking into the monolith",
+  "reduced motion structure guard rejects canonical names leaking into the monolith",
   async () => {
     const paddingStart = monolithFixtureSource.lastIndexOf("/*");
     assert.notEqual(paddingStart, -1, "Monolith fixture must retain its padding");
     const canonicalNameLeak = padWithComment(
       [
         monolithFixtureSource.slice(0, paddingStart),
-        `const leakedCanonicalName = ${JSON.stringify(publicDiscoveryTestNames[0])};`,
+        `const leakedCanonicalName = ${JSON.stringify(reducedMotionTestNames[0])};`,
         ""
       ].join("\n"),
       Buffer.byteLength(monolithFixtureSource)
@@ -247,153 +258,163 @@ mutationTest(
     );
     await assertMutationRejected(
       { monolith: canonicalNameLeak },
-      /must exclusively own the three canonical public discovery contracts/
+      /must exclusively own the two canonical reduced-motion contracts/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects adjacent monolith contracts leaking into the focused module",
+  "reduced motion structure guard rejects adjacent monolith contracts leaking into the focused module",
   async () => {
     const reviewedAssertionMessage = JSON.stringify(
-      "Static summary primary actions must exactly match the canonical project destinations"
+      "Reduced motion must define one combined rule for .wordmark-mark and .site-header.is-compact .wordmark-mark"
     );
     const adjacentContractLeak = replaceOncePreservingBytes(
-      publicDiscoverySource,
+      reducedMotionSource,
       reviewedAssertionMessage,
       JSON.stringify(adjacentMonolithTestNames[0])
     );
     assert.equal(
       Buffer.byteLength(adjacentContractLeak),
-      Buffer.byteLength(publicDiscoverySource)
+      Buffer.byteLength(reducedMotionSource)
     );
     await assertMutationRejected(
-      { publicDiscovery: adjacentContractLeak },
-      /adjacent JavaScript, rejected-experiment, and new-tab contracts must remain exclusively in the monolith/
+      { reducedMotion: adjacentContractLeak },
+      /adjacent parallax and focus contracts must remain exclusively in the monolith/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects computed duplicate registrations",
+  "reduced motion structure guard rejects OKLCH helpers leaking into the focused module",
+  async () => {
+    const reviewedComment =
+      "  // Idempotency: repeated arm calls must not attach duplicate listeners";
+    const helperDefinitionLeak = replaceOncePreservingBytes(
+      reducedMotionSource,
+      reviewedComment,
+      `  function ${adjacentMonolithHelperNames[0]}() {}`
+    );
+    assert.equal(
+      Buffer.byteLength(helperDefinitionLeak),
+      Buffer.byteLength(reducedMotionSource)
+    );
+    await assertMutationRejected(
+      { reducedMotion: helperDefinitionLeak },
+      /OKLCH contrast helpers must remain exclusively in the monolith/
+    );
+  }
+);
+
+mutationTest(
+  "reduced motion structure guard rejects computed duplicate registrations",
   async () => {
     const duplicateRegistration = appendSource(
-      publicDiscoverySource,
+      reducedMotionSource,
       [
-        `const duplicatePublicDiscoveryName = ${JSON.stringify(publicDiscoveryTestNames[0])};`,
-        "test(duplicatePublicDiscoveryName, () => {});"
+        `const duplicateReducedMotionName = ${JSON.stringify(reducedMotionTestNames[0])};`,
+        "test(duplicateReducedMotionName, () => {});"
       ].join("\n")
     );
     await assertMutationRejected(
-      { publicDiscovery: duplicateRegistration },
+      { reducedMotion: duplicateRegistration },
       /exact runtime test-name inventory/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects dynamic test registrations",
+  "reduced motion structure guard rejects dynamically assembled duplicate registrations",
   async () => {
-    const dynamicRegistration = appendSource(
-      publicDiscoverySource,
+    const splitMarker = ": a runtime change ";
+    const [namePrefix, nameSuffix] = reducedMotionTestNames[1].split(splitMarker);
+    assert.ok(nameSuffix, "Dynamic duplicate needs a stable split point");
+    const dynamicDuplicate = appendSource(
+      reducedMotionSource,
       [
-        'const dynamicPublicDiscoveryName = ["dynamic", "public", "discovery", "contract"].join(" ");',
-        "test(dynamicPublicDiscoveryName, () => {});"
+        `const dynamicReducedMotionName = ${JSON.stringify(`${namePrefix}: a runtime`)} + ${JSON.stringify(` change ${nameSuffix}`)};`,
+        "test(dynamicReducedMotionName, () => {});"
       ].join("\n")
     );
     await assertMutationRejected(
-      { publicDiscovery: dynamicRegistration },
+      { reducedMotion: dynamicDuplicate },
       /exact runtime test-name inventory/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects hidden global duplicates",
+  "reduced motion structure guard rejects hidden global duplicates",
   async () => {
-    const [namePrefix, nameSuffix] = publicDiscoveryTestNames[0].split(
-      " social metadata"
-    );
+    const hiddenName = reducedMotionTestNames[0];
+    const separator = ", disables ";
+    const separatorIndex = hiddenName.indexOf(separator);
+    assert.notEqual(separatorIndex, -1, "Hidden duplicate needs a split point");
+    const namePrefix = hiddenName.slice(0, separatorIndex);
+    const nameSuffix = hiddenName.slice(separatorIndex + separator.length);
     const hiddenDuplicate = [
       'import { test as registerTest } from "node:test";',
       "",
-      `const canonicalName = ${JSON.stringify(`${namePrefix} `)} + ${JSON.stringify(`social metadata${nameSuffix}`)};`,
-      "registerTest(canonicalName, () => {});",
+      `const hiddenReducedMotionName = ${JSON.stringify(`${namePrefix}, disables`)} + ${JSON.stringify(` ${nameSuffix}`)};`,
+      "registerTest(hiddenReducedMotionName, () => {});",
       ""
     ].join("\n");
     await assertMutationRejected(
       {
         extraQualityFiles: {
-          "hidden-public-discovery-duplicate.test.mjs": hiddenDuplicate
+          "hidden-reduced-motion-duplicate.test.mjs": hiddenDuplicate
         }
       },
-      /canonical public discovery test names must be registered exactly once globally/
+      /canonical reduced-motion test names must be registered exactly once globally/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects runtime-disabled canonical contracts",
+  "reduced motion structure guard rejects skipped canonical contracts",
   async () => {
     const firstRegistration =
-      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
-    const runtimeDisabled = replaceOnce(
-      publicDiscoverySource,
-      firstRegistration,
-      `${firstRegistration.slice(0, -"() => {".length)}(context) => {\n  context.skip("mutation");\n  return;`
-    );
-    await assertMutationRejected(
-      { publicDiscovery: runtimeDisabled },
-      /must execute all three contracts without skip or todo/
-    );
-  }
-);
-
-mutationTest(
-  "public discovery structure guard rejects skipped canonical contracts",
-  async () => {
-    const firstRegistration =
-      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
+      `test(${JSON.stringify(reducedMotionTestNames[0])}, async () => {`;
     await assertMutationRejected(
       {
-        publicDiscovery: replaceOnce(
-          publicDiscoverySource,
+        reducedMotion: replaceOnce(
+          reducedMotionSource,
           firstRegistration,
           firstRegistration.replace("test(", "test.skip(")
         )
       },
-      /must execute all three contracts without skip or todo/
+      /must execute both contracts without skip or todo/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects todo canonical contracts",
+  "reduced motion structure guard rejects todo canonical contracts",
   async () => {
     const firstRegistration =
-      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
+      `test(${JSON.stringify(reducedMotionTestNames[0])}, async () => {`;
     await assertMutationRejected(
       {
-        publicDiscovery: replaceOnce(
-          publicDiscoverySource,
+        reducedMotion: replaceOnce(
+          reducedMotionSource,
           firstRegistration,
           firstRegistration.replace("test(", "test.todo(")
         )
       },
-      /must execute all three contracts without skip or todo/
+      /must execute both contracts without skip or todo/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects exclusive canonical contracts",
+  "reduced motion structure guard rejects exclusive canonical contracts",
   async () => {
     const firstRegistration =
-      `test(${JSON.stringify(publicDiscoveryTestNames[0])}, async () => {`;
+      `test(${JSON.stringify(reducedMotionTestNames[0])}, async () => {`;
     await assertMutationRejected(
       {
-        publicDiscovery: replaceOnce(
-          publicDiscoverySource,
+        reducedMotion: replaceOnce(
+          reducedMotionSource,
           firstRegistration,
           firstRegistration.replace("test(", "test.only(")
         )
@@ -404,17 +425,37 @@ mutationTest(
 );
 
 mutationTest(
-  "public discovery structure guard rejects focused-module padding",
+  "reduced motion structure guard rejects runtime-disabled canonical contracts",
   async () => {
+    const firstRegistration =
+      `test(${JSON.stringify(reducedMotionTestNames[0])}, async () => {`;
+    const disabledRegistration =
+      `test(${JSON.stringify(reducedMotionTestNames[0])}, { skip: true }, async () => {`;
     await assertMutationRejected(
-      { publicDiscovery: `${publicDiscoverySource} ` },
-      /public-discovery-contracts\.test\.mjs must be exactly 4993 bytes/
+      {
+        reducedMotion: replaceOnce(
+          reducedMotionSource,
+          firstRegistration,
+          disabledRegistration
+        )
+      },
+      /must execute both contracts without skip or todo/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects monolith padding",
+  "reduced motion structure guard rejects focused-module padding",
+  async () => {
+    await assertMutationRejected(
+      { reducedMotion: `${reducedMotionSource} ` },
+      /reduced-motion-contracts\.test\.mjs must be exactly 5080 bytes/
+    );
+  }
+);
+
+mutationTest(
+  "reduced motion structure guard rejects monolith padding",
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
@@ -424,63 +465,63 @@ mutationTest(
 );
 
 mutationTest(
-  "public discovery structure guard rejects a same-length inert header wrapper",
+  "reduced motion structure guard rejects a same-length inert header wrapper",
   async () => {
     const inertHeader = `${padWithComment(
       'import { test as t } from "node:test"; const test=(name)=>t(name,()=>{});\n',
-      publicDiscoveryBodyStart - 1
+      reducedMotionBodyStart - 1
     )}\n`;
     const headerWrapperBypass =
-      `${inertHeader}${publicDiscoverySource.slice(publicDiscoveryBodyStart)}`;
+      `${inertHeader}${reducedMotionSource.slice(reducedMotionBodyStart)}`;
 
     assert.equal(
       Buffer.byteLength(headerWrapperBypass),
-      Buffer.byteLength(publicDiscoverySource)
+      Buffer.byteLength(reducedMotionSource)
     );
     assert.equal(
-      headerWrapperBypass.slice(publicDiscoveryBodyStart),
-      publicDiscoverySource.slice(publicDiscoveryBodyStart)
+      headerWrapperBypass.slice(reducedMotionBodyStart),
+      reducedMotionSource.slice(reducedMotionBodyStart)
     );
 
     await assertMutationRejected(
-      { publicDiscovery: headerWrapperBypass },
-      /public-discovery-contracts\.test\.mjs header SHA-256 must match the reviewed extraction/
+      { reducedMotion: headerWrapperBypass },
+      /reduced-motion-contracts\.test\.mjs header SHA-256 must match the reviewed extraction/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard rejects empty stubs plus unrelated extraction",
+  "reduced motion structure guard rejects empty stubs plus unrelated extraction",
   async () => {
     const stubBody = [
-      ...publicDiscoveryTestNames.map(
+      ...reducedMotionTestNames.map(
         (name) => `test(${JSON.stringify(name)}, () => {});`
       ),
       "",
-      "const unrelatedNewTabAccessibilityExtraction = true;",
+      "const unrelatedColorContrastExtraction = true;",
       ""
     ].join("\n");
     const unrelatedExtraction =
-      `${publicDiscoveryHeader}${padWithComment(stubBody, publicDiscoveryBodyBytes)}`;
+      `${reducedMotionHeader}${padWithComment(stubBody, reducedMotionBodyBytes)}`;
 
     assert.equal(
       Buffer.byteLength(unrelatedExtraction),
-      Buffer.byteLength(publicDiscoverySource)
+      Buffer.byteLength(reducedMotionSource)
     );
 
     await assertMutationRejected(
-      { publicDiscovery: unrelatedExtraction },
+      { reducedMotion: unrelatedExtraction },
       /assertion body SHA-256/
     );
   }
 );
 
 mutationTest(
-  "public discovery structure guard binds skipped mutation callbacks",
+  "reduced motion structure guard binds skipped mutation callbacks",
   async () => {
     const wrapperMarker = [
       "mutationTest(",
-      '  "public discovery structure guard accepts the reviewed unchanged extraction",',
+      '  "reduced motion structure guard accepts the reviewed unchanged extraction",',
       "  async () => {",
       "    const result = await runGuardMutation();"
     ].join("\n");
@@ -491,7 +532,7 @@ mutationTest(
         .replace("async ()", "async (context)")
         .replace(
           "\n    const result",
-          "\n    const hiddenCanonicalName = publicDiscoveryTestNames[0].slice(0);" +
+          "\n    const hiddenCanonicalName = reducedMotionTestNames[0].slice(0);" +
             "\n    await context.test(hiddenCanonicalName, () => {});" +
             "\n    const result"
         )

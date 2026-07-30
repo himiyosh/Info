@@ -19,6 +19,7 @@ const focusedGuardFiles = [
   "project-catalogue-structure.test.mjs",
   "public-discovery-contracts-structure.test.mjs",
   "publishing-integrity-structure.test.mjs",
+  "reduced-motion-contracts-structure.test.mjs",
   "workflow-security-structure.test.mjs"
 ];
 const isolatedMutationFixtureFiles = [
@@ -26,7 +27,8 @@ const isolatedMutationFixtureFiles = [
   "baseline-motion-safety-structure-mutations.test.mjs",
   "mobile-navigation-contracts-structure-mutations.test.mjs",
   "project-catalogue-structure-mutations.test.mjs",
-  "public-discovery-contracts-structure-mutations.test.mjs"
+  "public-discovery-contracts-structure-mutations.test.mjs",
+  "reduced-motion-contracts-structure-mutations.test.mjs"
 ];
 const authorityImportPattern =
   /^import { siteQualityExpectedBytes } from "\.\.\/helpers\/site-quality-boundary\.mjs";$/gm;
