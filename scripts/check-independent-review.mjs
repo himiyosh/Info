@@ -8,12 +8,13 @@ const FULL_UUID_PATTERN =
 const REPOSITORY_PATTERN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const PULL_REQUEST_NUMBER_PATTERN = /^[1-9][0-9]*$/;
 const MARKER_PREFIX = "independent-review head=";
-const TOKEN_CHARACTER_PATTERN = /[A-Za-z0-9_-]/;
 const UUID_PATTERN_SOURCE =
   "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
-const VERDICT_SUFFIX_PATTERN = new RegExp(
-  `^ verdict=(pass|fail) by=(${UUID_PATTERN_SOURCE})(?![A-Za-z0-9_-])`
+const EXACT_MARKER_LINE_PATTERN = new RegExp(
+  `^${MARKER_PREFIX}([0-9a-f]{40}) verdict=(pass|fail) by=(${UUID_PATTERN_SOURCE})$`
 );
+const MARKDOWN_CONTAINER_PREFIX_PATTERN =
+  /^(?:(?:[ \t]*>[ \t]?)|(?:[ \t]*(?:[-+*]|\d{1,9}[.)])[ \t]+))+/;
 const SECOND_VERDICT_PATTERN = /^(?:pass|fail)(?![A-Za-z0-9_-])/;
 const VERDICT_SEPARATOR_PATTERN =
   /^(?:[ \t\r\n]*[|/,、;；][ \t\r\n]*|[ \t\r\n]+)(?:or[ \t\r\n]+)?/;
@@ -82,6 +83,30 @@ export function parseReviewEvidenceJson(source) {
   }
 }
 
+function normalizeFenceCandidate(line) {
+  return line.replace(MARKDOWN_CONTAINER_PREFIX_PATTERN, "").trimStart();
+}
+
+function parseOpeningFence(line) {
+  const match = normalizeFenceCandidate(line).match(/^(`{3,}|~{3,})(.*)$/);
+  if (!match || (match[1][0] === "`" && match[2].includes("`"))) {
+    return null;
+  }
+
+  return {
+    character: match[1][0],
+    length: match[1].length
+  };
+}
+
+function closesFence(line, fence) {
+  const match = normalizeFenceCandidate(line).match(/^(`{3,}|~{3,})[ \t]*$/);
+
+  return (
+    match !== null && match[1][0] === fence.character && match[1].length >= fence.length
+  );
+}
+
 function hasSecondVerdictAfterSeparator(suffix) {
   const separatorMatch = suffix.match(VERDICT_SEPARATOR_PATTERN);
 
@@ -92,29 +117,48 @@ function hasSecondVerdictAfterSeparator(suffix) {
 }
 
 function collectStandaloneVerdicts(body, head) {
-  const marker = `${MARKER_PREFIX}${head}`;
   const matches = [];
-  let index = body.indexOf(marker);
+  let fence = null;
+  let lineStart = 0;
 
-  while (index !== -1) {
-    const precedingCharacter = body[index - 1];
-    const hasValidStart =
-      precedingCharacter === undefined || !TOKEN_CHARACTER_PATTERN.test(precedingCharacter);
-    const suffix = body.slice(index + marker.length);
-    const suffixMatch = suffix.match(VERDICT_SUFFIX_PATTERN);
-    const hasSecondVerdict =
-      suffixMatch &&
-      hasSecondVerdictAfterSeparator(suffix.slice(suffixMatch[0].length));
-
-    if (hasValidStart && suffixMatch && !hasSecondVerdict) {
-      matches.push({
-        verdict: suffixMatch[1],
-        by: validateReviewerSessionId(suffixMatch[2]),
-        offset: index
-      });
+  while (lineStart <= body.length) {
+    let lineEnd = lineStart;
+    while (lineEnd < body.length && body[lineEnd] !== "\r" && body[lineEnd] !== "\n") {
+      lineEnd += 1;
     }
 
-    index = body.indexOf(marker, index + 1);
+    const line = body.slice(lineStart, lineEnd);
+    if (fence) {
+      if (closesFence(line, fence)) {
+        fence = null;
+      }
+    } else {
+      const openingFence = parseOpeningFence(line);
+      if (openingFence) {
+        fence = openingFence;
+      } else {
+        const trimmedLine = line.trim();
+        const markerMatch = trimmedLine.match(EXACT_MARKER_LINE_PATTERN);
+
+        if (markerMatch && markerMatch[1] === head) {
+          const offset = lineStart + line.indexOf(trimmedLine);
+          const suffix = body.slice(offset + trimmedLine.length);
+          if (!hasSecondVerdictAfterSeparator(suffix)) {
+            matches.push({
+              verdict: markerMatch[2],
+              by: validateReviewerSessionId(markerMatch[3]),
+              offset
+            });
+          }
+        }
+      }
+    }
+
+    if (lineEnd === body.length) {
+      break;
+    }
+    lineStart =
+      lineEnd + (body[lineEnd] === "\r" && body[lineEnd + 1] === "\n" ? 2 : 1);
   }
 
   return matches;
@@ -406,7 +450,7 @@ function reviewersFor(evidence) {
 function reportIndependentReviewResult(result, head) {
   if (result.verdict === "missing") {
     console.error(
-      `Independent review pass verdict not found for head ${head} in review or comment bodies`
+      `Independent review pass verdict not found for head ${head}; expected one exact trimmed marker line outside fenced code blocks in review or comment bodies`
     );
     return 1;
   }

@@ -186,7 +186,7 @@ export function evaluateMergeGate(input, expectedHead) {
   });
   if (independentReview.verdict === "missing") {
     failures.push(
-      `independent review verdict=pass not found for exact head ${expectedHead} in review or comment bodies`
+      `independent review verdict=pass not found for exact head ${expectedHead}; expected one exact trimmed marker line outside fenced code blocks in review or comment bodies`
     );
   }
   if (independentReview.verdict === "fail") {
