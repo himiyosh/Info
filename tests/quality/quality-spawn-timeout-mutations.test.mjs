@@ -66,6 +66,7 @@ const hardcodedTimeoutProperty = [
 ].join(": ");
 const legacySpawnAssertion = `${["assert", "ifError"].join(".")}(result.error);`;
 const unspacedSpawnCall = ["spawnSync", "(process.execPath"].join("");
+const spawnCallToken = ["spawnSync", "("].join("");
 const spacedSpawnCall = ["spawnSync", "(process.execPath"].join(" ");
 const concealedFlagDeclaration = `const concealedTestFlag = ${JSON.stringify("--te")} + ${JSON.stringify("st")};`;
 const unlistedLiteralFlagSource = [
@@ -95,6 +96,16 @@ const unlistedAliasedImportSource = [
   '  if (typeof run !== "function") {',
   '    throw new Error("child process API missing");',
   "  }",
+  "});",
+  ""
+].join("\n");
+const unlistedBareSpecifierSource = [
+  'import { spawnSync as run } from "child_process";',
+  'import { test } from "node:test";',
+  "",
+  'test("an unlisted module imports the legacy child process specifier", () => {',
+  `  ${concealedFlagDeclaration}`,
+  '  run(process.execPath, [concealedTestFlag, "tests/quality/site-quality.test.mjs"]);',
   "});",
   ""
 ].join("\n");
@@ -372,13 +383,36 @@ mutationTest(
   "spawn-timeout guard rejects an unlisted module that only aliases the child process API",
   async () => {
     assert.ok(
-      !unlistedAliasedImportSource.includes("spawnSync("),
+      !unlistedAliasedImportSource.includes(spawnCallToken),
       "The aliased-import fixture must not contain a direct spawnSync call site"
     );
     await assertMutationRejected(
       {
         extraQualityFiles: {
           "unlisted-aliased-spawner.test.mjs": unlistedAliasedImportSource
+        }
+      },
+      inventoryMismatchMessage
+    );
+  }
+);
+
+mutationTest(
+  "spawn-timeout guard rejects an unlisted module that uses the legacy child process specifier",
+  async () => {
+    assert.ok(
+      !unlistedBareSpecifierSource.includes("node:child_process"),
+      "The legacy-specifier fixture must import without the node: prefix"
+    );
+    assert.ok(
+      !unlistedBareSpecifierSource.includes(spawnCallToken),
+      "The legacy-specifier fixture must not contain a direct spawnSync call site"
+    );
+    await assertMutationRejected(
+      {
+        extraQualityFiles: {
+          "unlisted-legacy-specifier-spawner.test.mjs":
+            unlistedBareSpecifierSource
         }
       },
       inventoryMismatchMessage

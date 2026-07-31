@@ -16,6 +16,8 @@ import {
 // This guard is a source scanner. It exists to catch accidental regressions,
 // such as a contributor reintroducing a per-file spawn timeout; it cannot stop a
 // contributor who deliberately obfuscates a module's own child_process usage.
+// The `node:` prefix is spelling, not obfuscation, so a bare "child_process"
+// specifier is detected exactly like "node:child_process".
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const spawnHelperFile = "quality-spawn.mjs";
@@ -85,7 +87,7 @@ const fixtureWriterFiles = [
 // namespaced, or dynamic) or any call to the spawn/exec/fork family requires an
 // inventory entry. Bare `exec(` is intentionally omitted because RegExp#exec
 // dominates it; importing `exec` still matches the specifier pattern.
-const childProcessSpecifierPattern = /['"]node:child_process['"]/;
+const childProcessSpecifierPattern = /['"](?:node:)?child_process['"]/;
 const childProcessCallPattern =
   /\b(?:spawnSync|spawn|execFileSync|execFile|execSync|fork)\s*\(/;
 const spawnCallCountPattern = /\bspawnSync\s*\(/g;
