@@ -5,6 +5,10 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import {
+  assertQualitySpawnCompleted,
+  qualitySpawnTimeoutMs
+} from "../helpers/quality-spawn.mjs";
 import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
 
 const repoRoot = process.cwd();
@@ -39,9 +43,9 @@ const reducedMotionBodyExpectedSha256 =
 const reviewedSourceSliceExpectedBytes = 4_808;
 const reviewedSourceSliceExpectedSha256 =
   "337f1f315eb90c87704d76dd85d0df8f2371ebb1809b3201d6efaa8ede22303b";
-const mutationGuardExpectedBytes = 16_849;
+const mutationGuardExpectedBytes = 17_282;
 const mutationGuardExpectedSha256 =
-  "3de5ad98a453739c5819180103b8f29a6997ba6214bd289fadf17c70a9a8c3dc";
+  "b6fd6fe00cac69deaf4e3a651d6553ab89da66b7525e737363e5e1f554449959";
 const expectedReducedMotionTestNames = [
   "reduced motion nulls every new spatial transform, disables non-essential motion, and keeps the wordmark-mark rotation invariant",
   "reduced motion preference is live: a runtime change arms/disarms motion without duplicate observers"
@@ -146,11 +150,11 @@ function runTestModules(
       cwd: repoRoot,
       encoding: "utf8",
       env: childProcessEnv,
-      timeout: 60_000
+      timeout: qualitySpawnTimeoutMs
     }
   );
 
-  assert.ifError(result.error);
+  assertQualitySpawnCompleted(result, "reduced-motion inventory");
   assert.equal(
     result.status,
     0,

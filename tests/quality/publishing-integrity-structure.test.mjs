@@ -5,6 +5,10 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import {
+  assertQualitySpawnCompleted,
+  qualitySpawnTimeoutMs
+} from "../helpers/quality-spawn.mjs";
 import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
 
 const repoRoot = process.cwd();
@@ -98,10 +102,10 @@ function runTestModules(
     cwd: repoRoot,
     encoding: "utf8",
     env: childProcessEnv,
-    timeout: 60_000
+    timeout: qualitySpawnTimeoutMs
   });
 
-  assert.ifError(result.error);
+  assertQualitySpawnCompleted(result, "publishing integrity inventory");
   assert.equal(
     result.status,
     0,

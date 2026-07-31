@@ -5,6 +5,10 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import {
+  assertQualitySpawnCompleted,
+  qualitySpawnTimeoutMs
+} from "../helpers/quality-spawn.mjs";
 import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
 
 const repoRoot = process.cwd();
@@ -30,9 +34,9 @@ const globalInventoryChildMode =
     globalInventoryEnvironmentValue ||
   process.env[mobileNavigationInventoryEnvironment] ===
     globalInventoryEnvironmentValue;
-const mutationGuardExpectedBytes = 7_118;
+const mutationGuardExpectedBytes = 7_554;
 const mutationGuardExpectedSha256 =
-  "c958650e9485c9d4cee1c4bec2d2996ca919e419684933bef6097556969d1d54";
+  "ab8c2da40d857bdfc54ec8794bd35eb0187e77804658ace274dd58549c1d00a1";
 const mobileNavigationExpectedBytes = 6_211;
 const mobileNavigationBodyStartExpectedBytes = 273;
 const mobileNavigationHeaderExpectedSha256 =
@@ -111,10 +115,10 @@ function runTestModules(
     cwd: repoRoot,
     encoding: "utf8",
     env: childProcessEnv,
-    timeout: 60_000
+    timeout: qualitySpawnTimeoutMs
   });
 
-  assert.ifError(result.error);
+  assertQualitySpawnCompleted(result, "mobile navigation inventory");
   assert.equal(
     result.status,
     0,

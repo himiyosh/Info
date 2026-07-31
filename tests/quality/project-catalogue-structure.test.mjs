@@ -5,6 +5,10 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import {
+  assertQualitySpawnCompleted,
+  qualitySpawnTimeoutMs
+} from "../helpers/quality-spawn.mjs";
 import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
 
 const repoRoot = process.cwd();
@@ -22,9 +26,9 @@ const catalogueBodyStartExpectedBytes = 8_196;
 const catalogueBodyExpectedBytes = 43_806;
 const catalogueBodyExpectedSha256 =
   "d9b94bf0f5f70fdb7fe289aa32f5da411539958825b1602c1e11561feb4a7821";
-const mutationGuardExpectedBytes = 12_645;
+const mutationGuardExpectedBytes = 13_081;
 const mutationGuardExpectedSha256 =
-  "551194645cc2d88ea5263508174fdef6320eec22d1a1981d4df2a3747c284a61";
+  "f0d4f186433091d4b04420f8a290b3a804d7d8dc19dd652c4172822cbbede623";
 const expectedCatalogueTestNames = [
   "projects.json schema, localization, links, and preview assets are valid",
   "exactly six live projects expose verified public source actions",
@@ -96,10 +100,10 @@ function runTestModules(
     cwd: repoRoot,
     encoding: "utf8",
     env: childProcessEnv,
-    timeout: 60_000
+    timeout: qualitySpawnTimeoutMs
   });
 
-  assert.ifError(result.error);
+  assertQualitySpawnCompleted(result, "project catalogue structural inventory");
   assert.equal(
     result.status,
     0,

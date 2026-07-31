@@ -5,6 +5,10 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
+import {
+  assertQualitySpawnCompleted,
+  qualitySpawnTimeoutMs
+} from "../helpers/quality-spawn.mjs";
 import { siteQualityExpectedBytes } from "../helpers/site-quality-boundary.mjs";
 
 const repoRoot = process.cwd();
@@ -40,9 +44,9 @@ const focusContrastBodyExpectedSha256 =
 const reviewedSourceSliceExpectedBytes = 7_501;
 const reviewedSourceSliceExpectedSha256 =
   "7a4034411d7b56a35233d7e547d6f767c644852344a7b3eb7fd0545a12cbdf40";
-const mutationGuardExpectedBytes = 20_121;
+const mutationGuardExpectedBytes = 20_554;
 const mutationGuardExpectedSha256 =
-  "33a3b225aa94f974bf329fc66be05c6e2664f4f28d45f6a69197acc6c7b2bac8";
+  "1f658d409d1999f924cbcf70f3f6b8e3b5e0d162bf1df45527f7b22a0ec66e81";
 const expectedFocusContrastTestNames = [
   "final modern focus-ring overrides match the actual project and contact surfaces",
   "focus-ring / backdrop token pairings meet WCAG 1.4.11 non-text contrast (>= 3:1)",
@@ -152,11 +156,11 @@ function runTestModules(
       cwd: repoRoot,
       encoding: "utf8",
       env: childProcessEnv,
-      timeout: 60_000
+      timeout: qualitySpawnTimeoutMs
     }
   );
 
-  assert.ifError(result.error);
+  assertQualitySpawnCompleted(result, "focus/contrast inventory");
   assert.equal(
     result.status,
     0,

@@ -12,10 +12,16 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
+import {
+  assertQualitySpawnCompleted,
+  qualitySpawnTimeoutMs
+} from "../helpers/quality-spawn.mjs";
+
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const helperDirectory = path.join(repoRoot, "tests/helpers");
 const boundaryAuthorityFile = "site-quality-boundary.mjs";
+const spawnHelperFile = "quality-spawn.mjs";
 const guardFile = "baseline-motion-safety-structure.test.mjs";
 const mutationGuardFile =
   "baseline-motion-safety-structure-mutations.test.mjs";
@@ -42,12 +48,14 @@ delete childProcessEnv.NODE_TEST_CONTEXT;
 const runtimeFixturePaths = ["script.js", "styles.css"];
 const [
   boundaryAuthoritySource,
+  spawnHelperSource,
   guardSource,
   mutationGuardSource,
   baselineMotionSafetySource,
   monolithSource
 ] = await Promise.all([
   readFile(path.join(helperDirectory, boundaryAuthorityFile), "utf8"),
+  readFile(path.join(helperDirectory, spawnHelperFile), "utf8"),
   readFile(path.join(qualityDirectory, guardFile), "utf8"),
   readFile(path.join(qualityDirectory, mutationGuardFile), "utf8"),
   readFile(path.join(qualityDirectory, baselineMotionSafetyFile), "utf8"),
@@ -177,6 +185,10 @@ async function runGuardMutation({
         path.join(fixtureHelperDirectory, boundaryAuthorityFile),
         boundaryAuthoritySource
       ),
+      writeFile(
+        path.join(fixtureHelperDirectory, spawnHelperFile),
+        spawnHelperSource
+      ),
       ...Object.entries(extraQualityFiles).map(([file, source]) => {
         assert.equal(
           path.basename(file),
@@ -198,10 +210,13 @@ async function runGuardMutation({
         cwd: fixtureRoot,
         encoding: "utf8",
         env: childProcessEnv,
-        timeout: 60_000
+        timeout: qualitySpawnTimeoutMs
       }
     );
-    assert.ifError(result.error);
+    assertQualitySpawnCompleted(
+      result,
+      "the baseline motion-safety structure guard fixture"
+    );
     return {
       output: `${result.stdout}${result.stderr}`,
       status: result.status
