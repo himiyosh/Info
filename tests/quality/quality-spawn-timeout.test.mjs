@@ -13,6 +13,9 @@ import {
   resolveQualitySpawnTimeoutMs
 } from "../helpers/quality-spawn.mjs";
 
+// This guard is a source scanner. It exists to catch accidental regressions,
+// such as a contributor reintroducing a per-file spawn timeout; it cannot stop a
+// contributor who deliberately obfuscates a module's own child_process usage.
 const repoRoot = process.cwd();
 const qualityDirectory = path.join(repoRoot, "tests/quality");
 const spawnHelperFile = "quality-spawn.mjs";
@@ -24,9 +27,11 @@ const workflowPath = ".github/workflows/quality-baseline.yml";
 // other nested spawner, including this contract's own mutation fixture, is
 // listed in nestedSpawnerFiles and is checked.
 const contractFile = "quality-spawn-timeout.test.mjs";
-// Authoritative inventory. Detection below must reproduce it exactly, so adding
-// a nested spawner, deleting one, or hiding one from detection all fail this
-// contract until the inventory is updated deliberately.
+// Authoritative inventory. Every tests/quality module that can start a child
+// process must appear in exactly one of these two lists, and detection below
+// must reproduce their union exactly. Adding such a module, deleting one, or
+// obscuring how it builds its arguments all fail this contract until the
+// inventory is updated deliberately.
 const nestedSpawnerFiles = [
   "asset-integrity-contracts-structure-mutations.test.mjs",
   "asset-integrity-contracts-structure.test.mjs",
@@ -47,6 +52,24 @@ const nestedSpawnerFiles = [
   "reduced-motion-contracts-structure.test.mjs",
   "workflow-security-structure.test.mjs"
 ];
+// Modules that start child processes for something other than a nested quality
+// suite. They are classified, not exempted: each entry states what it runs, and
+// a module only belongs here if its child process is not a quality-suite run.
+const nonNestedSpawnerFiles = [
+  // Runs scripts/generate-static-pages.mjs --check, the generated-page drift
+  // checker, through promisified execFile.
+  "bilingual-static.test.mjs",
+  // Runs scripts/check-independent-review.mjs, the review-marker CLI.
+  "independent-review-evidence.test.mjs",
+  // Runs scripts/check-merge-gate.mjs, the snapshot merge-gate CLI.
+  "merge-gate.test.mjs",
+  // Launches a headless Chrome binary to exercise the print stylesheet.
+  "print-portfolio.test.mjs"
+];
+const childProcessFiles = [
+  ...nestedSpawnerFiles,
+  ...nonNestedSpawnerFiles
+].sort();
 const fixtureWriterFiles = [
   "asset-integrity-contracts-structure-mutations.test.mjs",
   "baseline-motion-safety-structure-mutations.test.mjs",
@@ -57,9 +80,15 @@ const fixtureWriterFiles = [
   "quality-spawn-timeout-mutations.test.mjs",
   "reduced-motion-contracts-structure-mutations.test.mjs"
 ];
-const spawnCallPattern = /\bspawnSync\s*\(/;
+// Detection is on the ability to start a child process, not on how the child's
+// arguments are spelled: any child_process specifier (static, aliased,
+// namespaced, or dynamic) or any call to the spawn/exec/fork family requires an
+// inventory entry. Bare `exec(` is intentionally omitted because RegExp#exec
+// dominates it; importing `exec` still matches the specifier pattern.
+const childProcessSpecifierPattern = /['"]node:child_process['"]/;
+const childProcessCallPattern =
+  /\b(?:spawnSync|spawn|execFileSync|execFile|execSync|fork)\s*\(/;
 const spawnCallCountPattern = /\bspawnSync\s*\(/g;
-const nestedRunFlagPattern = /['"]--test['"]/;
 const fixtureRootPattern =
   /\bconst\s+fixtureHelperDirectory\s*=\s*path\.join\(\s*fixtureRoot\s*,\s*['"]tests\/helpers['"]\s*\)/;
 const helperImportPattern =
@@ -124,10 +153,11 @@ test(
           ])
       )
     );
-    const detectedSpawners = [...moduleSources]
+    const detectedChildProcessModules = [...moduleSources]
       .filter(
         ([, source]) =>
-          spawnCallPattern.test(source) && nestedRunFlagPattern.test(source)
+          childProcessSpecifierPattern.test(source) ||
+          childProcessCallPattern.test(source)
       )
       .map(([file]) => file)
       .sort();
@@ -137,9 +167,9 @@ test(
       .sort();
 
     assert.deepEqual(
-      detectedSpawners,
-      nestedSpawnerFiles,
-      "nestedSpawnerFiles must list exactly the tests/quality modules that spawn a nested node --test run; a module that stopped matching detection is hiding from this contract, not exempt from it"
+      detectedChildProcessModules,
+      childProcessFiles,
+      "nestedSpawnerFiles and nonNestedSpawnerFiles must together list exactly the tests/quality modules that can start a child process; a module that starts one without an inventory entry is hiding from this contract, not exempt from it"
     );
     assert.deepEqual(
       detectedFixtureWriters,

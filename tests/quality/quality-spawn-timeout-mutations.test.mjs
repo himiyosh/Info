@@ -53,6 +53,8 @@ const mutationTest = globalInventoryChildMode ? test.skip : test;
 const childProcessEnv = { ...process.env, NO_COLOR: "1" };
 delete childProcessEnv.NODE_TEST_CONTEXT;
 const regressedSpawnTimeoutMs = 60_000;
+const inventoryMismatchMessage =
+  /must together list exactly the tests\/quality modules that can start a child process/;
 // These fragments are assembled at runtime so that this fixture's own source
 // never contains a hardcoded spawn timeout, an assert.ifError call, or an extra
 // spawnSync call site. The guard under test reads every inventoried module's
@@ -66,12 +68,33 @@ const legacySpawnAssertion = `${["assert", "ifError"].join(".")}(result.error);`
 const unspacedSpawnCall = ["spawnSync", "(process.execPath"].join("");
 const spacedSpawnCall = ["spawnSync", "(process.execPath"].join(" ");
 const concealedFlagDeclaration = `const concealedTestFlag = ${JSON.stringify("--te")} + ${JSON.stringify("st")};`;
-const hiddenSpawnerSource = [
+const unlistedLiteralFlagSource = [
   'import { spawnSync } from "node:child_process";',
   'import { test } from "node:test";',
   "",
   'test("an unlisted module spawns a nested quality run", () => {',
   `  ${["spawnSync", '(process.execPath, ["--test", "tests/quality/site-quality.test.mjs"]);'].join("")}`,
+  "});",
+  ""
+].join("\n");
+const unlistedIndirectFlagSource = [
+  'import { spawnSync } from "node:child_process";',
+  'import { test } from "node:test";',
+  "",
+  'test("an unlisted module builds its nested-run flag indirectly", () => {',
+  `  ${concealedFlagDeclaration}`,
+  `  ${["spawnSync", '(process.execPath, [concealedTestFlag, "tests/quality/site-quality.test.mjs"]);'].join("")}`,
+  "});",
+  ""
+].join("\n");
+const unlistedAliasedImportSource = [
+  'import { spawnSync as run } from "node:child_process";',
+  'import { test } from "node:test";',
+  "",
+  'test("an unlisted module aliases the child process API", () => {',
+  '  if (typeof run !== "function") {',
+  '    throw new Error("child process API missing");',
+  "  }",
   "});",
   ""
 ].join("\n");
@@ -114,10 +137,15 @@ const regressedTargetSource = replaceOnce(
 // adds almost no work to an already saturated runner. Anything this fixture
 // writes must therefore never be linked first, or the write would reach the
 // repository file through the shared inode.
+const linkFallbackCodes = new Set(["EXDEV", "EPERM", "ENOSYS", "EMLINK"]);
+
 async function materialize(sourcePath, destinationPath) {
   try {
     await link(sourcePath, destinationPath);
-  } catch {
+  } catch (linkError) {
+    if (!linkFallbackCodes.has(linkError.code)) {
+      throw linkError;
+    }
     await copyFile(sourcePath, destinationPath);
   }
 }
@@ -269,11 +297,11 @@ mutationTest(
 );
 
 mutationTest(
-  "spawn-timeout guard rejects a nested spawner that hides its nested-run flag",
+  "spawn-timeout guard rejects an inventoried spawner that obscures its nested-run flag",
   async () => {
     const concealed = replaceOnce(
       replaceOnce(
-        regressionTargetSource,
+        regressedTargetSource,
         "  const args = [",
         `  ${concealedFlagDeclaration}\n  const args = [`
       ),
@@ -287,13 +315,13 @@ mutationTest(
     );
     await assertMutationRejected(
       { qualityOverrides: { [regressionTargetFile]: concealed } },
-      /must list exactly the tests\/quality modules that spawn a nested node --test run/
+      /must not hardcode a spawn timeout/
     );
   }
 );
 
 mutationTest(
-  "spawn-timeout guard rejects a nested spawner dropped from the inventory",
+  "spawn-timeout guard rejects a child process module dropped from the inventory",
   async () => {
     const shortenedInventory = replaceOnce(
       guardSource,
@@ -303,21 +331,57 @@ mutationTest(
 
     await assertMutationRejected(
       { guard: shortenedInventory },
-      /must list exactly the tests\/quality modules that spawn a nested node --test run/
+      inventoryMismatchMessage
     );
   }
 );
 
 mutationTest(
-  "spawn-timeout guard rejects an unlisted nested spawner",
+  "spawn-timeout guard rejects an unlisted module that spawns with a literal flag",
   async () => {
     await assertMutationRejected(
       {
         extraQualityFiles: {
-          "unlisted-nested-spawner.test.mjs": hiddenSpawnerSource
+          "unlisted-literal-spawner.test.mjs": unlistedLiteralFlagSource
         }
       },
-      /must list exactly the tests\/quality modules that spawn a nested node --test run/
+      inventoryMismatchMessage
+    );
+  }
+);
+
+mutationTest(
+  "spawn-timeout guard rejects an unlisted module that builds its nested-run flag indirectly",
+  async () => {
+    assert.ok(
+      !unlistedIndirectFlagSource.includes('"--test"'),
+      "The indirect-flag fixture must not contain a literal nested-run flag"
+    );
+    await assertMutationRejected(
+      {
+        extraQualityFiles: {
+          "unlisted-indirect-spawner.test.mjs": unlistedIndirectFlagSource
+        }
+      },
+      inventoryMismatchMessage
+    );
+  }
+);
+
+mutationTest(
+  "spawn-timeout guard rejects an unlisted module that only aliases the child process API",
+  async () => {
+    assert.ok(
+      !unlistedAliasedImportSource.includes("spawnSync("),
+      "The aliased-import fixture must not contain a direct spawnSync call site"
+    );
+    await assertMutationRejected(
+      {
+        extraQualityFiles: {
+          "unlisted-aliased-spawner.test.mjs": unlistedAliasedImportSource
+        }
+      },
+      inventoryMismatchMessage
     );
   }
 );
