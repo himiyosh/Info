@@ -110,10 +110,21 @@ const fixtureWriterFiles = [
 // inventory entry. Bare `exec(` is intentionally omitted because RegExp#exec
 // dominates it; importing `exec` still matches the specifier pattern.
 const childProcessSpecifierPattern = /['"](?:node:)?child_process['"]/;
+const childProcessSpecifierCountPattern = /['"](?:node:)?child_process['"]/g;
+const canonicalChildProcessImportPattern =
+  /import\s*\{([^}]*)\}\s*from\s*['"](?:node:)?child_process['"]/g;
+const childProcessExports = [
+  "ChildProcess",
+  "exec",
+  "execFile",
+  "execFileSync",
+  "execSync",
+  "fork",
+  "spawn",
+  "spawnSync"
+];
 const childProcessCallPattern =
   /\b(?:spawnSync|spawn|execFileSync|execFile|execSync|fork)\s*\(/;
-const childProcessCallCountPattern =
-  /\b(?:spawnSync|spawn|execFileSync|execFile|execSync|fork)\s*\(/g;
 const spawnCallCountPattern = /\bspawnSync\s*\(/g;
 const nestedRunFlagPattern = /['"]--test['"]/;
 const qualitySuiteReferencePattern = /tests\/quality/;
@@ -290,10 +301,44 @@ test(
       const source = moduleSources.get(modulePath);
       assert.ok(source, `Missing inventoried non-nested spawner: ${modulePath}`);
 
-      const actualSpawnCallCount = countMatches(
+      // The pinned count is only meaningful if every child_process entry point
+      // is reachable by its canonical name, so the import shape is constrained
+      // first and the call sites are then counted per binding.
+      const specifierReferences = countMatches(
         source,
-        childProcessCallCountPattern
+        childProcessSpecifierCountPattern
       );
+      const namedImports = [
+        ...source.matchAll(canonicalChildProcessImportPattern)
+      ];
+      const bindings = namedImports.flatMap((match) =>
+        match[1]
+          .split(",")
+          .map((name) => name.trim())
+          .filter(Boolean)
+      );
+      const renamedBindings = bindings.filter(
+        (name) => !childProcessExports.includes(name)
+      );
+
+      if (namedImports.length !== specifierReferences) {
+        problems.push(
+          `${modulePath} must reach child_process only through a static named import, so its reviewed call-site count stays meaningful; found ${specifierReferences} specifier reference(s) but ${namedImports.length} named import(s)`
+        );
+      }
+      if (renamedBindings.length > 0) {
+        problems.push(
+          `${modulePath} must not rename its child_process imports (${renamedBindings.join(", ")}); the reviewed call-site count is counted by binding name, so a renamed entry point would not be counted`
+        );
+      }
+
+      const actualSpawnCallCount = bindings
+        .filter((name) => childProcessExports.includes(name))
+        .reduce(
+          (total, name) =>
+            total + countMatches(source, new RegExp(`\\b${name}\\s*\\(`, "g")),
+          0
+        );
       if (actualSpawnCallCount !== spawnCallCount) {
         problems.push(
           `${modulePath} is classified as a non-nested child process module with ${spawnCallCount} reviewed call site(s), but it now has ${actualSpawnCallCount}; reconsider the classification and move it to nestedSpawnerFiles if the new call runs the quality suite`

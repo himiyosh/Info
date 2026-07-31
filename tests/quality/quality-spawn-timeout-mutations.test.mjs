@@ -169,6 +169,16 @@ const indirectNonNestedSpawnLine = [
   unspacedSpawnCall,
   ', [process.env.INFO_EXTRA_FLAG, path.join("tests", "quality", "site-quality.test.mjs")]);'
 ].join("");
+// The same spawn reached through a renamed binding, which no family-name count
+// can see. Only the import-shape rule catches this.
+const aliasedNonNestedSpawnBlock = [
+  'import { spawnSync as extra } from "node:child_process";',
+  'import nodePath from "node:path";',
+  "",
+  "export function extraRun() {",
+  '  return extra(process.execPath, [process.env.INFO_EXTRA_FLAG, nodePath.join("tests", "quality", "site-quality.test.mjs")]);',
+  "}"
+].join("\n");
 
 async function collectFiles(directory, relativeDirectory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -602,6 +612,24 @@ mutationTest(
     await assertMutationRejected(
       { overrides: { [nonNestedTargetPath]: extraSpawn } },
       /reviewed call site\(s\), but it now has/
+    );
+  }
+);
+
+mutationTest(
+  "spawn-timeout guard rejects a non-nested module that renames its child process import",
+  async () => {
+    const aliased = `${nonNestedTargetSource.trimEnd()}\n\n${aliasedNonNestedSpawnBlock}\n`;
+
+    assert.ok(
+      !aliasedNonNestedSpawnBlock.includes('"--test"') &&
+        !aliasedNonNestedSpawnBlock.includes("tests/quality") &&
+        !aliasedNonNestedSpawnBlock.includes(spawnCallToken),
+      "The alias mutation must be invisible to the literal checks and to any family-name count"
+    );
+    await assertMutationRejected(
+      { overrides: { [nonNestedTargetPath]: aliased } },
+      /must not rename its child_process imports/
     );
   }
 );
