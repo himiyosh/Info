@@ -126,6 +126,22 @@ const unlistedSpawnHelperSource = [
   "}",
   ""
 ].join("\n");
+const unlistedCommonJsSpawnHelperSource = [
+  'const { spawnSync } = require("node:child_process");',
+  "",
+  "exports.runNestedQuality = function runNestedQuality(files) {",
+  `  return ${[unspacedSpawnCall, ', ["--test", ...files], { encoding: "utf8" });'].join("")}`,
+  "};",
+  ""
+].join("\n");
+const unsupportedExtensionSource = [
+  'import { spawnSync } from "node:child_process";',
+  "",
+  "export function runNestedQuality(files: string[]) {",
+  `  return ${[unspacedSpawnCall, ', ["--test", ...files]);'].join("")}`,
+  "}",
+  ""
+].join("\n");
 const helperBackedSpawnerSource = [
   'import { test } from "node:test";',
   "",
@@ -136,6 +152,23 @@ const helperBackedSpawnerSource = [
   "});",
   ""
 ].join("\n");
+const scriptBackedSpawnerSource = [
+  'import { test } from "node:test";',
+  "",
+  'import { runNestedQuality } from "../helpers/zz-quality-child-runner.js";',
+  "",
+  'test("a wrapper module runs the nested quality suite through a script helper", () => {',
+  '  runNestedQuality(["tests/quality/site-quality.test.mjs"]);',
+  "});",
+  ""
+].join("\n");
+// Ordinary argument construction: an environment-supplied flag and a joined
+// path, so neither the nested-run flag nor the quality directory appears as a
+// literal. Only the pinned call-site count catches this.
+const indirectNonNestedSpawnLine = [
+  unspacedSpawnCall,
+  ', [process.env.INFO_EXTRA_FLAG, path.join("tests", "quality", "site-quality.test.mjs")]);'
+].join("");
 
 async function collectFiles(directory, relativeDirectory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -501,6 +534,50 @@ mutationTest(
 );
 
 mutationTest(
+  "spawn-timeout guard rejects a nested run extracted into an unlisted tests/helpers script",
+  async () => {
+    await assertMutationRejected(
+      {
+        extraFiles: {
+          "tests/helpers/zz-quality-child-runner.js": unlistedSpawnHelperSource,
+          "tests/quality/zz-script-spawner.test.mjs": scriptBackedSpawnerSource
+        }
+      },
+      inventoryMismatchMessage
+    );
+  }
+);
+
+mutationTest(
+  "spawn-timeout guard rejects a nested run extracted into an unlisted CommonJS helper",
+  async () => {
+    await assertMutationRejected(
+      {
+        extraFiles: {
+          "tests/helpers/zz-quality-child-runner.cjs":
+            unlistedCommonJsSpawnHelperSource
+        }
+      },
+      inventoryMismatchMessage
+    );
+  }
+);
+
+mutationTest(
+  "spawn-timeout guard fails closed on a script extension it does not scan",
+  async () => {
+    await assertMutationRejected(
+      {
+        extraFiles: {
+          "tests/helpers/zz-quality-child-runner.mts": unsupportedExtensionSource
+        }
+      },
+      /uses the \.mts script extension, which this contract does not scan/
+    );
+  }
+);
+
+mutationTest(
   "spawn-timeout guard rejects a non-nested module that starts spawning the quality suite",
   async () => {
     const promotedToNested = `${nonNestedTargetSource.trimEnd()}\n\n${nestedSuiteSpawnLine}\n`;
@@ -508,6 +585,23 @@ mutationTest(
     await assertMutationRejected(
       { overrides: { [nonNestedTargetPath]: promotedToNested } },
       classificationMessage
+    );
+  }
+);
+
+mutationTest(
+  "spawn-timeout guard rejects a non-nested module that gains an indirectly built spawn",
+  async () => {
+    const extraSpawn = `${nonNestedTargetSource.trimEnd()}\n\n${indirectNonNestedSpawnLine}\n`;
+
+    assert.ok(
+      !indirectNonNestedSpawnLine.includes('"--test"') &&
+        !indirectNonNestedSpawnLine.includes("tests/quality"),
+      "The indirect mutation must be caught by the pinned call-site count alone"
+    );
+    await assertMutationRejected(
+      { overrides: { [nonNestedTargetPath]: extraSpawn } },
+      /reviewed call site\(s\), but it now has/
     );
   }
 );

@@ -57,25 +57,42 @@ const nestedSpawnerFiles = [
   "tests/quality/workflow-security-structure.test.mjs"
 ];
 // Modules that start child processes for something other than a nested quality
-// suite. They are classified, not exempted: each entry states what it runs, and
-// the classification itself is verified below, so one of these cannot quietly
-// become a nested spawner.
+// suite. They are classified, not exempted: each entry states what it runs and
+// how many child-process call sites it is reviewed to have. Proving in strings
+// that a module never runs the suite is not decidable, so the surface is pinned
+// by count instead — adding or removing a spawn here fails until the
+// classification is reconsidered.
 const nonNestedSpawnerFiles = [
-  // Launches a headless Chrome binary; the shared browser-journey driver.
-  "tests/helpers/chrome-journey.mjs",
-  // Runs scripts/generate-static-pages.mjs --check, the generated-page drift
-  // checker, through promisified execFile.
-  "tests/quality/bilingual-static.test.mjs",
-  // Runs scripts/check-independent-review.mjs, the review-marker CLI.
-  "tests/quality/independent-review-evidence.test.mjs",
-  // Runs scripts/check-merge-gate.mjs, the snapshot merge-gate CLI.
-  "tests/quality/merge-gate.test.mjs",
-  // Launches a headless Chrome binary to exercise the print stylesheet.
-  "tests/quality/print-portfolio.test.mjs"
+  {
+    path: "tests/helpers/chrome-journey.mjs",
+    spawnCallCount: 1,
+    reason: "launches a headless Chrome binary; the shared browser-journey driver"
+  },
+  {
+    path: "tests/quality/bilingual-static.test.mjs",
+    spawnCallCount: 0,
+    reason:
+      "runs scripts/generate-static-pages.mjs --check through a promisified execFile, so it has no direct call site"
+  },
+  {
+    path: "tests/quality/independent-review-evidence.test.mjs",
+    spawnCallCount: 2,
+    reason: "runs scripts/check-independent-review.mjs, the review-marker CLI"
+  },
+  {
+    path: "tests/quality/merge-gate.test.mjs",
+    spawnCallCount: 1,
+    reason: "runs scripts/check-merge-gate.mjs, the snapshot merge-gate CLI"
+  },
+  {
+    path: "tests/quality/print-portfolio.test.mjs",
+    spawnCallCount: 1,
+    reason: "launches a headless Chrome binary to exercise the print stylesheet"
+  }
 ];
 const childProcessFiles = [
   ...nestedSpawnerFiles,
-  ...nonNestedSpawnerFiles
+  ...nonNestedSpawnerFiles.map((entry) => entry.path)
 ].sort();
 const fixtureWriterFiles = [
   "tests/quality/asset-integrity-contracts-structure-mutations.test.mjs",
@@ -95,6 +112,8 @@ const fixtureWriterFiles = [
 const childProcessSpecifierPattern = /['"](?:node:)?child_process['"]/;
 const childProcessCallPattern =
   /\b(?:spawnSync|spawn|execFileSync|execFile|execSync|fork)\s*\(/;
+const childProcessCallCountPattern =
+  /\b(?:spawnSync|spawn|execFileSync|execFile|execSync|fork)\s*\(/g;
 const spawnCallCountPattern = /\bspawnSync\s*\(/g;
 const nestedRunFlagPattern = /['"]--test['"]/;
 const qualitySuiteReferencePattern = /tests\/quality/;
@@ -139,23 +158,49 @@ const rejectedOverrides = [
   String(Number.MAX_SAFE_INTEGER + 2)
 ];
 
+// Every executable JavaScript extension is scanned. A script extension this
+// contract cannot parse into the same guarantees is not silently skipped: it
+// fails closed so the contributor must extend one of these two lists
+// deliberately. tests/ holds only .mjs files today.
+const scannedExtensions = [".mjs", ".js", ".cjs"];
+const unsupportedScriptExtensions = [".jsx", ".ts", ".tsx", ".mts", ".cts"];
+
 function countMatches(source, pattern) {
   return [...source.matchAll(pattern)].length;
 }
 
-async function readModuleSources(directory, relativeDirectory) {
+async function readModuleSources(directory, relativeDirectory, problems) {
   const entries = await readdir(directory, { withFileTypes: true });
   const collected = await Promise.all(
     entries.map(async (entry) => {
       const entryPath = path.posix.join(relativeDirectory, entry.name);
-      if (entry.isDirectory()) {
-        return readModuleSources(path.join(directory, entry.name), entryPath);
+      if (entry.isSymbolicLink()) {
+        problems.push(
+          `${entryPath} is a symbolic link; this contract reads regular files only, so a link could point its real source outside the scanned tree`
+        );
+        return [];
       }
-      if (
-        !entry.isFile() ||
-        !entry.name.endsWith(".mjs") ||
-        entryPath === contractPath
-      ) {
+      if (entry.isDirectory()) {
+        return readModuleSources(
+          path.join(directory, entry.name),
+          entryPath,
+          problems
+        );
+      }
+      if (!entry.isFile()) {
+        problems.push(
+          `${entryPath} is neither a regular file nor a directory, so this contract cannot scan it`
+        );
+        return [];
+      }
+      const extension = path.extname(entry.name);
+      if (unsupportedScriptExtensions.includes(extension)) {
+        problems.push(
+          `${entryPath} uses the ${extension} script extension, which this contract does not scan; add it to scannedExtensions once it can start a child process, or remove it from unsupportedScriptExtensions`
+        );
+        return [];
+      }
+      if (!scannedExtensions.includes(extension) || entryPath === contractPath) {
         return [];
       }
       return [
@@ -169,8 +214,9 @@ async function readModuleSources(directory, relativeDirectory) {
 test(
   "child process modules under tests share the reviewed spawn-timeout helper",
   async () => {
+    const problems = [];
     const moduleSources = new Map(
-      await readModuleSources(testsDirectory, "tests")
+      await readModuleSources(testsDirectory, "tests", problems)
     );
     const detectedChildProcessModules = [...moduleSources]
       .filter(
@@ -195,8 +241,6 @@ test(
       fixtureWriterFiles,
       "fixtureWriterFiles must list exactly the tests modules that build an isolated fixture root"
     );
-
-    const problems = [];
 
     for (const modulePath of nestedSpawnerFiles) {
       const source = moduleSources.get(modulePath);
@@ -242,10 +286,19 @@ test(
       }
     }
 
-    for (const modulePath of nonNestedSpawnerFiles) {
+    for (const { path: modulePath, spawnCallCount } of nonNestedSpawnerFiles) {
       const source = moduleSources.get(modulePath);
       assert.ok(source, `Missing inventoried non-nested spawner: ${modulePath}`);
 
+      const actualSpawnCallCount = countMatches(
+        source,
+        childProcessCallCountPattern
+      );
+      if (actualSpawnCallCount !== spawnCallCount) {
+        problems.push(
+          `${modulePath} is classified as a non-nested child process module with ${spawnCallCount} reviewed call site(s), but it now has ${actualSpawnCallCount}; reconsider the classification and move it to nestedSpawnerFiles if the new call runs the quality suite`
+        );
+      }
       if (
         nestedRunFlagPattern.test(source) ||
         qualitySuiteReferencePattern.test(source)
