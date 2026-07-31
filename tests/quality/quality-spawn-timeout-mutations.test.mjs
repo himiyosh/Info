@@ -20,18 +20,22 @@ import {
 } from "../helpers/quality-spawn.mjs";
 
 const repoRoot = process.cwd();
-const qualityDirectory = path.join(repoRoot, "tests/quality");
-const helperDirectory = path.join(repoRoot, "tests/helpers");
+const testsDirectory = path.join(repoRoot, "tests");
 const spawnHelperFile = "quality-spawn.mjs";
-const guardFile = "quality-spawn-timeout.test.mjs";
+const spawnHelperPath = "tests/helpers/quality-spawn.mjs";
+const guardPath = "tests/quality/quality-spawn-timeout.test.mjs";
+const regressionTargetPath =
+  "tests/quality/asset-integrity-contracts-structure.test.mjs";
+const regressionTargetLabel = "asset integrity inventory";
+const fixtureWriterPath =
+  "tests/quality/mobile-navigation-contracts-structure-mutations.test.mjs";
+const nonNestedTargetPath = "tests/quality/merge-gate.test.mjs";
+const workflowRelativePath = ".github/workflows/quality-baseline.yml";
 // npm test already saturates a two-core runner with ten nested full-suite
 // spawns, so each fixture run is restricted to the coverage contract, which
 // reads sources and spawns nothing of its own.
 const coverageTestName =
-  "nested quality-suite spawns share the reviewed spawn-timeout helper";
-const regressionTargetFile = "asset-integrity-contracts-structure.test.mjs";
-const regressionTargetLabel = "asset integrity inventory";
-const workflowRelativePath = ".github/workflows/quality-baseline.yml";
+  "child process modules under tests share the reviewed spawn-timeout helper";
 const globalInventoryEnvironments = [
   "INFO_WORKFLOW_SECURITY_INVENTORY",
   "INFO_LOCALIZATION_INVENTORY",
@@ -54,7 +58,9 @@ const childProcessEnv = { ...process.env, NO_COLOR: "1" };
 delete childProcessEnv.NODE_TEST_CONTEXT;
 const regressedSpawnTimeoutMs = 60_000;
 const inventoryMismatchMessage =
-  /must together list exactly the tests\/quality modules that can start a child process/;
+  /must together list exactly the tests modules that can start a child process/;
+const classificationMessage =
+  /is classified as a non-nested child process module/;
 // These fragments are assembled at runtime so that this fixture's own source
 // never contains a hardcoded spawn timeout, an assert.ifError call, or an extra
 // spawnSync call site. The guard under test reads every inventoried module's
@@ -66,15 +72,16 @@ const hardcodedTimeoutProperty = [
 ].join(": ");
 const legacySpawnAssertion = `${["assert", "ifError"].join(".")}(result.error);`;
 const unspacedSpawnCall = ["spawnSync", "(process.execPath"].join("");
-const spawnCallToken = ["spawnSync", "("].join("");
 const spacedSpawnCall = ["spawnSync", "(process.execPath"].join(" ");
+const spawnCallToken = ["spawnSync", "("].join("");
 const concealedFlagDeclaration = `const concealedTestFlag = ${JSON.stringify("--te")} + ${JSON.stringify("st")};`;
+const nestedSuiteSpawnLine = `${unspacedSpawnCall}, ["--test", "tests/quality/site-quality.test.mjs"]);`;
 const unlistedLiteralFlagSource = [
   'import { spawnSync } from "node:child_process";',
   'import { test } from "node:test";',
   "",
   'test("an unlisted module spawns a nested quality run", () => {',
-  `  ${["spawnSync", '(process.execPath, ["--test", "tests/quality/site-quality.test.mjs"]);'].join("")}`,
+  `  ${nestedSuiteSpawnLine}`,
   "});",
   ""
 ].join("\n");
@@ -84,7 +91,7 @@ const unlistedIndirectFlagSource = [
   "",
   'test("an unlisted module builds its nested-run flag indirectly", () => {',
   `  ${concealedFlagDeclaration}`,
-  `  ${["spawnSync", '(process.execPath, [concealedTestFlag, "tests/quality/site-quality.test.mjs"]);'].join("")}`,
+  `  ${[unspacedSpawnCall, ', [concealedTestFlag, "tests/quality/site-quality.test.mjs"]);'].join("")}`,
   "});",
   ""
 ].join("\n");
@@ -109,16 +116,56 @@ const unlistedBareSpecifierSource = [
   "});",
   ""
 ].join("\n");
-const [guardSource, regressionTargetSource, spawnHelperSource, qualityEntries] =
-  await Promise.all([
-    readFile(path.join(qualityDirectory, guardFile), "utf8"),
-    readFile(path.join(qualityDirectory, regressionTargetFile), "utf8"),
-    readFile(path.join(helperDirectory, spawnHelperFile), "utf8"),
-    readdir(qualityDirectory, { withFileTypes: true })
-  ]);
-const qualityFixtureFiles = qualityEntries
-  .filter((entry) => entry.isFile())
-  .map((entry) => entry.name);
+// The extracted-helper shape this repository would plausibly reach for next: the
+// duplicated runTestModules() body moved out of the structure guards.
+const unlistedSpawnHelperSource = [
+  'import { spawnSync } from "node:child_process";',
+  "",
+  "export function runNestedQuality(files) {",
+  `  return ${[unspacedSpawnCall, ', ["--test", ...files], { encoding: "utf8" });'].join("")}`,
+  "}",
+  ""
+].join("\n");
+const helperBackedSpawnerSource = [
+  'import { test } from "node:test";',
+  "",
+  'import { runNestedQuality } from "../helpers/zz-quality-child-runner.mjs";',
+  "",
+  'test("a wrapper module runs the nested quality suite through a helper", () => {',
+  '  runNestedQuality(["tests/quality/site-quality.test.mjs"]);',
+  "});",
+  ""
+].join("\n");
+
+async function collectFiles(directory, relativeDirectory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const collected = await Promise.all(
+    entries.map(async (entry) => {
+      const entryPath = path.posix.join(relativeDirectory, entry.name);
+      if (entry.isDirectory()) {
+        return collectFiles(path.join(directory, entry.name), entryPath);
+      }
+      return entry.isFile() ? [entryPath] : [];
+    })
+  );
+  return collected.flat();
+}
+
+const [
+  guardSource,
+  regressionTargetSource,
+  fixtureWriterSource,
+  nonNestedTargetSource,
+  spawnHelperSource,
+  testsFixtureFiles
+] = await Promise.all([
+  readFile(path.join(repoRoot, guardPath), "utf8"),
+  readFile(path.join(repoRoot, regressionTargetPath), "utf8"),
+  readFile(path.join(repoRoot, fixtureWriterPath), "utf8"),
+  readFile(path.join(repoRoot, nonNestedTargetPath), "utf8"),
+  readFile(path.join(repoRoot, spawnHelperPath), "utf8"),
+  collectFiles(testsDirectory, "tests")
+]);
 
 function replaceOnce(source, marker, replacement) {
   assert.notEqual(
@@ -163,63 +210,58 @@ async function materialize(sourcePath, destinationPath) {
 
 async function runGuardMutation({
   guard = guardSource,
-  qualityOverrides = {},
-  extraQualityFiles = {}
+  overrides = {},
+  extraFiles = {}
 } = {}) {
   const fixtureRoot = await mkdtemp(
     path.join(os.tmpdir(), "info-quality-spawn-guard-")
   );
-  const fixtureQualityDirectory = path.join(fixtureRoot, "tests/quality");
   const fixtureHelperDirectory = path.join(fixtureRoot, "tests/helpers");
-  const writtenQualityFiles = new Set([
-    guardFile,
-    ...Object.keys(qualityOverrides),
-    ...Object.keys(extraQualityFiles)
-  ]);
+  const writtenFiles = {
+    [guardPath]: guard,
+    ...overrides,
+    ...extraFiles
+  };
+  const linkedFiles = testsFixtureFiles.filter(
+    (filePath) =>
+      filePath !== spawnHelperPath && !Object.hasOwn(writtenFiles, filePath)
+  );
 
   try {
-    await Promise.all([
-      mkdir(fixtureQualityDirectory, { recursive: true }),
-      mkdir(fixtureHelperDirectory, { recursive: true }),
-      mkdir(path.join(fixtureRoot, path.dirname(workflowRelativePath)), {
+    for (const filePath of [
+      ...linkedFiles,
+      ...Object.keys(writtenFiles),
+      workflowRelativePath
+    ]) {
+      assert.ok(
+        !path.posix.isAbsolute(filePath) && !filePath.includes(".."),
+        `Fixture paths must stay inside the fixture root: ${filePath}`
+      );
+      await mkdir(path.join(fixtureRoot, path.dirname(filePath)), {
         recursive: true
-      })
-    ]);
+      });
+    }
+    await mkdir(fixtureHelperDirectory, { recursive: true });
     await Promise.all([
       materialize(
         path.join(repoRoot, workflowRelativePath),
         path.join(fixtureRoot, workflowRelativePath)
       ),
-      ...qualityFixtureFiles
-        .filter((file) => !writtenQualityFiles.has(file))
-        .map((file) =>
-          materialize(
-            path.join(qualityDirectory, file),
-            path.join(fixtureQualityDirectory, file)
-          )
+      ...linkedFiles.map((filePath) =>
+        materialize(
+          path.join(repoRoot, filePath),
+          path.join(fixtureRoot, filePath)
         )
+      )
     ]);
     await Promise.all([
       writeFile(
         path.join(fixtureHelperDirectory, spawnHelperFile),
         spawnHelperSource
       ),
-      writeFile(path.join(fixtureQualityDirectory, guardFile), guard),
-      ...Object.entries(qualityOverrides).map(([file, source]) => {
-        assert.equal(
-          path.basename(file),
-          file,
-          "Quality overrides must use a file name"
-        );
-        return writeFile(path.join(fixtureQualityDirectory, file), source);
-      }),
-      ...Object.entries(extraQualityFiles).map(([file, source]) => {
-        assert.ok(
-          file.endsWith(".test.mjs") && path.basename(file) === file,
-          "Extra quality fixtures must be named test modules"
-        );
-        return writeFile(path.join(fixtureQualityDirectory, file), source);
-      })
+      ...Object.entries(writtenFiles).map(([filePath, source]) =>
+        writeFile(path.join(fixtureRoot, filePath), source)
+      )
     ]);
 
     const result = spawnSync(
@@ -227,7 +269,7 @@ async function runGuardMutation({
       [
         "--test",
         `--test-name-pattern=^${coverageTestName}$`,
-        path.join("tests/quality", guardFile)
+        guardPath
       ],
       {
         cwd: fixtureRoot,
@@ -281,7 +323,7 @@ mutationTest(
       "The requote mutation must remove the double-quoted nested-run flag"
     );
     await assertMutationRejected(
-      { qualityOverrides: { [regressionTargetFile]: requoted } },
+      { overrides: { [regressionTargetPath]: requoted } },
       /must not hardcode a spawn timeout/
     );
   }
@@ -301,7 +343,7 @@ mutationTest(
       "The spacing mutation must remove the unspaced spawnSync call site"
     );
     await assertMutationRejected(
-      { qualityOverrides: { [regressionTargetFile]: spaced } },
+      { overrides: { [regressionTargetPath]: spaced } },
       /must not hardcode a spawn timeout/
     );
   }
@@ -325,7 +367,7 @@ mutationTest(
       "The concealment mutation must remove the literal nested-run flag"
     );
     await assertMutationRejected(
-      { qualityOverrides: { [regressionTargetFile]: concealed } },
+      { overrides: { [regressionTargetPath]: concealed } },
       /must not hardcode a spawn timeout/
     );
   }
@@ -336,7 +378,7 @@ mutationTest(
   async () => {
     const shortenedInventory = replaceOnce(
       guardSource,
-      `  ${JSON.stringify(regressionTargetFile)},\n`,
+      `  ${JSON.stringify(regressionTargetPath)},\n`,
       ""
     );
 
@@ -352,8 +394,9 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       {
-        extraQualityFiles: {
-          "unlisted-literal-spawner.test.mjs": unlistedLiteralFlagSource
+        extraFiles: {
+          "tests/quality/unlisted-literal-spawner.test.mjs":
+            unlistedLiteralFlagSource
         }
       },
       inventoryMismatchMessage
@@ -370,8 +413,9 @@ mutationTest(
     );
     await assertMutationRejected(
       {
-        extraQualityFiles: {
-          "unlisted-indirect-spawner.test.mjs": unlistedIndirectFlagSource
+        extraFiles: {
+          "tests/quality/unlisted-indirect-spawner.test.mjs":
+            unlistedIndirectFlagSource
         }
       },
       inventoryMismatchMessage
@@ -388,8 +432,9 @@ mutationTest(
     );
     await assertMutationRejected(
       {
-        extraQualityFiles: {
-          "unlisted-aliased-spawner.test.mjs": unlistedAliasedImportSource
+        extraFiles: {
+          "tests/quality/unlisted-aliased-spawner.test.mjs":
+            unlistedAliasedImportSource
         }
       },
       inventoryMismatchMessage
@@ -410,8 +455,8 @@ mutationTest(
     );
     await assertMutationRejected(
       {
-        extraQualityFiles: {
-          "unlisted-legacy-specifier-spawner.test.mjs":
+        extraFiles: {
+          "tests/quality/unlisted-legacy-specifier-spawner.test.mjs":
             unlistedBareSpecifierSource
         }
       },
@@ -421,14 +466,55 @@ mutationTest(
 );
 
 mutationTest(
+  "spawn-timeout guard rejects a nested run extracted into an unlisted tests/helpers module",
+  async () => {
+    assert.ok(
+      !helperBackedSpawnerSource.includes("child_process") &&
+        !helperBackedSpawnerSource.includes(spawnCallToken),
+      "The wrapper fixture must delegate its child process to the helper"
+    );
+    await assertMutationRejected(
+      {
+        extraFiles: {
+          "tests/helpers/zz-quality-child-runner.mjs":
+            unlistedSpawnHelperSource,
+          "tests/quality/zz-wrapper-spawner.test.mjs": helperBackedSpawnerSource
+        }
+      },
+      inventoryMismatchMessage
+    );
+  }
+);
+
+mutationTest(
+  "spawn-timeout guard rejects a nested run extracted into a new tests subdirectory",
+  async () => {
+    await assertMutationRejected(
+      {
+        extraFiles: {
+          "tests/support/zz-quality-child-runner.mjs": unlistedSpawnHelperSource
+        }
+      },
+      inventoryMismatchMessage
+    );
+  }
+);
+
+mutationTest(
+  "spawn-timeout guard rejects a non-nested module that starts spawning the quality suite",
+  async () => {
+    const promotedToNested = `${nonNestedTargetSource.trimEnd()}\n\n${nestedSuiteSpawnLine}\n`;
+
+    await assertMutationRejected(
+      { overrides: { [nonNestedTargetPath]: promotedToNested } },
+      classificationMessage
+    );
+  }
+);
+
+mutationTest(
   "spawn-timeout guard rejects a fixture writer that stops copying the shared helper",
   async () => {
-    const fixtureWriterFile =
-      "mobile-navigation-contracts-structure-mutations.test.mjs";
-    const fixtureWriterSource = await readFile(
-      path.join(qualityDirectory, fixtureWriterFile),
-      "utf8"
-    );
     const withoutHelperCopy = replaceOnce(
       fixtureWriterSource,
       ",\n      writeFile(\n        path.join(fixtureHelperDirectory, spawnHelperFile),\n        spawnHelperSource\n      )",
@@ -436,7 +522,7 @@ mutationTest(
     );
 
     await assertMutationRejected(
-      { qualityOverrides: { [fixtureWriterFile]: withoutHelperCopy } },
+      { overrides: { [fixtureWriterPath]: withoutHelperCopy } },
       /must copy tests\/helpers\/quality-spawn\.mjs into its isolated fixture root/
     );
   }

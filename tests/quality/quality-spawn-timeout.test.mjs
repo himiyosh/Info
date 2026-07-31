@@ -14,73 +14,78 @@ import {
 } from "../helpers/quality-spawn.mjs";
 
 // This guard is a source scanner. It exists to catch accidental regressions,
-// such as a contributor reintroducing a per-file spawn timeout; it cannot stop a
-// contributor who deliberately obfuscates a module's own child_process usage.
-// The `node:` prefix is spelling, not obfuscation, so a bare "child_process"
-// specifier is detected exactly like "node:child_process".
+// such as a contributor reintroducing a per-file spawn timeout or moving a
+// nested run behind a new helper; it cannot stop a contributor who deliberately
+// obfuscates a module's own child_process usage. Spelling is not obfuscation, so
+// a bare "child_process" specifier is detected exactly like "node:child_process",
+// and the whole tests/ tree is walked recursively rather than a fixed list of
+// directories, because the next extracted helper may live anywhere under it.
 const repoRoot = process.cwd();
-const qualityDirectory = path.join(repoRoot, "tests/quality");
+const testsDirectory = path.join(repoRoot, "tests");
 const spawnHelperFile = "quality-spawn.mjs";
-const spawnHelperPath = path.join("tests/helpers", spawnHelperFile);
+const spawnHelperPath = path.posix.join("tests/helpers", spawnHelperFile);
 const spawnHelperUrl = pathToFileURL(path.join(repoRoot, spawnHelperPath)).href;
 const workflowPath = ".github/workflows/quality-baseline.yml";
-// This contract owns the timeout literals it exercises, so it is the one quality
+// This contract owns the timeout literals it exercises, so it is the one tests/
 // module exempt from the rules it enforces. Never widen the exemption: every
-// other nested spawner, including this contract's own mutation fixture, is
-// listed in nestedSpawnerFiles and is checked.
-const contractFile = "quality-spawn-timeout.test.mjs";
-// Authoritative inventory. Every tests/quality module that can start a child
-// process must appear in exactly one of these two lists, and detection below
-// must reproduce their union exactly. Adding such a module, deleting one, or
-// obscuring how it builds its arguments all fail this contract until the
-// inventory is updated deliberately.
+// other module that can start a child process, including this contract's own
+// mutation fixture, is inventoried and checked.
+const contractPath = "tests/quality/quality-spawn-timeout.test.mjs";
+// Authoritative inventory. Every tests/ module that can start a child process
+// must appear in exactly one of these two lists, and detection below must
+// reproduce their union exactly. Adding such a module, deleting one, moving the
+// capability into a new helper, or obscuring how it builds its arguments all
+// fail this contract until the inventory is updated deliberately.
 const nestedSpawnerFiles = [
-  "asset-integrity-contracts-structure-mutations.test.mjs",
-  "asset-integrity-contracts-structure.test.mjs",
-  "baseline-motion-safety-structure-mutations.test.mjs",
-  "baseline-motion-safety-structure.test.mjs",
-  "focus-contrast-contracts-structure-mutations.test.mjs",
-  "focus-contrast-contracts-structure.test.mjs",
-  "localization-contracts-structure.test.mjs",
-  "mobile-navigation-contracts-structure-mutations.test.mjs",
-  "mobile-navigation-contracts-structure.test.mjs",
-  "project-catalogue-structure-mutations.test.mjs",
-  "project-catalogue-structure.test.mjs",
-  "public-discovery-contracts-structure-mutations.test.mjs",
-  "public-discovery-contracts-structure.test.mjs",
-  "publishing-integrity-structure.test.mjs",
-  "quality-spawn-timeout-mutations.test.mjs",
-  "reduced-motion-contracts-structure-mutations.test.mjs",
-  "reduced-motion-contracts-structure.test.mjs",
-  "workflow-security-structure.test.mjs"
+  "tests/quality/asset-integrity-contracts-structure-mutations.test.mjs",
+  "tests/quality/asset-integrity-contracts-structure.test.mjs",
+  "tests/quality/baseline-motion-safety-structure-mutations.test.mjs",
+  "tests/quality/baseline-motion-safety-structure.test.mjs",
+  "tests/quality/focus-contrast-contracts-structure-mutations.test.mjs",
+  "tests/quality/focus-contrast-contracts-structure.test.mjs",
+  "tests/quality/localization-contracts-structure.test.mjs",
+  "tests/quality/mobile-navigation-contracts-structure-mutations.test.mjs",
+  "tests/quality/mobile-navigation-contracts-structure.test.mjs",
+  "tests/quality/project-catalogue-structure-mutations.test.mjs",
+  "tests/quality/project-catalogue-structure.test.mjs",
+  "tests/quality/public-discovery-contracts-structure-mutations.test.mjs",
+  "tests/quality/public-discovery-contracts-structure.test.mjs",
+  "tests/quality/publishing-integrity-structure.test.mjs",
+  "tests/quality/quality-spawn-timeout-mutations.test.mjs",
+  "tests/quality/reduced-motion-contracts-structure-mutations.test.mjs",
+  "tests/quality/reduced-motion-contracts-structure.test.mjs",
+  "tests/quality/workflow-security-structure.test.mjs"
 ];
 // Modules that start child processes for something other than a nested quality
 // suite. They are classified, not exempted: each entry states what it runs, and
-// a module only belongs here if its child process is not a quality-suite run.
+// the classification itself is verified below, so one of these cannot quietly
+// become a nested spawner.
 const nonNestedSpawnerFiles = [
+  // Launches a headless Chrome binary; the shared browser-journey driver.
+  "tests/helpers/chrome-journey.mjs",
   // Runs scripts/generate-static-pages.mjs --check, the generated-page drift
   // checker, through promisified execFile.
-  "bilingual-static.test.mjs",
+  "tests/quality/bilingual-static.test.mjs",
   // Runs scripts/check-independent-review.mjs, the review-marker CLI.
-  "independent-review-evidence.test.mjs",
+  "tests/quality/independent-review-evidence.test.mjs",
   // Runs scripts/check-merge-gate.mjs, the snapshot merge-gate CLI.
-  "merge-gate.test.mjs",
+  "tests/quality/merge-gate.test.mjs",
   // Launches a headless Chrome binary to exercise the print stylesheet.
-  "print-portfolio.test.mjs"
+  "tests/quality/print-portfolio.test.mjs"
 ];
 const childProcessFiles = [
   ...nestedSpawnerFiles,
   ...nonNestedSpawnerFiles
 ].sort();
 const fixtureWriterFiles = [
-  "asset-integrity-contracts-structure-mutations.test.mjs",
-  "baseline-motion-safety-structure-mutations.test.mjs",
-  "focus-contrast-contracts-structure-mutations.test.mjs",
-  "mobile-navigation-contracts-structure-mutations.test.mjs",
-  "project-catalogue-structure-mutations.test.mjs",
-  "public-discovery-contracts-structure-mutations.test.mjs",
-  "quality-spawn-timeout-mutations.test.mjs",
-  "reduced-motion-contracts-structure-mutations.test.mjs"
+  "tests/quality/asset-integrity-contracts-structure-mutations.test.mjs",
+  "tests/quality/baseline-motion-safety-structure-mutations.test.mjs",
+  "tests/quality/focus-contrast-contracts-structure-mutations.test.mjs",
+  "tests/quality/mobile-navigation-contracts-structure-mutations.test.mjs",
+  "tests/quality/project-catalogue-structure-mutations.test.mjs",
+  "tests/quality/public-discovery-contracts-structure-mutations.test.mjs",
+  "tests/quality/quality-spawn-timeout-mutations.test.mjs",
+  "tests/quality/reduced-motion-contracts-structure-mutations.test.mjs"
 ];
 // Detection is on the ability to start a child process, not on how the child's
 // arguments are spelled: any child_process specifier (static, aliased,
@@ -91,6 +96,8 @@ const childProcessSpecifierPattern = /['"](?:node:)?child_process['"]/;
 const childProcessCallPattern =
   /\b(?:spawnSync|spawn|execFileSync|execFile|execSync|fork)\s*\(/;
 const spawnCallCountPattern = /\bspawnSync\s*\(/g;
+const nestedRunFlagPattern = /['"]--test['"]/;
+const qualitySuiteReferencePattern = /tests\/quality/;
 const fixtureRootPattern =
   /\bconst\s+fixtureHelperDirectory\s*=\s*path\.join\(\s*fixtureRoot\s*,\s*['"]tests\/helpers['"]\s*\)/;
 const helperImportPattern =
@@ -136,24 +143,34 @@ function countMatches(source, pattern) {
   return [...source.matchAll(pattern)].length;
 }
 
+async function readModuleSources(directory, relativeDirectory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const collected = await Promise.all(
+    entries.map(async (entry) => {
+      const entryPath = path.posix.join(relativeDirectory, entry.name);
+      if (entry.isDirectory()) {
+        return readModuleSources(path.join(directory, entry.name), entryPath);
+      }
+      if (
+        !entry.isFile() ||
+        !entry.name.endsWith(".mjs") ||
+        entryPath === contractPath
+      ) {
+        return [];
+      }
+      return [
+        [entryPath, await readFile(path.join(directory, entry.name), "utf8")]
+      ];
+    })
+  );
+  return collected.flat();
+}
+
 test(
-  "nested quality-suite spawns share the reviewed spawn-timeout helper",
+  "child process modules under tests share the reviewed spawn-timeout helper",
   async () => {
-    const entries = await readdir(qualityDirectory, { withFileTypes: true });
     const moduleSources = new Map(
-      await Promise.all(
-        entries
-          .filter(
-            (entry) =>
-              entry.isFile() &&
-              entry.name.endsWith(".test.mjs") &&
-              entry.name !== contractFile
-          )
-          .map(async (entry) => [
-            entry.name,
-            await readFile(path.join(qualityDirectory, entry.name), "utf8")
-          ])
-      )
+      await readModuleSources(testsDirectory, "tests")
     );
     const detectedChildProcessModules = [...moduleSources]
       .filter(
@@ -161,29 +178,28 @@ test(
           childProcessSpecifierPattern.test(source) ||
           childProcessCallPattern.test(source)
       )
-      .map(([file]) => file)
+      .map(([modulePath]) => modulePath)
       .sort();
     const detectedFixtureWriters = [...moduleSources]
       .filter(([, source]) => fixtureRootPattern.test(source))
-      .map(([file]) => file)
+      .map(([modulePath]) => modulePath)
       .sort();
 
     assert.deepEqual(
       detectedChildProcessModules,
       childProcessFiles,
-      "nestedSpawnerFiles and nonNestedSpawnerFiles must together list exactly the tests/quality modules that can start a child process; a module that starts one without an inventory entry is hiding from this contract, not exempt from it"
+      "nestedSpawnerFiles and nonNestedSpawnerFiles must together list exactly the tests modules that can start a child process, wherever under tests they live; a module that starts one without an inventory entry is hiding from this contract, not exempt from it"
     );
     assert.deepEqual(
       detectedFixtureWriters,
       fixtureWriterFiles,
-      "fixtureWriterFiles must list exactly the tests/quality modules that build an isolated fixture root"
+      "fixtureWriterFiles must list exactly the tests modules that build an isolated fixture root"
     );
 
     const problems = [];
 
-    for (const file of nestedSpawnerFiles) {
-      const source = moduleSources.get(file);
-      const modulePath = path.posix.join("tests/quality", file);
+    for (const modulePath of nestedSpawnerFiles) {
+      const source = moduleSources.get(modulePath);
       assert.ok(source, `Missing inventoried nested spawner: ${modulePath}`);
 
       const importNames = [...source.matchAll(helperImportPattern)].map(
@@ -226,9 +242,22 @@ test(
       }
     }
 
-    for (const file of fixtureWriterFiles) {
-      const source = moduleSources.get(file);
-      const modulePath = path.posix.join("tests/quality", file);
+    for (const modulePath of nonNestedSpawnerFiles) {
+      const source = moduleSources.get(modulePath);
+      assert.ok(source, `Missing inventoried non-nested spawner: ${modulePath}`);
+
+      if (
+        nestedRunFlagPattern.test(source) ||
+        qualitySuiteReferencePattern.test(source)
+      ) {
+        problems.push(
+          `${modulePath} is classified as a non-nested child process module, but it now passes a nested-run flag or names the quality suite directory; move it to nestedSpawnerFiles so the shared spawn budget applies`
+        );
+      }
+    }
+
+    for (const modulePath of fixtureWriterFiles) {
+      const source = moduleSources.get(modulePath);
       assert.ok(source, `Missing inventoried fixture writer: ${modulePath}`);
 
       if (
