@@ -80,6 +80,11 @@
         copyManualSelected: "コピーできませんでした。選択中のアドレスを手動でコピーしてください。",
         copyFailure: "コピーできませんでした。表示中のアドレスを手動でコピーしてください。"
       },
+      theme: {
+        toLight: "白妙(ライトモード)に切り替え",
+        toDark: "夜藍(ダークモード)に切り替え",
+        akatsukiUnlocked: "夜が明けました — 隠しテーマ「暁」"
+      },
       notFound: {
         metaDescription:
           "指定されたページは見つかりませんでした。himiyosh のポートフォリオから日本語または英語のページへ移動できます。",
@@ -170,6 +175,11 @@
         copySuccess: "Email address copied.",
         copyManualSelected: "Copy failed. Copy the selected address manually.",
         copyFailure: "Copy failed. Select the visible address and copy it manually."
+      },
+      theme: {
+        toLight: "Switch to Shirotae (light mode)",
+        toDark: "Switch to Yoruai (dark mode)",
+        akatsukiUnlocked: "Dawn breaks — hidden theme: Akatsuki"
       },
       notFound: {
         metaDescription:

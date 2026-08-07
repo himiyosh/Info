@@ -1395,3 +1395,391 @@ html:not(.js-enabled) .about-copy {
     max-width: 80ch;
   }
 }
+
+/* ============================================================
+ * 夜藍×白妙 theme layer — Alpine Ink · Decode
+ * Additive palette + component layer for the 2026-08 redesign.
+ * tokens.css stays single-palette (夜藍, the canonical dark set)
+ * so the quality-contract OKLCH parser reads one token universe;
+ * the 白妙 (light) and hidden 暁 palettes live here and override
+ * the same slots via data-theme attributes or the OS scheme.
+ * Slot re-interpretation in 白妙: --color-on-dark carries the
+ * content color for nav/menu chrome, so it resolves to the light
+ * theme's ink; --color-accent-2 becomes a light tinted fill so
+ * that pairing stays >= 4.5:1. All three palettes were verified
+ * against the same WCAG math the contrast contracts use.
+ * ============================================================ */
+
+:root {
+  color-scheme: dark;
+}
+
+:root[data-theme="shirotae"] {
+  color-scheme: light;
+  --color-paper: oklch(96% 0.012 95);
+  --color-paper-2: oklch(93% 0.015 95);
+  --color-paper-3: oklch(99% 0.005 95);
+  --color-surface: oklch(98% 0.007 95);
+  --color-surface-raised: oklch(91% 0.02 95);
+  --color-ink: oklch(28% 0.03 260);
+  --color-ink-2: oklch(38% 0.035 260);
+  --color-muted: oklch(47% 0.04 260);
+  --color-rule: oklch(72% 0.03 260);
+  --color-accent: oklch(50% 0.19 265);
+  --color-accent-2: oklch(88% 0.055 265);
+  --color-accent-ink: oklch(98% 0.005 95);
+  --color-on-dark: oklch(28% 0.03 260);
+  --color-focus: oklch(45% 0.19 265);
+  --color-ok: oklch(56% 0.13 156);
+  --color-scene-hero: oklch(95% 0.014 95);
+  --color-scene-about: oklch(94% 0.02 90);
+  --color-scene-projects: oklch(94% 0.016 100);
+  --color-scene-contact: oklch(93% 0.02 95);
+  --color-project-a: oklch(92% 0.02 95);
+  --color-project-b: oklch(95% 0.014 95);
+  --shadow-hard: 0 14px 34px -16px oklch(35% 0.03 260 / 0.4);
+  --shadow-float: 0 0.75rem 2.5rem oklch(35% 0.03 260 / 0.22);
+  --shadow-cinematic: 0 1.5rem 5rem oklch(35% 0.03 260 / 0.26);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --color-paper: oklch(96% 0.012 95);
+    --color-paper-2: oklch(93% 0.015 95);
+    --color-paper-3: oklch(99% 0.005 95);
+    --color-surface: oklch(98% 0.007 95);
+    --color-surface-raised: oklch(91% 0.02 95);
+    --color-ink: oklch(28% 0.03 260);
+    --color-ink-2: oklch(38% 0.035 260);
+    --color-muted: oklch(47% 0.04 260);
+    --color-rule: oklch(72% 0.03 260);
+    --color-accent: oklch(50% 0.19 265);
+    --color-accent-2: oklch(88% 0.055 265);
+    --color-accent-ink: oklch(98% 0.005 95);
+    --color-on-dark: oklch(28% 0.03 260);
+    --color-focus: oklch(45% 0.19 265);
+    --color-ok: oklch(56% 0.13 156);
+    --color-scene-hero: oklch(95% 0.014 95);
+    --color-scene-about: oklch(94% 0.02 90);
+    --color-scene-projects: oklch(94% 0.016 100);
+    --color-scene-contact: oklch(93% 0.02 95);
+    --color-project-a: oklch(92% 0.02 95);
+    --color-project-b: oklch(95% 0.014 95);
+    --shadow-hard: 0 14px 34px -16px oklch(35% 0.03 260 / 0.4);
+    --shadow-float: 0 0.75rem 2.5rem oklch(35% 0.03 260 / 0.22);
+    --shadow-cinematic: 0 1.5rem 5rem oklch(35% 0.03 260 / 0.26);
+  }
+}
+
+:root[data-theme="akatsuki"] {
+  color-scheme: dark;
+  --color-paper: oklch(18% 0.035 310);
+  --color-paper-2: oklch(22% 0.04 308);
+  --color-paper-3: oklch(28% 0.045 306);
+  --color-surface: oklch(25% 0.042 307);
+  --color-surface-raised: oklch(32% 0.05 305);
+  --color-ink: oklch(94% 0.012 40);
+  --color-ink-2: oklch(84% 0.025 310);
+  --color-muted: oklch(73% 0.04 310);
+  --color-rule: oklch(50% 0.05 310);
+  --color-accent: oklch(76% 0.11 10);
+  --color-accent-2: oklch(44% 0.09 5);
+  --color-accent-ink: oklch(16% 0.03 310);
+  --color-on-dark: oklch(95% 0.01 40);
+  --color-focus: oklch(87% 0.07 15);
+  --color-ok: oklch(78% 0.093 161);
+  --color-scene-hero: oklch(20% 0.038 310);
+  --color-scene-about: oklch(23% 0.042 305);
+  --color-scene-projects: oklch(21% 0.045 300);
+  --color-scene-contact: oklch(25% 0.042 308);
+  --color-project-a: oklch(27% 0.048 300);
+  --color-project-b: oklch(23% 0.04 306);
+}
+
+@media screen and (prefers-contrast: more) {
+  :root[data-theme="shirotae"] {
+    --color-ink-2: oklch(30% 0.03 260);
+    --color-muted: oklch(36% 0.035 260);
+    --color-rule: oklch(52% 0.04 260);
+    --color-focus: oklch(35% 0.16 265);
+  }
+
+  :root[data-theme="akatsuki"] {
+    --color-ink-2: oklch(91% 0.012 40);
+    --color-muted: oklch(87% 0.02 310);
+    --color-rule: oklch(71% 0.04 310);
+    --color-focus: oklch(97% 0.02 20);
+  }
+}
+
+@media screen and (prefers-contrast: more) and (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --color-ink-2: oklch(30% 0.03 260);
+    --color-muted: oklch(36% 0.035 260);
+    --color-rule: oklch(52% 0.04 260);
+    --color-focus: oklch(35% 0.16 265);
+  }
+}
+
+/* Rounded-gothic weight mapping: the maru families carry their weight in
+ * font-weight, not the variable-font axis the previous Latin display used. */
+.hero h1,
+.section-heading h2,
+.projects-intro h2,
+.contact h2 {
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.project-heading h3 {
+  font-weight: 700;
+}
+
+.hero-role {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.wordmark {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* Decorative terminal caret lives in CSS (not the DOM) so the wordmark's
+ * textContent stays exactly "himiyosh" for print, copy, and search. The
+ * second content declaration supplies empty alternative text where the
+ * alt syntax is supported. */
+.wordmark::after {
+  content: "▌";
+  content: "▌" / "";
+  color: var(--color-accent);
+  animation: caret-blink 1.15s steps(1) infinite;
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Contour-line backdrop, drawn once inside the fixed viewport stage. */
+.viewport-stage-topo {
+  position: absolute;
+  inset: -6%;
+  width: 112%;
+  height: 112%;
+  color: var(--color-rule);
+  opacity: 0.3;
+}
+
+.viewport-stage-topo path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.1;
+}
+
+.viewport-stage-topo path.topo-hl {
+  stroke: var(--color-accent);
+  opacity: 0.6;
+}
+
+/* 夜藍 ⇄ 白妙 mode toggle (3-second hold wakes the hidden 暁). */
+.theme-toggle {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-transparent);
+  color: inherit;
+  border: var(--rule-strong) solid var(--color-rule);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out),
+    transform var(--dur-short) var(--ease-out);
+}
+
+.theme-toggle:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: rotate(20deg);
+}
+
+.theme-toggle[hidden] {
+  display: none;
+}
+
+.theme-toggle-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.theme-toggle-icon--sun {
+  display: none;
+}
+
+:root[data-theme="shirotae"] .theme-toggle-icon--sun {
+  display: block;
+}
+
+:root[data-theme="shirotae"] .theme-toggle-icon--moon {
+  display: none;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) .theme-toggle-icon--sun {
+    display: block;
+  }
+
+  :root:not([data-theme]) .theme-toggle-icon--moon {
+    display: none;
+  }
+}
+
+.theme-toggle-charging {
+  animation: theme-charge 3s linear forwards;
+}
+
+@keyframes theme-charge {
+  to {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    box-shadow: 0 0 0 5px color-mix(in oklab, var(--color-accent) 30%, transparent);
+  }
+}
+
+/* Theme announcements surface as a bottom toast; role=status carries
+ * the same text to assistive technology. */
+.theme-status {
+  position: fixed;
+  inset-block-end: var(--space-lg);
+  inset-inline-start: 50%;
+  z-index: var(--z-toast);
+  max-inline-size: calc(100% - var(--space-lg));
+  margin: 0;
+  padding: var(--space-xs) var(--space-md);
+  background: var(--color-paper-3);
+  color: var(--color-ink);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-float);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  opacity: 0;
+  transform: translate(-50%, 140%);
+  transition:
+    transform var(--dur-long) var(--ease-out),
+    opacity var(--dur-long) var(--ease-out);
+}
+
+.theme-status[hidden] {
+  display: none;
+}
+
+.theme-status-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Project directory as a Network+ homage panel: decorative window
+ * chrome via pseudo-elements only, so the measured directory grid,
+ * ellipsis, and focus contracts stay untouched. */
+.project-directory {
+  overflow: clip;
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid var(--color-rule);
+  border-radius: var(--radius-md);
+}
+
+.project-directory::before {
+  content: "";
+  display: block;
+  height: 2.25rem;
+  background:
+    radial-gradient(circle at 1.3rem 50%, var(--color-accent) 4px, var(--color-transparent) 5px),
+    radial-gradient(circle at 2.5rem 50%, var(--color-rule) 4px, var(--color-transparent) 5px),
+    radial-gradient(circle at 3.7rem 50%, var(--color-rule) 4px, var(--color-transparent) 5px),
+    var(--color-surface);
+  border-block-end: var(--rule-hair) solid var(--color-rule);
+}
+
+.project-directory-list {
+  padding: var(--space-2xs) var(--space-xs);
+}
+
+.project-directory-link::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-ok);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--color-ok) 70%, transparent);
+}
+
+.project-directory-link:hover {
+  background: color-mix(in oklab, var(--color-accent) 9%, transparent);
+}
+
+.project-directory-kind {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+}
+
+/* Mode-change crossfade (View Transitions API; script.js skips the
+ * transition entirely under reduced motion). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.45s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wordmark::after {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .theme-toggle {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .theme-toggle:hover {
+    transform: none !important;
+  }
+
+  .theme-status {
+    transition: none !important;
+    transform: translate(-50%, 140%);
+  }
+
+  .theme-status-on {
+    transform: translate(-50%, 0);
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
+
+@media print {
+  .theme-toggle,
+  .theme-status,
+  .viewport-stage-topo {
+    display: none !important;
+  }
+
+  .wordmark::after {
+    content: none !important;
+  }
+}

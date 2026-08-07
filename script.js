@@ -498,6 +498,240 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   syncNavigationMode();
 
+  // --- Theme: 夜藍 ⇄ 白妙 selection lifecycle (3s hold wakes 暁) --------
+  // The inline head script has already applied any stored choice before
+  // first paint; with no stored choice the OS scheme drives the palette
+  // through CSS alone, so this block only manages the control state,
+  // persistence, the theme-color meta, and announcements.
+  const THEME_STORAGE_KEY = "info-theme";
+  const THEME_COLORS = Object.freeze({
+    yoruai: "#06101c",
+    shirotae: "#f4f2e9",
+    akatsuki: "#160d1d"
+  });
+  const themeToggle = requireElement("theme-toggle");
+  const themeStatus = requireElement("theme-status");
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  const lightSchemeQuery = window.matchMedia("(prefers-color-scheme: light)");
+  let themeStatusTimer = null;
+  let themeHoldTimer = null;
+  let suppressThemeClick = false;
+
+  function storedTheme() {
+    try {
+      const value = window.localStorage.getItem(THEME_STORAGE_KEY);
+      return Object.hasOwn(THEME_COLORS, value) ? value : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function persistTheme(theme) {
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch (error) {
+      console.warn("Theme preference could not be saved:", error);
+    }
+  }
+
+  function effectiveTheme() {
+    return (
+      document.documentElement.dataset.theme ||
+      (lightSchemeQuery.matches ? "shirotae" : "yoruai")
+    );
+  }
+
+  function syncThemeControl() {
+    const theme = effectiveTheme();
+    const labelKey = theme === "yoruai" ? "theme.toLight" : "theme.toDark";
+    themeToggle.setAttribute("data-i18n-aria-label", labelKey);
+    themeToggle.setAttribute("aria-label", window.siteI18n.t(labelKey));
+    themeToggle.setAttribute(
+      "aria-pressed",
+      theme === "akatsuki" ? "mixed" : String(theme === "shirotae")
+    );
+    themeColorMeta?.setAttribute("content", THEME_COLORS[theme]);
+  }
+
+  function withThemeTransition(applyChange) {
+    if (!prefersReducedMotion && typeof document.startViewTransition === "function") {
+      document.startViewTransition(applyChange);
+    } else {
+      applyChange();
+    }
+  }
+
+  function announceTheme(message) {
+    themeStatus.hidden = false;
+    themeStatus.textContent = message;
+    themeStatus.classList.add("theme-status-on");
+    window.clearTimeout(themeStatusTimer);
+    themeStatusTimer = window.setTimeout(() => {
+      themeStatus.classList.remove("theme-status-on");
+      themeStatus.textContent = "";
+      themeStatus.hidden = true;
+    }, 2400);
+  }
+
+  function setTheme(theme, { announceKey = null } = {}) {
+    withThemeTransition(() => {
+      document.documentElement.dataset.theme = theme;
+    });
+    persistTheme(theme);
+    syncThemeControl();
+    if (announceKey) {
+      announceTheme(window.siteI18n.t(announceKey));
+    }
+  }
+
+  themeToggle.hidden = false;
+  themeToggle.addEventListener("click", () => {
+    if (suppressThemeClick) {
+      suppressThemeClick = false;
+      return;
+    }
+    setTheme(effectiveTheme() === "yoruai" ? "shirotae" : "yoruai");
+  });
+  themeToggle.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) {
+      return;
+    }
+    suppressThemeClick = false;
+    themeToggle.classList.add("theme-toggle-charging");
+    window.clearTimeout(themeHoldTimer);
+    themeHoldTimer = window.setTimeout(() => {
+      suppressThemeClick = true;
+      themeToggle.classList.remove("theme-toggle-charging");
+      setTheme("akatsuki", { announceKey: "theme.akatsukiUnlocked" });
+    }, 3000);
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach((type) =>
+    themeToggle.addEventListener(type, () => {
+      window.clearTimeout(themeHoldTimer);
+      themeToggle.classList.remove("theme-toggle-charging");
+    })
+  );
+  themeToggle.addEventListener("contextmenu", (event) => event.preventDefault());
+
+  function handleSchemeChange() {
+    if (!storedTheme()) {
+      syncThemeControl();
+    }
+  }
+
+  if (typeof lightSchemeQuery.addEventListener === "function") {
+    lightSchemeQuery.addEventListener("change", handleSchemeChange);
+  } else if (typeof lightSchemeQuery.addListener === "function") {
+    // Safari < 14 fallback.
+    lightSchemeQuery.addListener(handleSchemeChange);
+  }
+
+  syncThemeControl();
+
+  // --- Motion: one-time heading decode reveal ---------------------------
+  // Scrambles [data-decode] headings once as they enter the viewport and
+  // always lands on the exact translated text. A language change cancels
+  // in-flight runs so a stale frame can never overwrite the fresh copy
+  // written by i18n.js before site-languagechange is dispatched.
+  const DECODE_POOL = "アイウエオカキクケコサシスセソ〇一二三四五六七八九◆※+<>/";
+  const decodeTargets = [...document.querySelectorAll("[data-decode]")];
+  const activeDecodes = new Map();
+  const printMediaQuery = window.matchMedia("print");
+
+  function cancelActiveDecodes() {
+    // Language change: i18n.js has already written the fresh copy, so the
+    // in-flight runs are abandoned without touching the text again.
+    activeDecodes.forEach((token) => {
+      token.cancelled = true;
+      window.clearTimeout(token.backstopTimer);
+    });
+    activeDecodes.clear();
+  }
+
+  function finalizeActiveDecodes() {
+    // Print: land every in-flight run on its exact final text right away.
+    activeDecodes.forEach((token, element) => {
+      token.cancelled = true;
+      window.clearTimeout(token.backstopTimer);
+      element.textContent = token.target;
+    });
+    activeDecodes.clear();
+  }
+
+  function runDecode(element) {
+    const target = element.textContent;
+    const characters = [...target];
+    const token = { cancelled: false, backstopTimer: null, target };
+    activeDecodes.set(element, token);
+    let frame = 0;
+    const totalFrames = characters.length * 3 + 12;
+
+    function finish() {
+      window.clearTimeout(token.backstopTimer);
+      element.textContent = target;
+      activeDecodes.delete(element);
+    }
+
+    // Frames can stall mid-run (throttled background tabs, print
+    // rendering), so a timer independently lands the exact final text
+    // once the intended duration has passed.
+    token.backstopTimer = window.setTimeout(() => {
+      if (!token.cancelled) {
+        token.cancelled = true;
+        element.textContent = target;
+        activeDecodes.delete(element);
+      }
+    }, totalFrames * 17 + 100);
+
+    function step() {
+      if (token.cancelled) {
+        return;
+      }
+      frame += 1;
+      if (frame >= totalFrames) {
+        finish();
+        return;
+      }
+      element.textContent = characters
+        .map((character, index) =>
+          character === " " || frame > index * 3 + 10
+            ? character
+            : DECODE_POOL[Math.floor(Math.random() * DECODE_POOL.length)]
+        )
+        .join("");
+      window.requestAnimationFrame(step);
+    }
+
+    window.requestAnimationFrame(step);
+  }
+
+  if (supportsIntersectionObserver && decodeTargets.length > 0) {
+    const decodeObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
+          decodeObserver.unobserve(entry.target);
+          if (!prefersReducedMotion && !printMediaQuery.matches) {
+            runDecode(entry.target);
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+    decodeTargets.forEach((element) => decodeObserver.observe(element));
+    document.addEventListener("site-languagechange", cancelActiveDecodes);
+    window.addEventListener("beforeprint", finalizeActiveDecodes);
+    if (typeof printMediaQuery.addEventListener === "function") {
+      printMediaQuery.addEventListener("change", (event) => {
+        if (event.matches) {
+          finalizeActiveDecodes();
+        }
+      });
+    }
+  }
+
   // --- Motion: one shared viewport-scene lifecycle -------------------
   // A single passive/rAF-batched listener owns progress, active-scene
   // state, hero depth, project-copy focus, and media depth. CSS scroll

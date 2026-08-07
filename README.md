@@ -10,11 +10,11 @@
 - Every portfolio share control targets a generated localized referral helper at `/share/${slug}/` or `/en/share/${slug}/`. These noindex pages expose project-specific social metadata and a complete no-JavaScript fallback while linking back to the unchanged language-specific `#project-${slug}` portfolio fragment.
 - After project data loads, the Projects introduction renders one compact localized directory from those same slugs and canonical titles. Each 44px row reserves its one visible line for project identity below 48rem, restores the secondary localized kind at 48rem, keeps two columns from 48rem until 67rem, then advances to three shrinkable columns whose titles remain constrained by the existing ellipsis boundary. A focus-revealed localized bypass link precedes the directory and reaches the existing Contact target without traversing project controls. No-JavaScript, blocked-runtime, early-initialization-failure, and persistent-error states retain the bypass plus nine generated localized summaries with stable project fragments, descriptions, primary actions, and available stack, source, and public-evidence context from `projects.json`.
 - Project AVIF previews use a consistent `sips` quality setting: desktop `sips -s format avif -s formatOptions 70 -z 540 960 assets/name-preview.jpg --out assets/name-preview-960w.avif`; mobile `sips -s format avif -s formatOptions 70 -z 405 720 assets/name-preview.jpg --out assets/name-preview-720w.avif`.
-- The nine desktop AVIFs total 187,587 bytes versus 551,363 bytes for the JPEG fallbacks, saving 363,776 bytes (66.0%).
+- The nine desktop AVIFs total 173,550 bytes versus 524,923 bytes for the JPEG fallbacks, saving 351,373 bytes (66.9%).
 
 | Project preview | JPEG bytes | Desktop AVIF bytes | Savings |
 | --- | ---: | ---: | ---: |
-| `portfolio-preview` | 78,916 | 37,634 | 52.3% |
+| `portfolio-preview` | 52,476 | 23,597 | 55.0% |
 | `techdb-preview` | 131,203 | 48,704 | 62.9% |
 | `jojo-aiagent-preview` | 78,218 | 25,011 | 68.0% |
 | `jojo-git-preview` | 55,239 | 18,481 | 66.5% |
@@ -23,7 +23,9 @@
 | `network-plus-preview` | 45,463 | 11,759 | 74.1% |
 | `url-decoder-preview` | 37,955 | 9,316 | 75.5% |
 | `image-resizer-preview` | 20,417 | 5,828 | 71.5% |
-- `tokens.css` is the design-token source of truth. The Latin display font is bundled under `assets/fonts/` with its `OFL.txt` license, so no runtime font provider is required.
+- `tokens.css` is the design-token source of truth and carries the canonical 夜藍 (dark) palette in strict `--color-*: oklch(L% C H)` form; the 白妙 (light) and hidden 暁 palettes override the same slots from the theme layer at the end of `modern.css`, keyed by `html[data-theme]` or the OS color scheme when no explicit choice is stored.
+- The header theme toggle cycles 夜藍 ⇄ 白妙 (a 3-second hold wakes 暁), persists the choice under the `info-theme` localStorage key at the same layer as language normalization, syncs the `theme-color` meta per palette, and falls back to instant switching when View Transitions are unavailable or reduced motion is requested.
+- Typography uses self-hostable rounded-gothic stacks (`Zen Maru Gothic` / `M PLUS Rounded 1c` / `IBM Plex Mono` named first, with system Maru Gothic fallbacks) so no runtime font provider is loaded; the Latin display font remains bundled under `assets/fonts/` with its `OFL.txt` license. Subsetted woff2 files for the maru families can be dropped into `assets/fonts/` later without markup changes.
 - `robots.txt` and `sitemap.xml` expose both canonical language routes with reciprocal `ja`, `en`, and `x-default` alternates.
 - Root `404.html` is a generated, bilingual, no-JavaScript recovery page with `noindex` metadata and `/Info/`-absolute links so GitHub Pages can serve it at arbitrarily deep missing routes without creating a soft redirect.
 - The site uses local HTML, CSS, JavaScript, and imagery for its initial render. AdSense is deferred to production so core content remains fast and resilient.
