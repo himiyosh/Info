@@ -1544,6 +1544,21 @@ html:not(.js-enabled) .about-copy {
   color: var(--color-accent);
 }
 
+.hero-title-accent {
+  color: var(--color-accent);
+}
+
+.button-primary {
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  box-shadow: 0 10px 30px -12px color-mix(in oklab, var(--color-accent) 55%, transparent);
+}
+
+.button-primary:hover {
+  background: color-mix(in oklab, var(--color-accent) 82%, var(--color-ink));
+  color: var(--color-accent-ink);
+}
+
 .wordmark {
   font-family: var(--font-mono);
   font-weight: 500;

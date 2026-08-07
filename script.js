@@ -515,7 +515,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const lightSchemeQuery = window.matchMedia("(prefers-color-scheme: light)");
   let themeStatusTimer = null;
   let themeHoldTimer = null;
-  let suppressThemeClick = false;
+  let themeEggFiredAt = 0;
 
   function storedTheme() {
     try {
@@ -541,8 +541,10 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  function syncThemeControl() {
-    const theme = effectiveTheme();
+  // Always sync from the explicit target theme: startViewTransition runs
+  // its update callback asynchronously, so reading the DOM right after
+  // setTheme() would still observe the previous data-theme value.
+  function syncThemeControl(theme = effectiveTheme()) {
     const labelKey = theme === "yoruai" ? "theme.toLight" : "theme.toDark";
     themeToggle.setAttribute("data-i18n-aria-label", labelKey);
     themeToggle.setAttribute("aria-label", window.siteI18n.t(labelKey));
@@ -555,7 +557,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function withThemeTransition(applyChange) {
     if (!prefersReducedMotion && typeof document.startViewTransition === "function") {
-      document.startViewTransition(applyChange);
+      // Rapid re-toggles abort the in-flight crossfade; the rejected
+      // promises are expected there and must not surface as console noise.
+      const transition = document.startViewTransition(applyChange);
+      transition.ready?.catch?.(() => {});
+      transition.finished?.catch?.(() => {});
     } else {
       applyChange();
     }
@@ -578,7 +584,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.documentElement.dataset.theme = theme;
     });
     persistTheme(theme);
-    syncThemeControl();
+    syncThemeControl(theme);
     if (announceKey) {
       announceTheme(window.siteI18n.t(announceKey));
     }
@@ -586,8 +592,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   themeToggle.hidden = false;
   themeToggle.addEventListener("click", () => {
-    if (suppressThemeClick) {
-      suppressThemeClick = false;
+    // Swallow only the click synthesized by the long-press that just woke
+    // 暁; a time window (not a flag) keeps later keyboard clicks working.
+    if (Date.now() - themeEggFiredAt < 800) {
       return;
     }
     setTheme(effectiveTheme() === "yoruai" ? "shirotae" : "yoruai");
@@ -596,11 +603,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (event.button !== 0) {
       return;
     }
-    suppressThemeClick = false;
     themeToggle.classList.add("theme-toggle-charging");
     window.clearTimeout(themeHoldTimer);
     themeHoldTimer = window.setTimeout(() => {
-      suppressThemeClick = true;
+      themeEggFiredAt = Date.now();
       themeToggle.classList.remove("theme-toggle-charging");
       setTheme("akatsuki", { announceKey: "theme.akatsukiUnlocked" });
     }, 3000);
@@ -634,6 +640,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // in-flight runs so a stale frame can never overwrite the fresh copy
   // written by i18n.js before site-languagechange is dispatched.
   const DECODE_POOL = "アイウエオカキクケコサシスセソ〇一二三四五六七八九◆※+<>/";
+  // Latin characters scramble within same-case Latin pools so English
+  // headings keep their line count (no layout shift) while decoding.
+  const DECODE_POOL_UPPER = "ABCDEFGHKMNPRSTUVXYZ2345789#*+<>/";
+  const DECODE_POOL_LOWER = "abcdefghkmnoprstuvxyz2345789*+</";
   const decodeTargets = [...document.querySelectorAll("[data-decode]")];
   const activeDecodes = new Map();
   const printMediaQuery = window.matchMedia("print");
@@ -693,11 +703,18 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       element.textContent = characters
-        .map((character, index) =>
-          character === " " || frame > index * 3 + 10
-            ? character
-            : DECODE_POOL[Math.floor(Math.random() * DECODE_POOL.length)]
-        )
+        .map((character, index) => {
+          if (character === " " || frame > index * 3 + 10) {
+            return character;
+          }
+          const pool =
+            character.charCodeAt(0) >= 0x2e80
+              ? DECODE_POOL
+              : /[a-z]/.test(character)
+                ? DECODE_POOL_LOWER
+                : DECODE_POOL_UPPER;
+          return pool[Math.floor(Math.random() * pool.length)];
+        })
         .join("");
       window.requestAnimationFrame(step);
     }
