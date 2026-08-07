@@ -674,10 +674,10 @@ html:lang(ja) .contact-copy-button {
   display: block;
   font-family: var(--font-heading);
   font-size: clamp(2.5rem, 7vw, 5.5rem);
-  font-weight: 600;
-  font-variation-settings: "wght" 600;
-  letter-spacing: -0.035em;
-  line-height: 1.03;
+  font-weight: 900;
+  font-variation-settings: normal;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
   text-transform: none;
   animation: none;
   transform: none;
@@ -1528,9 +1528,12 @@ html:not(.js-enabled) .about-copy {
  * the old 5.5vw a Latin project title overflowed its column and broke
  * mid-word. The maru families also carry weight in font-weight rather
  * than the variable-font axis the old face used. */
+/* The maru families are static faces: any leftover variable-font axis pin
+ * would cap their weight once the webfonts are self-hosted. */
 .hero h1 {
   font-size: clamp(2.7rem, 7.6vw, 6.2rem);
   font-weight: 900;
+  font-variation-settings: normal;
   letter-spacing: 0.04em;
   line-height: 1.2;
 }
@@ -1538,6 +1541,10 @@ html:not(.js-enabled) .about-copy {
 html:lang(ja) .hero h1 {
   font-size: clamp(2.7rem, 7.6vw, 6.2rem);
   font-weight: 900;
+  font-variation-settings: normal;
+  /* Re-declared here because the lang-scoped rule in styles.css outranks
+   * the bare class above and would otherwise keep the old tight tracking. */
+  letter-spacing: 0.04em;
   line-height: 1.2;
 }
 
@@ -1546,14 +1553,26 @@ html:lang(ja) .hero h1 {
 .contact h2 {
   font-size: clamp(2rem, 4.8vw, 3.5rem);
   font-weight: 900;
+  font-variation-settings: normal;
   letter-spacing: 0.03em;
   line-height: 1.3;
 }
 
-.project-heading h3 {
-  font-size: clamp(1.5rem, 2.2vw, 2.25rem);
+/* Contact is the largest type on the prototype's page. */
+.contact h2 {
+  font-size: clamp(2.6rem, 7vw, 5.4rem);
+}
+
+/* Project titles use the body face at card scale in the prototype; the
+ * lang-scoped form is required because a lang-scoped rule earlier in this
+ * file pins the Japanese display face at a higher specificity. */
+.project-heading h3,
+html:lang(ja) .project-heading h3 {
+  font-family: var(--font-body);
+  font-size: 1.35rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  font-variation-settings: normal;
+  letter-spacing: normal;
   line-height: 1.4;
 }
 
@@ -1589,12 +1608,17 @@ html:lang(ja) .hero-role {
   background: var(--color-accent);
 }
 
-/* Primary CTA: pill, mono, with the arrow that advances on hover. */
+/* Primary CTA: pill, mono, with the arrow that advances on hover. The
+ * lang-scoped form is required — a lang-scoped rule earlier in this file
+ * sets the Japanese body face and outranks a bare class selector. */
 .button-primary,
-.text-link {
+.text-link,
+html:lang(ja) :where(.button-primary, .text-link) {
   font-family: var(--font-mono);
   font-size: 0.85rem;
+  font-weight: 500;
   letter-spacing: 0.06em;
+  padding: 0.95rem 1.7rem;
   border-radius: var(--radius-pill);
 }
 
@@ -1695,6 +1719,10 @@ html:lang(ja) .hero-role {
 
 /* 夜藍 ⇄ 白妙 mode toggle (3-second hold wakes the hidden 暁). */
 .theme-toggle {
+  /* The mobile menu is a grid, so a stretched toggle would render as a
+   * full-width bar; the icon button keeps its square 44px target. */
+  inline-size: 44px;
+  justify-self: start;
   min-width: 44px;
   min-height: 44px;
   padding: 0;
@@ -1777,8 +1805,12 @@ html:lang(ja) .hero-role {
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-float);
   font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
   opacity: 0;
+  /* The region stays in the accessibility tree between announcements, so
+   * it must not intercept pointer events while it is invisible. */
+  pointer-events: none;
   transform: translate(-50%, 140%);
   transition:
     transform var(--dur-long) var(--ease-out),
@@ -1799,6 +1831,9 @@ html:lang(ja) .hero-role {
  * ellipsis, and focus contracts stay untouched. */
 .project-directory {
   overflow: clip;
+  /* Reset the section's inherited top padding so the window chrome sits
+   * flush against the panel's rounded edge. */
+  padding-block-start: 0;
   background: var(--color-paper-2);
   border: var(--rule-hair) solid var(--color-rule);
   border-radius: var(--radius-md);
@@ -1826,8 +1861,6 @@ html:lang(ja) .hero-role {
  * is preserved — the dot and arrow are pseudo-elements. */
 .project-directory-link {
   padding: 1.15rem 1.4rem;
-  border-block-start: var(--rule-hair) solid
-    color-mix(in oklab, var(--color-rule) 45%, transparent);
   transition:
     background-color var(--dur-micro) var(--ease-out),
     color var(--dur-micro) var(--ease-out);
@@ -1850,6 +1883,19 @@ html:lang(ja) .hero-role {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   transition: transform var(--dur-micro) var(--ease-out);
+}
+
+/* One hairline per boundary: the separator is drawn on the trailing edge
+ * only, and released on the final row so it never doubles against the
+ * panel border. Column count changes across three breakpoints, so this
+ * must not be expressed with :nth-child. */
+.project-directory-list > li .project-directory-link {
+  border-block-end: var(--rule-hair) solid
+    color-mix(in oklab, var(--color-rule) 45%, transparent);
+}
+
+.project-directory-list > li:last-child .project-directory-link {
+  border-block-end: 0;
 }
 
 .project-directory-link:hover {
@@ -1931,5 +1977,52 @@ html:lang(ja) .hero-role {
 
   .wordmark::after {
     content: none !important;
+  }
+
+  /* This theme layer is emitted after the main print block, so the screen
+   * type scale and accent colours would otherwise follow the page onto
+   * paper. Restate the ink-efficient print treatment here. */
+  :root,
+  :root[data-theme] {
+    color-scheme: light;
+  }
+
+  .hero h1 {
+    font-size: 24pt;
+    line-height: 1.05;
+  }
+
+  html:lang(ja) .hero h1 {
+    font-size: 21pt;
+    line-height: 1.15;
+  }
+
+  .section-heading h2,
+  .projects-intro h2,
+  .contact h2 {
+    font-size: 18pt;
+    line-height: 1.1;
+  }
+
+  .project-heading h3 {
+    font-size: 15pt;
+    line-height: 1.15;
+  }
+
+  .hero-lede,
+  .about-copy p,
+  .projects-intro > p,
+  .project-description {
+    line-height: 1.5;
+  }
+
+  .hero-role,
+  html:lang(ja) .hero-role,
+  .hero-title-accent {
+    color: var(--color-print-ink);
+  }
+
+  .hero-role::before {
+    display: none;
   }
 }

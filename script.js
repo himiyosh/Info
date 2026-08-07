@@ -567,15 +567,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Clear then set on a later task, matching the contact/share status
+  // regions: a live region that keeps the same text between announcements
+  // is not guaranteed to be re-read, and one that is toggled `hidden` can
+  // be dropped from the accessibility tree before it is announced at all.
   function announceTheme(message) {
-    themeStatus.hidden = false;
-    themeStatus.textContent = message;
-    themeStatus.classList.add("theme-status-on");
     window.clearTimeout(themeStatusTimer);
+    themeStatus.textContent = "";
+    themeStatus.classList.add("theme-status-on");
+    window.setTimeout(() => {
+      themeStatus.textContent = message;
+    }, 0);
     themeStatusTimer = window.setTimeout(() => {
       themeStatus.classList.remove("theme-status-on");
       themeStatus.textContent = "";
-      themeStatus.hidden = true;
     }, 2400);
   }
 
@@ -591,6 +596,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   themeToggle.hidden = false;
+  themeStatus.hidden = false;
   themeToggle.addEventListener("click", () => {
     // Swallow only the click synthesized by the long-press that just woke
     // 暁; a time window (not a flag) keeps later keyboard clicks working.
