@@ -738,7 +738,6 @@ document.addEventListener("DOMContentLoaded", () => {
       { threshold: 0.5 }
     );
     decodeTargets.forEach((element) => decodeObserver.observe(element));
-    document.addEventListener("site-languagechange", cancelActiveDecodes);
     window.addEventListener("beforeprint", finalizeActiveDecodes);
     if (typeof printMediaQuery.addEventListener === "function") {
       printMediaQuery.addEventListener("change", (event) => {
@@ -1889,6 +1888,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.addEventListener("site-languagechange", () => {
     contactEmailCopyController.reset();
+    cancelActiveDecodes();
     updateNavigationLabel();
     if (projectState === "ready") {
       renderProjects();

@@ -1522,26 +1522,90 @@ html:not(.js-enabled) .about-copy {
   }
 }
 
-/* Rounded-gothic weight mapping: the maru families carry their weight in
- * font-weight, not the variable-font axis the previous Latin display used. */
-.hero h1,
+/* Type scale ported from preview-site/index.html. The previous scale was
+ * tuned for a condensed Latin display face; the maru families are much
+ * wider, so the prototype's smaller display sizes are required here — at
+ * the old 5.5vw a Latin project title overflowed its column and broke
+ * mid-word. The maru families also carry weight in font-weight rather
+ * than the variable-font axis the old face used. */
+.hero h1 {
+  font-size: clamp(2.7rem, 7.6vw, 6.2rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+html:lang(ja) .hero h1 {
+  font-size: clamp(2.7rem, 7.6vw, 6.2rem);
+  font-weight: 900;
+  line-height: 1.2;
+}
+
 .section-heading h2,
 .projects-intro h2,
 .contact h2 {
+  font-size: clamp(2rem, 4.8vw, 3.5rem);
   font-weight: 900;
   letter-spacing: 0.03em;
+  line-height: 1.3;
 }
 
 .project-heading h3 {
+  font-size: clamp(1.5rem, 2.2vw, 2.25rem);
   font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
 }
 
-.hero-role {
+.hero-lede,
+.about-copy p,
+.projects-intro > p,
+.project-description {
+  line-height: 1.85;
+}
+
+/* Kicker / eyebrow: mono, wide tracking, accent, with the prototype's
+ * 34px leading rule. */
+/* The lang-scoped body-font rule earlier in this file outranks a bare
+ * class selector, so the kicker's mono stack is declared at the same
+ * specificity for both routes. */
+.hero-role,
+html:lang(ja) .hero-role {
   font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-size: 0.78rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.hero-role::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 34px;
+  height: 1px;
+  background: var(--color-accent);
+}
+
+/* Primary CTA: pill, mono, with the arrow that advances on hover. */
+.button-primary,
+.text-link {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  border-radius: var(--radius-pill);
+}
+
+.button-primary::after {
+  content: "→";
+  margin-inline-start: 0.6rem;
+  transition: transform var(--dur-short) var(--ease-out);
+}
+
+.button-primary:hover::after {
+  transform: translateX(4px);
 }
 
 .hero-title-accent {
@@ -1582,25 +1646,51 @@ html:not(.js-enabled) .about-copy {
   }
 }
 
-/* Contour-line backdrop, drawn once inside the fixed viewport stage. */
+/* Contour-line backdrop and the drifting amber blob, ported from the
+ * prototype's .hero-bg. It lives in the fixed viewport stage — the
+ * production site's decorative aria-hidden layer — so the texture is
+ * painted once rather than per section. Stroke alphas match the
+ * prototype's --topo / --topo-hl exactly. */
 .viewport-stage-topo {
   position: absolute;
-  inset: -6%;
-  width: 112%;
-  height: 112%;
-  color: var(--color-rule);
-  opacity: 0.3;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  opacity: 0.85;
 }
 
 .viewport-stage-topo path {
   fill: none;
-  stroke: currentColor;
+  stroke: color-mix(in oklab, var(--color-ink) 5.5%, transparent);
   stroke-width: 1.1;
 }
 
 .viewport-stage-topo path.topo-hl {
-  stroke: var(--color-accent);
-  opacity: 0.6;
+  stroke: color-mix(in oklab, var(--color-accent) 12%, transparent);
+}
+
+.viewport-stage-glow {
+  position: absolute;
+  inset-block-start: -10vw;
+  inset-inline-end: -14vw;
+  width: 56vw;
+  height: 56vw;
+  max-width: 760px;
+  max-height: 760px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--color-accent) 14%, transparent),
+    transparent 62%
+  );
+  filter: blur(10px);
+  animation: topo-drift 26s ease-in-out infinite alternate;
+}
+
+@keyframes topo-drift {
+  to {
+    transform: translate(-5%, 7%) scale(1.08);
+  }
 }
 
 /* 夜藍 ⇄ 白妙 mode toggle (3-second hold wakes the hidden 暁). */
@@ -1727,7 +1817,20 @@ html:not(.js-enabled) .about-copy {
 }
 
 .project-directory-list {
-  padding: var(--space-2xs) var(--space-xs);
+  padding: 0;
+}
+
+/* Row rhythm from the prototype's .row: hairline separator, generous
+ * padding, status dot, name that takes the accent on hover, and the
+ * advancing go arrow. The pinned two-child link structure (title, kind)
+ * is preserved — the dot and arrow are pseudo-elements. */
+.project-directory-link {
+  padding: 1.15rem 1.4rem;
+  border-block-start: var(--rule-hair) solid
+    color-mix(in oklab, var(--color-rule) 45%, transparent);
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out);
 }
 
 .project-directory-link::before {
@@ -1740,8 +1843,26 @@ html:not(.js-enabled) .about-copy {
   box-shadow: 0 0 8px color-mix(in oklab, var(--color-ok) 70%, transparent);
 }
 
+.project-directory-link::after {
+  content: "↓";
+  flex: 0 0 auto;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  transition: transform var(--dur-micro) var(--ease-out);
+}
+
 .project-directory-link:hover {
   background: color-mix(in oklab, var(--color-accent) 9%, transparent);
+  color: var(--color-accent);
+}
+
+.project-directory-link:hover::after {
+  transform: translateY(3px);
+}
+
+.project-directory-title {
+  font-weight: 700;
 }
 
 .project-directory-kind {
@@ -1761,6 +1882,15 @@ html:not(.js-enabled) .about-copy {
   .wordmark::after {
     animation: none !important;
     opacity: 1 !important;
+  }
+
+  .viewport-stage-glow {
+    animation: none !important;
+  }
+
+  .button-primary:hover::after,
+  .project-directory-link:hover::after {
+    transform: none !important;
   }
 
   .theme-toggle {
@@ -1790,8 +1920,13 @@ html:not(.js-enabled) .about-copy {
 @media print {
   .theme-toggle,
   .theme-status,
-  .viewport-stage-topo {
+  .viewport-stage-topo,
+  .viewport-stage-glow {
     display: none !important;
+  }
+
+  .button-primary::after {
+    content: none !important;
   }
 
   .wordmark::after {

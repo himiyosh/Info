@@ -533,8 +533,8 @@ mutationTest(
   async () => {
     const weakenedTokens = replaceOnce(
       tokensSource,
-      "    --color-focus: oklch(98% 0.02 230);",
-      "    --color-focus: oklch(20% 0.02 248);"
+      "    --color-focus: oklch(97% 0.03 90);",
+      "    --color-focus: oklch(20% 0.03 253);"
     );
     await assertMutationRejected(
       { runtimeOverrides: { "tokens.css": weakenedTokens } },
@@ -548,8 +548,8 @@ mutationTest(
   async () => {
     const unchangedMutedRole = replaceOnce(
       tokensSource,
-      "    --color-muted: oklch(84% 0.016 245);",
-      "    --color-muted: oklch(70% 0.02 245);"
+      "    --color-muted: oklch(86% 0.02 250);",
+      "    --color-muted: oklch(72% 0.03 250);"
     );
     await assertMutationRejected(
       { runtimeOverrides: { "tokens.css": unchangedMutedRole } },
