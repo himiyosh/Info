@@ -122,3 +122,31 @@ exit 3 = fail 検出、exit 0 = pass 検出、exit 1 = **検出できていな�
 - **`styles.css` は旧デザインと共有の基盤レイヤー。** 構造を差し替えた PR では、
   同名クラスに効く旧レイアウト宣言が生き残って勝つことがある。
   文字列検査では見えないので、計算後スタイルで「どの規則が実際に勝っているか」を見る。
+
+---
+
+# PR #88 固有の申し送り
+
+汎用手順は上まで。ここから下は PR #88 が閉じたら削除してよい。
+
+## by= に使ってはいけない UUID
+
+実装に関与したセッションは、その PR の判定者になれない。
+
+| UUID | 理由 |
+| --- | --- |
+| `49c95d85-6d6d-4cdc-acc1-7b5945d5c997` | 実装セッション |
+| `4189122c-c05a-4f94-a6fb-d76cfe4b6c56` | 初回レビュー後に修正 `5bb37cd`・`71a6804` を自ら実装 |
+| `d3a2dd8a-0883-4a25-b7b5-ed2c307f4206` | 2回目レビュー。**この手順書の書き換え(PR #91)を自ら実装したため**、以後 `prototype-structure` の判定者になれない |
+
+## 未解決の指摘(2回目レビュー、head `fb22c94` で `verdict=fail`)
+
+1. `text-spacing-resilience` が省略記号による切り落としを検出できない。
+   320px + リーダー上書きで `.row .name` の「Encode / Decode Tool」が 31px 切れている(ja/en)。
+   負のコントロール 4 件中 2 件が素通りした。
+2. print は現役(`@media print` 4 ブロック / 167 宣言)なのに `print-portfolio.test.mjs` を削除し、
+   README には "print contract carry over unchanged" と書いてある。
+3. `styles.css:608 .contact-links a { flex-direction: column }` が旧デザインの生き残りで、
+   Contact の `↗` が下段に落ちる。壊れた状態と直した状態の**両方で 47 ファイル全緑**。
+
+詳細と検証済みパッチは PR #88 のコメント 2 件にある。
