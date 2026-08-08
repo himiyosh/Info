@@ -1717,6 +1717,11 @@ html:lang(ja) .footer-meta a {
   position: relative;
   display: flex;
   flex-direction: column;
+  /* A grid item defaults to min-width: auto, so the card refuses to shrink
+   * below its content's minimum and pushes past its track. At 320px with
+   * WCAG 1.4.12 letter spacing applied that pushed the card 47px wider than
+   * the shell, and `overflow: clip` below silently cut the text off. */
+  min-width: 0;
   overflow: clip;
   background: var(--color-paper-2);
   border: var(--rule-hair) solid
@@ -1786,6 +1791,10 @@ html:lang(ja) .card h3 {
   color: var(--color-muted);
   font-size: 0.92rem;
   line-height: 1.85;
+  /* Safety net for the one description that carries an unbreakable
+   * Prompt→Chain→… run: with reader letter spacing it cannot wrap and
+   * overhangs the 320px viewport on its own. */
+  overflow-wrap: break-word;
 }
 
 .tags {
