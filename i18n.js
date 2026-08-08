@@ -15,7 +15,7 @@
         locale: "ja_JP",
         alternateLocale: "en_US",
         imageAlt: "山岳風景の中で手を上げる himiyosh のシルエット",
-        shareImageAlt: "ポートフォリオの見出しと山岳写真を組み合わせた himiyosh のトップ画面"
+        shareImageAlt: "夜藍の背景に「技術を、役に立つ形へ。」の見出しと山のロゴマークを配した himiyosh の共有カード"
       },
       accessibility: {
         skip: "メインコンテンツへ移動",
@@ -119,7 +119,7 @@
         locale: "en_US",
         alternateLocale: "ja_JP",
         imageAlt: "Silhouette of himiyosh raising a hand in a mountain landscape",
-        shareImageAlt: "Portfolio hero pairing the himiyosh headline with a mountain photograph"
+        shareImageAlt: "Share card for himiyosh: the headline Technology, made useful. set beside a mountain logo mark on a deep indigo field"
       },
       accessibility: {
         skip: "Skip to main content",

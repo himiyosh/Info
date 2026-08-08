@@ -3,6 +3,22 @@
 このファイルは、実装セッションとは**別の** Claude Code セッションでレビューを
 行うための依頼文です。新しいセッションを開き、次をそのまま貼り付けてください。
 
+## 再レビュー(2回目)の補足
+
+初回レビューは verdict=fail(旧レイアウト CSS が新構造を破壊 / 死んだ CSS を
+要求する契約 / text-spacing 契約の黙殺)。その後の対応が head に積まれている。
+
+- 対応差分の全量: `git diff 1a22e28..HEAD`(初回レビュー時点との差)
+- 重点: (1) 旧構造 CSS の削除が完全か(`grep -c 'project-row\|project-directory\|projects-fallback\|viewport-stage\|footer-marquee' styles.css modern.css` は 0 になるはず)、
+  (2) 契約の書き換えが「移植」であって「削除」でないか、
+  (3) `tests/quality/prototype-geometry-browser.test.mjs` の実測が自分の環境でも通るか、
+  (4) `tests/quality/composition-layout-ownership.test.mjs`(初回レビュアー由来)が通るか
+- **UUID の失格リスト**: 次の2セッションは実装に関与したため、
+  マーカーの by= に使ってはならない。
+  - `49c95d85-6d6d-4cdc-acc1-7b5945d5c997`(実装セッション)
+  - `4189122c-c05a-4f94-a6fb-d76cfe4b6c56`(初回レビュー。修正 5bb37cd を自ら実装)
+- テストはファイル単位ループで 46 ファイル・280 件(単発 `npm test` は完走しない)
+
 ---
 
 REVIEW-REQUEST.md を読み、PR #88(himiyosh/Info、prototype-structure → main)の
