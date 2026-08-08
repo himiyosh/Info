@@ -43,7 +43,7 @@
         caption: "画面の内外で、好奇心を持ち続ける。"
       },
       about: {
-        title: "About",
+        title: "好奇心を、実用へ。",
         content:
           "某グローバルIT企業で、テクノロジー領域の課題解決に取り組\u2060んでいます。役に立つ知識や技術を見つけ、試し、分かりやすい形にすることが好きです。",
         site:
@@ -51,7 +51,7 @@
         statement: "好奇心を、実用へ。"
       },
       projects: {
-        title: "Projects",
+        title: "小さな不便を、道具に。",
         intro: "日々の不便を小さくするために作った、公開中のサイト、サービス、ツールです。",
         skipToContact: "連絡先へスキップ",
         directoryLabel: "プロジェクト一覧",
@@ -72,7 +72,7 @@
           "共有できませんでした。固定リンクのコンテキストメニューからリンクをコピーしてください。"
       },
       contact: {
-        title: "Contact",
+        title: "話しましょう。",
         intro: "技術や公開プロジェクトについてのご連絡は、メールまたは GitHub からどうぞ。",
         emailLabel: "Email",
         copyEmail: "メールアドレスをコピー",
@@ -139,7 +139,7 @@
         caption: "Staying curious, on and off the screen."
       },
       about: {
-        title: "About",
+        title: "Curiosity, put to work.",
         content:
           "I work on technology challenges at a global IT company. I enjoy finding useful knowledge and techniques, testing them, and making them easier to understand.",
         site:
@@ -147,7 +147,7 @@
         statement: "Curiosity, put to work."
       },
       projects: {
-        title: "Projects",
+        title: "Small frictions, made into tools.",
         intro: "Public sites, services, and tools built to make small, everyday tasks a little easier.",
         skipToContact: "Skip to Contact",
         directoryLabel: "Project directory",
@@ -168,7 +168,7 @@
           "Sharing failed. Use the permalink's context menu to copy the link."
       },
       contact: {
-        title: "Contact",
+        title: "Let's talk.",
         intro: "For questions about technology or these public projects, reach out by email or GitHub.",
         emailLabel: "Email",
         copyEmail: "Copy email address",

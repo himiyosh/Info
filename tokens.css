@@ -7,6 +7,59 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/* 夜藍とデコード typefaces, self-hosted so no runtime font provider is
+ * contacted. Each file is a subset carrying only the glyphs this site
+ * renders — including the decode animation's scramble pool — which keeps
+ * the Japanese faces near 65KB instead of several megabytes. Licences and
+ * provenance are recorded in assets/fonts/OFL.txt. */
+@font-face {
+  font-family: "Zen Maru Gothic";
+  src: url("assets/fonts/zen-maru-gothic-700-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Zen Maru Gothic";
+  src: url("assets/fonts/zen-maru-gothic-900-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 800 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "M PLUS Rounded 1c";
+  src: url("assets/fonts/mplus-rounded-1c-500-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "M PLUS Rounded 1c";
+  src: url("assets/fonts/mplus-rounded-1c-700-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("assets/fonts/ibm-plex-mono-400-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("assets/fonts/ibm-plex-mono-500-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+}
+
 /* 夜藍とデコード — Alpine Ink · Decode
  * Canonical (dark / 夜藍) design tokens. The 白妙 (light) and 暁 (hidden)
  * palettes override these slots from the theme layer at the end of
