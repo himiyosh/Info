@@ -12,12 +12,22 @@
 - 重点: (1) 旧構造 CSS の削除が完全か(`grep -c 'project-row\|project-directory\|projects-fallback\|viewport-stage\|footer-marquee' styles.css modern.css` は 0 になるはず)、
   (2) 契約の書き換えが「移植」であって「削除」でないか、
   (3) `tests/quality/prototype-geometry-browser.test.mjs` の実測が自分の環境でも通るか、
-  (4) `tests/quality/composition-layout-ownership.test.mjs`(初回レビュアー由来)が通るか
+  (4) `tests/quality/composition-layout-ownership.test.mjs` と
+  `tests/quality/text-spacing-resilience.test.mjs`(初回レビュアー由来)が通るか
+- **落ちないテストを疑うこと**。この PR では既に2件が実測で見つかっている:
+  `html { overflow-x: clip }` の下で `scrollWidth <= clientWidth` を見る契約は
+  常に真になり、負のコントロール(はみ出す箱を注入)でも通過した。
+  新規・改変されたテストには**負のコントロールを当てて、落ちることを確かめる**こと。
 - **UUID の失格リスト**: 次の2セッションは実装に関与したため、
   マーカーの by= に使ってはならない。
   - `49c95d85-6d6d-4cdc-acc1-7b5945d5c997`(実装セッション)
-  - `4189122c-c05a-4f94-a6fb-d76cfe4b6c56`(初回レビュー。修正 5bb37cd を自ら実装)
-- テストはファイル単位ループで 46 ファイル・280 件(単発 `npm test` は完走しない)
+  - `4189122c-c05a-4f94-a6fb-d76cfe4b6c56`(初回レビュー。修正 `5bb37cd`・`71a6804` を
+    自ら実装したため、以後は判定者になれない)
+- テストはファイル単位ループで 47 ファイル・279 件(単発 `npm test` は完走しない)
+- **作業ディレクトリの注意**: 共有チェックアウト
+  `/Users/himiyosh/GH_himiyosh/ghcp-worktrees/Info` は他セッションが使用中。
+  レビューは必ず自分専用の worktree を作って行うこと:
+  `git worktree add /tmp/review-88 origin/prototype-structure`
 
 ---
 
@@ -26,7 +36,9 @@ REVIEW-REQUEST.md を読み、PR #88(himiyosh/Info、prototype-structure → mai
 
 手順:
 
-1. `git fetch origin && git switch prototype-structure` で対象ブランチへ。
+1. `git fetch origin` の後、**自分専用の worktree** を作ってそこで作業する:
+   `git worktree add /tmp/review-88 origin/prototype-structure && cd /tmp/review-88`
+   (共有チェックアウトは他セッションが使用中。直接 switch しないこと)
 2. 差分の全体像: `git diff origin/main...HEAD --stat`
 3. 重点的に検証すること(コミットメッセージは著者の主張であり証拠ではない):
    - **テスト改変の妥当性**。この変更は品質契約を大規模に書き換えている
