@@ -1,38 +1,5 @@
 [
   {
-    "slug": "portfolio",
-    "title": {
-      "ja": "Portfolio",
-      "en": "Portfolio"
-    },
-    "kind": {
-      "ja": "個人サイト / オープンソース",
-      "en": "Personal site / Open source"
-    },
-    "description": {
-      "ja": "このポートフォリオのソースコード。日本語と英語の切り替え、レスポンシブ表示、アクセシビリティを備えた静的サイトです。",
-      "en": "The source for this portfolio: a static bilingual site with responsive behavior and accessible interactions."
-    },
-    "image": "assets/portfolio-preview.jpg",
-    "desktopImageAvif": "assets/portfolio-preview-960w.avif",
-    "mobileImageAvif": "assets/portfolio-preview-720w.avif",
-    "imageAlt": {
-      "ja": "himiyosh ポートフォリオのヒーロー画面",
-      "en": "Hero view of the himiyosh portfolio"
-    },
-    "stack": ["HTML", "CSS", "JavaScript"],
-    "proof": {
-      "ja": "公開成果物は許可リストに限定し、テスト・ワークフロー・内部ドキュメントを配信対象から除外しています。",
-      "en": "The deployed artifact is allowlisted so tests, workflows, and internal docs are excluded from publication."
-    },
-    "proofLink": "https://github.com/himiyosh/Info/blob/a1e0e2bb1e2acefce7e9795b08a4486776ddb3bb/README.md#L25-L33",
-    "action": {
-      "ja": "GitHub でコードを見る",
-      "en": "View code on GitHub"
-    },
-    "link": "https://github.com/himiyosh/Info"
-  },
-  {
     "slug": "techdb",
     "title": {
       "ja": "TechDB",
@@ -53,7 +20,12 @@
       "ja": "AI関連ニュースとトレンドを一覧表示するTechDBのダッシュボード",
       "en": "TechDB dashboard showing AI news, categories, and trending topics"
     },
-    "stack": ["Astro", "TypeScript", "Cloudflare", "AI agents"],
+    "stack": [
+      "Astro",
+      "TypeScript",
+      "Cloudflare",
+      "AI agents"
+    ],
     "proof": {
       "ja": "自動収集データは、秘密情報検査・型検査・ユニットテスト・Web build・ブラウザーE2Eを通過した場合だけ公開用コミットへ進みます。",
       "en": "Collected data advances to a publication commit only after secret scanning, type checks, unit tests, the web build, and browser E2E pass."
@@ -91,7 +63,12 @@
       "ja": "Prompt→Context→Harness→Loop の章立てを表示する JoJo-AIAgent のスライド表紙",
       "en": "JoJo-AIAgent cover slide showing the Prompt, Context, Harness, and Loop structure"
     },
-    "stack": ["Slidev", "Vue", "Playwright", "GitHub Pages"],
+    "stack": [
+      "Slidev",
+      "Vue",
+      "Playwright",
+      "GitHub Pages"
+    ],
     "proof": {
       "ja": "Reader は見出し・本文・全タブ状態・発表者ノート・出典を横断検索し、目次から任意のスライドへ直接移動できます。",
       "en": "Reader searches headings, body text, every tab state, speaker notes, and citations, with direct navigation from its slide index."
@@ -129,7 +106,12 @@
       "ja": "4領域モデルでGit操作を整理した JoJo-Git のスライド表紙",
       "en": "JoJo-Git cover slide presenting the four-area model for Git operations"
     },
-    "stack": ["Slidev", "Vue", "Playwright", "GitHub Pages"],
+    "stack": [
+      "Slidev",
+      "Vue",
+      "Playwright",
+      "GitHub Pages"
+    ],
     "proof": {
       "ja": "Reader はスライド本文・実レンダリング・公開登壇者ノートからビルド時に生成され、本文を二重管理しません。",
       "en": "Reader is generated at build time from the slide source, rendered presentation, and public speaker notes without duplicate body copy."
@@ -167,7 +149,10 @@
       "ja": "Fitbitの歩数と達成率を表示するUCFitnessのトップ画面",
       "en": "UCFitness landing page showing Fitbit steps and goal progress"
     },
-    "stack": ["Fitbit", "PWA"],
+    "stack": [
+      "Fitbit",
+      "PWA"
+    ],
     "action": {
       "ja": "UCFitnessを開く",
       "en": "Open UCFitness"
@@ -195,7 +180,11 @@
       "ja": "複数の形式を切り替えられるEncode / Decode Toolの画面",
       "en": "Encode / Decode Tool interface with multiple format tabs"
     },
-    "stack": ["React", "Tailwind CSS", "Vite"],
+    "stack": [
+      "React",
+      "Tailwind CSS",
+      "Vite"
+    ],
     "proof": {
       "ja": "テキスト変換とQR画像処理はブラウザー内で完結し、入力テキスト・生成QR・選択画像をアップロードしません。",
       "en": "Text transforms and QR image processing stay in the browser; entered text, generated QR codes, and selected images are not uploaded."
@@ -233,7 +222,12 @@
       "ja": "リクエスト一覧と詳細ペインを備えたNetwork+のDevToolsパネル",
       "en": "Network+ DevTools panel with a request list and detail panes"
     },
-    "stack": ["Manifest V3", "JavaScript", "Edge DevTools", "Jest"],
+    "stack": [
+      "Manifest V3",
+      "JavaScript",
+      "Edge DevTools",
+      "Jest"
+    ],
     "proof": {
       "ja": "コピーとHAR出力は既定で認証情報・Cookie・クエリ値・本文をサニタイズし、完全出力は警告確認後の1回だけ有効です。",
       "en": "Clipboard and HAR exports sanitize credentials, cookies, query values, and bodies by default; full output requires one-time confirmation."
@@ -266,6 +260,10 @@
       "ja": "入力欄と操作ボタンを備えた URLDecoder の画面",
       "en": "URLDecoder interface with input, output, and action controls"
     },
+    "stack": [
+      "HTML",
+      "JavaScript"
+    ],
     "proof": {
       "ja": "入力を encodeURIComponent / decodeURIComponent で処理し、変換結果または失敗理由を出力欄に表示します。",
       "en": "Input is processed with encodeURIComponent or decodeURIComponent, and the output field shows either the result or the failure reason."
@@ -303,6 +301,10 @@
       "ja": "画像を選択し、2 種類のサイズをダウンロードできる ImageResizer の画面",
       "en": "ImageResizer interface with a selected image and two download sizes"
     },
+    "stack": [
+      "HTML",
+      "Canvas"
+    ],
     "proof": {
       "ja": "選択画像をブラウザー内で読み込み、192px と 32px の canvas に描画して PNG ダウンロードリンクを生成します。",
       "en": "The selected image is read in-browser, drawn to 192px and 32px canvases, and exposed as PNG download links."
@@ -318,5 +320,42 @@
       "en": "View source on GitHub"
     },
     "sourceLink": "https://github.com/himiyosh/ImageResizer"
+  },
+  {
+    "slug": "portfolio",
+    "title": {
+      "ja": "Portfolio",
+      "en": "Portfolio"
+    },
+    "kind": {
+      "ja": "個人サイト / オープンソース",
+      "en": "Personal site / Open source"
+    },
+    "description": {
+      "ja": "このポートフォリオのソースコード。日本語と英語の切り替え、レスポンシブ表示、アクセシビリティを備えた静的サイトです。",
+      "en": "The source for this portfolio: a static bilingual site with responsive behavior and accessible interactions."
+    },
+    "image": "assets/portfolio-preview.jpg",
+    "desktopImageAvif": "assets/portfolio-preview-960w.avif",
+    "mobileImageAvif": "assets/portfolio-preview-720w.avif",
+    "imageAlt": {
+      "ja": "himiyosh ポートフォリオのヒーロー画面",
+      "en": "Hero view of the himiyosh portfolio"
+    },
+    "stack": [
+      "HTML",
+      "CSS",
+      "JavaScript"
+    ],
+    "proof": {
+      "ja": "公開成果物は許可リストに限定し、テスト・ワークフロー・内部ドキュメントを配信対象から除外しています。",
+      "en": "The deployed artifact is allowlisted so tests, workflows, and internal docs are excluded from publication."
+    },
+    "proofLink": "https://github.com/himiyosh/Info/blob/a1e0e2bb1e2acefce7e9795b08a4486776ddb3bb/README.md#L25-L33",
+    "action": {
+      "ja": "GitHub でコードを見る",
+      "en": "View code on GitHub"
+    },
+    "link": "https://github.com/himiyosh/Info"
   }
 ]

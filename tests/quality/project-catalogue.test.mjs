@@ -832,8 +832,11 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
     "https://github.com/himiyosh/Info/blob/a1e0e2bb1e2acefce7e9795b08a4486776ddb3bb/README.md";
   assert.throws(() => validateCatalogue(unboundedProofLink), /immutable GitHub blob HTTPS URL/);
 
+  // Anchored by slug, not position: tech-dashboard is only "foreign" to a
+  // project that is not TechDB, and display order is free to change.
   const foreignProofLink = cloneProjects();
-  foreignProofLink[0].proofLink =
+  const foreignTarget = foreignProofLink.find((entry) => entry.slug !== "techdb");
+  foreignTarget.proofLink =
     "https://github.com/himiyosh/tech-dashboard/blob/6fde819e689fb8f19a238b1877484d8db596c59b/.github/workflows/publisher.yml#L71-L89";
   assert.throws(() => validateCatalogue(foreignProofLink), /must match an existing public GitHub repository action/);
 

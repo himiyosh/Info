@@ -1675,7 +1675,7 @@ html:lang(ja) :where(.button-primary, .text-link) {
  * production site's decorative aria-hidden layer — so the texture is
  * painted once rather than per section. Stroke alphas match the
  * prototype's --topo / --topo-hl exactly. */
-.viewport-stage-topo {
+.site-backdrop-topo {
   position: absolute;
   inset: -10%;
   width: 120%;
@@ -1683,17 +1683,17 @@ html:lang(ja) :where(.button-primary, .text-link) {
   opacity: 0.85;
 }
 
-.viewport-stage-topo path {
+.site-backdrop-topo path {
   fill: none;
   stroke: color-mix(in oklab, var(--color-ink) 5.5%, transparent);
   stroke-width: 1.1;
 }
 
-.viewport-stage-topo path.topo-hl {
+.site-backdrop-topo path.topo-hl {
   stroke: color-mix(in oklab, var(--color-accent) 12%, transparent);
 }
 
-.viewport-stage-glow {
+.site-backdrop-glow {
   position: absolute;
   inset-block-start: -10vw;
   inset-inline-end: -14vw;
@@ -1930,7 +1930,7 @@ html:lang(ja) :where(.button-primary, .text-link) {
     opacity: 1 !important;
   }
 
-  .viewport-stage-glow {
+  .site-backdrop-glow {
     animation: none !important;
   }
 
@@ -1966,8 +1966,8 @@ html:lang(ja) :where(.button-primary, .text-link) {
 @media print {
   .theme-toggle,
   .theme-status,
-  .viewport-stage-topo,
-  .viewport-stage-glow {
+  .site-backdrop-topo,
+  .site-backdrop-glow {
     display: none !important;
   }
 
@@ -2453,5 +2453,623 @@ html:lang(ja) .footer-meta a {
 
   .hero-visual {
     transform: none !important;
+  }
+}
+
+/* ============================================================
+ * Prototype composition — the page structure now IS
+ * preview-site/index.html, so these rules carry its layout:
+ * the fixed backdrop, featured cards, the Network+ panel,
+ * the sticky About grid, the centred contact, and the footer.
+ * ============================================================ */
+
+.site-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: clip;
+  background: var(--color-paper);
+  pointer-events: none;
+}
+
+/* Sections breathe on the prototype's rhythm and width. */
+.section-shell {
+  max-width: min(1160px, 92vw);
+  padding-block: clamp(5rem, 12vh, 8.5rem);
+}
+
+.hero {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  padding-block: clamp(7rem, 14vh, 10rem) clamp(3rem, 8vh, 5rem);
+}
+
+.hero-sticky {
+  max-width: min(1160px, 92vw);
+}
+
+/* Works section header: heading left, lede bottom-right. */
+.section-head {
+  margin-block-end: 2.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.section-lede {
+  max-width: 30em;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+/* Featured cards. */
+.featured {
+  margin-block-end: 4rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.4rem;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: clip;
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid
+    color-mix(in oklab, var(--color-rule) 55%, transparent);
+  border-radius: var(--radius-md);
+  transition:
+    transform var(--dur-long) var(--ease-out),
+    border-color var(--dur-long) var(--ease-out),
+    box-shadow var(--dur-long) var(--ease-out);
+}
+
+.card .thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: clip;
+  background: var(--color-paper-3);
+}
+
+.card .thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.9);
+  transition:
+    transform 0.8s var(--ease-out),
+    filter 0.8s var(--ease-out);
+}
+
+.card .thumb .badge {
+  position: absolute;
+  inset-block-start: 1rem;
+  inset-inline-start: 1rem;
+  z-index: var(--z-raised);
+  padding: 0.35rem 0.85rem;
+  color: var(--color-ink);
+  background: color-mix(in oklab, var(--color-paper) 78%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: var(--rule-hair) solid
+    color-mix(in oklab, var(--color-rule) 55%, transparent);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+}
+
+.card .body {
+  flex: 1;
+  padding: 1.6rem 1.6rem 1.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.card h3,
+html:lang(ja) .card h3 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.card .body > p {
+  flex: 1;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.92rem;
+  line-height: 1.85;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.tags span {
+  padding: 0.28rem 0.6rem;
+  color: var(--color-muted);
+  border: var(--rule-hair) solid
+    color-mix(in oklab, var(--color-rule) 45%, transparent);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+}
+
+.card .links {
+  display: flex;
+  gap: 1.4rem;
+  padding-block-start: 0.4rem;
+}
+
+.link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+}
+
+.link::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-end: -3px;
+  width: 0%;
+  height: 1px;
+  background: var(--color-accent);
+  transition: width var(--dur-short) var(--ease-out);
+}
+
+.link .ext {
+  font-size: 0.72rem;
+  translate: 0 -1px;
+}
+
+/* Network+ homage panel. */
+.panel {
+  overflow: clip;
+  background: var(--color-paper-2);
+  border: var(--rule-hair) solid
+    color-mix(in oklab, var(--color-rule) 55%, transparent);
+  border-radius: var(--radius-md);
+}
+
+.panel-head {
+  padding: 0.85rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  color: var(--color-muted);
+  background: var(--color-paper-3);
+  border-block-end: var(--rule-hair) solid
+    color-mix(in oklab, var(--color-rule) 55%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+}
+
+.panel-head .dots {
+  display: flex;
+  gap: 6px;
+}
+
+.panel-head .dots i {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklab, var(--color-rule) 55%, transparent);
+}
+
+.panel-head .dots i:first-child {
+  background: var(--color-accent);
+}
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 5.2rem 1.15fr 0.8fr 1.2fr auto;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.15rem 1.4rem;
+  border-block-start: var(--rule-hair) solid
+    color-mix(in oklab, var(--color-rule) 45%, transparent);
+  transition: background-color var(--dur-micro) var(--ease-out);
+}
+
+.panel .row:first-of-type {
+  border-block-start: 0;
+}
+
+.row .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-ok);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.row .status::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-ok);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--color-ok) 70%, transparent);
+}
+
+.row .status.src {
+  color: var(--color-muted);
+}
+
+.row .status.src::before {
+  background: var(--color-muted);
+  box-shadow: none;
+}
+
+/* The name is the row's one link; its pseudo-element stretches the click
+ * surface across the whole row, exactly like the prototype's row anchor. */
+.row-link {
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  outline-offset: -3px;
+}
+
+.row-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.row .name {
+  display: block;
+  overflow: hidden;
+  font-size: 1.02rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
+.row .type,
+.row .stack {
+  overflow: hidden;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row .type {
+  font-size: 0.74rem;
+}
+
+.row .stack {
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.row .go {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  transition: transform var(--dur-micro) var(--ease-out);
+}
+
+/* Sticky About grid. */
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: start;
+}
+
+.about-copy p {
+  max-width: 36em;
+  color: var(--color-muted);
+}
+
+.about-copy p strong {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+/* Centred contact. */
+.contact {
+  text-align: center;
+}
+
+.contact-panel {
+  display: grid;
+  gap: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+.section-eyebrow--center {
+  justify-content: center;
+}
+
+.contact-lede {
+  max-width: 40em;
+  margin: 0 auto 3rem;
+  color: var(--color-muted);
+}
+
+.contact-links {
+  display: grid;
+  gap: 2.6rem;
+  justify-items: center;
+}
+
+.mail-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+}
+
+.mail {
+  position: relative;
+  display: inline-block;
+  padding-block-end: 0.4rem;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.mail::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  height: 2px;
+  background: color-mix(in oklab, var(--color-rule) 55%, transparent);
+}
+
+.mail::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-end: 0;
+  z-index: var(--z-raised);
+  width: 0%;
+  height: 2px;
+  background: var(--color-accent);
+  transition: width var(--dur-long) var(--ease-out);
+}
+
+.sub-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+}
+
+/* Footer. */
+.foot {
+  max-width: min(1160px, 92vw);
+  margin-inline: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.foot-left,
+.foot-right {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.foot-right {
+  justify-items: end;
+  text-align: end;
+}
+
+.footer-copyright,
+.footer-disclaimer {
+  max-width: 34em;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.footer-statement {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+}
+
+.top-link,
+html:lang(ja) .top-link {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
+/* Hover states, gated away from touch. */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translateY(-6px);
+    border-color: color-mix(in oklab, var(--color-accent) 45%, transparent);
+    box-shadow: 0 26px 60px -30px oklch(6% 0.02 253 / 0.8);
+  }
+
+  .card:hover .thumb img {
+    transform: scale(1.045);
+    filter: saturate(1.05);
+  }
+
+  .link:hover::after {
+    width: 100%;
+  }
+
+  .row:hover,
+  .row:focus-within {
+    background: color-mix(in oklab, var(--color-accent) 5%, transparent);
+  }
+
+  .row:hover .name {
+    color: var(--color-accent);
+  }
+
+  .row:hover .go {
+    transform: translateX(4px);
+  }
+
+  .mail:hover {
+    color: var(--color-accent);
+  }
+
+  .mail:hover::before {
+    width: 100%;
+  }
+
+  .top-link:hover {
+    color: var(--color-accent);
+  }
+}
+
+/* Desktop widths. */
+@media (min-width: 60rem) {
+  .featured {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .card.wide {
+    grid-column: 1 / -1;
+  }
+
+  .card.wide .thumb {
+    aspect-ratio: 21 / 9;
+  }
+
+  .about-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .about-sticky {
+    position: sticky;
+    inset-block-start: 7rem;
+  }
+}
+
+/* The prototype's responsive row collapse. */
+@media (max-width: 60rem) {
+  .row {
+    grid-template-columns: 4.6rem 1fr auto;
+    gap: 0.9rem;
+  }
+
+  .row .type,
+  .row .stack {
+    display: none;
+  }
+}
+
+@media (max-width: 35rem) {
+  .row {
+    grid-template-columns: 1fr auto;
+    padding: 1rem 1.1rem;
+  }
+
+  .row .status {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card .thumb img,
+  .row,
+  .row .go,
+  .row .name,
+  .link::after,
+  .mail::before {
+    transition: none !important;
+  }
+
+  .card:hover {
+    transform: none !important;
+  }
+
+  .card:hover .thumb img {
+    transform: none !important;
+  }
+
+  .row:hover .go {
+    transform: none !important;
+  }
+}
+
+@media print {
+  .site-backdrop,
+  .panel-head .dots {
+    display: none !important;
+  }
+
+  .card,
+  .panel,
+  .row {
+    background: var(--color-print-paper);
+    border-color: var(--color-print-rule);
+    break-inside: avoid;
+  }
+
+  .card .body > p,
+  .row .type,
+  .row .stack,
+  .section-lede,
+  .about-copy p {
+    color: var(--color-print-ink);
+  }
+}
+
+/* Reveal priming: applied by script.js only while motion is allowed and
+ * IntersectionObserver exists, and cleared by a timeout backstop, so the
+ * resting state is always fully visible. */
+@media (prefers-reduced-motion: no-preference) {
+  .js-enabled .is-priming {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+
+  .js-enabled .card,
+  .js-enabled .panel,
+  .js-enabled .tool-group,
+  .js-enabled .about-grid > *,
+  .js-enabled .section-head,
+  .js-enabled .hero-visual,
+  .js-enabled .contact-panel > * {
+    transition:
+      opacity 0.8s var(--ease-out),
+      transform 0.8s var(--ease-out);
   }
 }

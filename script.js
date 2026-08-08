@@ -6,14 +6,6 @@ const CONTACT_COPY_STATUS_KEYS = Object.freeze({
   manualSelected: "contact.copyManualSelected",
   failure: "contact.copyFailure"
 });
-const PROJECT_SHARE_STATUS_KEYS = Object.freeze({
-  shared: "projects.shareSuccess",
-  copied: "projects.copySuccess",
-  failure: "projects.shareFailure"
-});
-const PROJECT_RUNTIME_READY_CLASS = "projects-runtime-ready";
-const PROJECT_REQUEST_TIMEOUT_MS = 8_000;
-
 async function writeTextToClipboard(value) {
   if (
     window.isSecureContext !== true ||
@@ -28,140 +20,6 @@ async function writeTextToClipboard(value) {
 
 async function writeContactEmailToClipboard(address) {
   return writeTextToClipboard(address);
-}
-
-function createStableProjectShareUrl(hash, stableRouteUrl) {
-  if (
-    typeof hash !== "string" ||
-    !/^#project-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(hash)
-  ) {
-    throw new TypeError("Project share URLs require a stable project fragment.");
-  }
-
-  const target = new URL(stableRouteUrl);
-  target.search = "";
-  target.hash = hash;
-  return target.href;
-}
-
-function createProjectShareUrl(slug, stableRouteUrl) {
-  if (
-    typeof slug !== "string" ||
-    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)
-  ) {
-    throw new TypeError("Project share URLs require a valid project slug.");
-  }
-
-  const stableRoute = new URL(stableRouteUrl);
-  stableRoute.search = "";
-  stableRoute.hash = "";
-  stableRoute.pathname = `${stableRoute.pathname.replace(/\/?$/, "/")}share/${slug}/`;
-  return stableRoute.href;
-}
-
-function isShareCancellation(error) {
-  return Boolean(
-    error &&
-      typeof error === "object" &&
-      error.name === "AbortError"
-  );
-}
-
-async function shareProjectLink({ title, url, share, copyText }) {
-  if (typeof share === "function") {
-    try {
-      await share({ title, url });
-      return "shared";
-    } catch (error) {
-      return isShareCancellation(error) ? "cancelled" : "failed";
-    }
-  }
-
-  try {
-    return (await copyText(url)) ? "copied" : "failed";
-  } catch {
-    return "failed";
-  }
-}
-
-function createProjectShareController({
-  title,
-  button,
-  permalink,
-  status,
-  getUrl,
-  share,
-  copyText,
-  translate,
-  schedule
-}) {
-  let operation = 0;
-
-  function reset() {
-    operation += 1;
-    button.dataset.shareState = "idle";
-    button.removeAttribute("aria-busy");
-    status.dataset.state = "idle";
-    status.textContent = "";
-  }
-
-  function announce(key, state, activeOperation) {
-    button.dataset.shareState = state;
-    button.removeAttribute("aria-busy");
-    status.dataset.state = state;
-    status.textContent = "";
-    schedule(() => {
-      if (activeOperation === operation) {
-        status.textContent = translate(key);
-      }
-    });
-  }
-
-  async function activate() {
-    const activeOperation = ++operation;
-    button.dataset.shareState = "loading";
-    button.setAttribute("aria-busy", "true");
-    status.dataset.state = "loading";
-    status.textContent = "";
-
-    const result = await shareProjectLink({
-      title,
-      url: getUrl(),
-      share,
-      copyText
-    });
-    if (activeOperation !== operation) {
-      return;
-    }
-
-    if (result === "cancelled") {
-      button.dataset.shareState = "idle";
-      button.removeAttribute("aria-busy");
-      status.dataset.state = "idle";
-      return;
-    }
-
-    if (result === "shared" || result === "copied") {
-      announce(
-        result === "shared"
-          ? PROJECT_SHARE_STATUS_KEYS.shared
-          : PROJECT_SHARE_STATUS_KEYS.copied,
-        "success",
-        activeOperation
-      );
-      return;
-    }
-
-    permalink.focus({ preventScroll: true });
-    announce(PROJECT_SHARE_STATUS_KEYS.failure, "error", activeOperation);
-  }
-
-  button.addEventListener("click", activate);
-  button.hidden = false;
-  status.hidden = false;
-  reset();
-
-  return { activate, reset };
 }
 
 function selectContactEmailForManualCopy(element, address) {
@@ -273,30 +131,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     return element;
   }
-
   const hamburgerMenu = requireElement("hamburger-menu");
   const navMenu = requireElement("nav-menu");
   const langToggle = requireElement("lang-toggle");
-  const projectsStatus = requireElement("projects-status");
-  const projectsDirectory = requireElement("projects-directory");
-  const projectsContainer = requireElement("projects-container");
-  const projectsFallback = requireElement("projects-fallback");
   const contactEmailLink = requireElement("contact-email-link");
   const contactEmailText = requireElement("contact-email-address");
   const contactCopyButton = requireElement("copy-email-address");
   const contactCopyStatus = requireElement("copy-email-status");
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
   const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const projectPreviewDesktopMedia = "(min-width: 48rem)";
-  const projectPreviewMobileMedia = "(max-width: 47.999rem)";
-  const projectSlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-  const reservedProjectSlugs = new Set([
-    "top",
-    "about",
-    "projects",
-    "contact",
-    "main-content"
-  ]);
   let prefersReducedMotion = motionQuery.matches;
   const supportsIntersectionObserver = "IntersectionObserver" in window;
   const menuFocusableSelector = [
@@ -307,17 +150,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "textarea:not([disabled])",
     "[tabindex]:not([tabindex='-1'])"
   ].join(", ");
-  let projects = null;
-  let projectState = "loading";
-  let projectLoadController = null;
-  let projectLoadSequence = 0;
-  let projectShareControllers = [];
-  const projectStatusKeys = {
-    loading: "projects.loading",
-    ready: "projects.ready",
-    error: "projects.error"
-  };
-  const localizedProjectFields = ["title", "description", "kind", "action", "imageAlt"];
 
   if (
     contactEmailLink.getAttribute("href") !== `mailto:${CONTACT_EMAIL_ADDRESS}` ||
@@ -336,59 +168,6 @@ document.addEventListener("DOMContentLoaded", () => {
     translate: (key) => window.siteI18n.t(key),
     schedule: (callback) => window.setTimeout(callback, 0)
   });
-
-  function requireNonEmptyString(value, fieldName) {
-    if (typeof value !== "string" || value.trim() === "") {
-      throw new TypeError(`${fieldName} must be a non-empty string.`);
-    }
-    return value.trim();
-  }
-
-  function projectTargetId(slug) {
-    return `project-${slug}`;
-  }
-
-  function validateStableSlug(project, index, seenSlugs) {
-    const slug = requireNonEmptyString(project.slug, `Project ${index + 1} field "slug"`);
-    if (project.slug !== slug || !projectSlugPattern.test(slug)) {
-      throw new TypeError(
-        `Project ${index + 1} field "slug" must use lowercase kebab-case.`
-      );
-    }
-    if (reservedProjectSlugs.has(slug)) {
-      throw new TypeError(`Project ${index + 1} field "slug" is reserved: ${slug}`);
-    }
-    if (seenSlugs.has(slug)) {
-      throw new TypeError(`Duplicate project slug detected: ${slug}`);
-    }
-    seenSlugs.add(slug);
-    return slug;
-  }
-
-  function githubRepositoryKey(url) {
-    if (
-      !url ||
-      url.protocol !== "https:" ||
-      url.hostname.toLocaleLowerCase("en-US") !== "github.com" ||
-      url.username ||
-      url.password ||
-      url.port ||
-      url.search ||
-      url.hash
-    ) {
-      return null;
-    }
-
-    const pathSegments = url.pathname.split("/").filter(Boolean);
-    if (pathSegments.length !== 2) {
-      return null;
-    }
-    const repositoryName = pathSegments[1].replace(/\.git$/i, "");
-    if (!pathSegments[0] || !repositoryName) {
-      return null;
-    }
-    return `${pathSegments[0]}/${repositoryName}`.toLocaleLowerCase("en-US");
-  }
 
   function updateNavigationLabel() {
     const labelKey =
@@ -764,181 +543,55 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // --- Motion: one shared viewport-scene lifecycle -------------------
-  // A single passive/rAF-batched listener owns progress, active-scene
-  // state, hero depth, project-copy focus, and media depth. CSS scroll
-  // timelines can still enhance the progress indicator, but this shared
-  // lifecycle remains required for section-wide scene coordination.
-  const progressFill = document.querySelector(".scroll-progress-fill");
-  const heroSection = document.getElementById("top");
-  const heroSticky = document.querySelector(".hero-sticky");
-  const rootStyles = window.getComputedStyle(document.documentElement);
-  const readPixelToken = (tokenName, fallback) => {
-    const value = Number.parseFloat(rootStyles.getPropertyValue(tokenName));
-    return Number.isFinite(value) ? value : fallback;
-  };
-  const parallaxDistance = readPixelToken("--parallax-distance", 5);
-  const heroDepthDistance = readPixelToken("--depth-hero-max", 5);
-  const projectDepthDistance = readPixelToken("--depth-project-max", 14);
-  let scrollMotionFrame = null;
-  let scrollMotionArmed = false;
-  let projectRows = [];
-  let scrollSceneElements = [];
-  let activeSceneElement = null;
+  // --- Motion: bounded, one-time section reveal ------------------------
+  // The prototype's .reveal treatment, hardened for production: the
+  // resting state is fully visible; priming only happens when JS is
+  // running, motion is allowed, and IntersectionObserver exists; and a
+  // timeout backstop clears priming even if an observer never fires, so
+  // content can never be left invisible.
+  const revealTargets = [
+    ...document.querySelectorAll(
+      ".card, .panel, .tool-group, .about-grid > *, .section-head, .hero-visual, .contact-panel > *"
+    )
+  ];
+  let revealObserver = null;
+  let revealBackstopTimer = null;
 
-  function clamp(value, minimum = 0, maximum = 1) {
-    return Math.min(maximum, Math.max(minimum, value));
+  function shouldAnimateReveal() {
+    return !prefersReducedMotion && supportsIntersectionObserver;
   }
 
-  function refreshScrollScenes() {
-    scrollSceneElements = [
-      ...document.querySelectorAll(
-        "main > section[data-scene], .project-row[data-scene], .site-footer[data-scene]"
-      )
-    ];
-  }
-
-  function setActiveScene(nextSceneElement) {
-    if (!nextSceneElement || nextSceneElement === activeSceneElement) {
-      return;
-    }
-
-    activeSceneElement?.classList.remove("is-active-scene");
-    activeSceneElement = nextSceneElement;
-    activeSceneElement.classList.add("is-active-scene");
-    document.body.dataset.scene = activeSceneElement.dataset.scene;
-  }
-
-  function updateActiveScene(viewportHeight) {
-    const documentBottom =
-      document.documentElement.scrollHeight - (window.scrollY + viewportHeight);
-    if (documentBottom <= 2) {
-      setActiveScene(scrollSceneElements.at(-1));
-      return;
-    }
-
-    const viewportAnchor = viewportHeight * 0.5;
-    let nextSceneElement = null;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-
-    scrollSceneElements.forEach((sceneElement) => {
-      const rect = sceneElement.getBoundingClientRect();
-      const containsAnchor = rect.top <= viewportAnchor && rect.bottom >= viewportAnchor;
-      const distance = containsAnchor
-        ? 0
-        : Math.min(Math.abs(rect.top - viewportAnchor), Math.abs(rect.bottom - viewportAnchor));
-
-      // Nested project chapters intentionally win ties with their parent
-      // projects section because they appear later in DOM order.
-      if (distance <= nearestDistance) {
-        nearestDistance = distance;
-        nextSceneElement = sceneElement;
-      }
-    });
-
-    setActiveScene(nextSceneElement);
-  }
-
-  function updateScrollMotion() {
-    scrollMotionFrame = null;
-    if (!scrollMotionArmed || prefersReducedMotion) {
-      return;
-    }
-
-    const scrollTop = window.scrollY || document.documentElement.scrollTop;
-    const scrollRange = document.documentElement.scrollHeight - window.innerHeight;
-    const progress = scrollRange > 0 ? Math.min(1, Math.max(0, scrollTop / scrollRange)) : 0;
-    progressFill?.style.setProperty("--scroll-progress", progress.toFixed(4));
-
-    const viewportHeight = window.innerHeight;
-    const viewportCenter = viewportHeight / 2;
-    const sceneMotionEnabled = !mobileNavigation.matches;
-    updateActiveScene(viewportHeight);
-
-    if (heroSection && heroSticky) {
-      const heroRect = heroSection.getBoundingClientRect();
-      const heroTravel = Math.max(1, heroRect.height - viewportHeight);
-      const heroProgress = sceneMotionEnabled ? clamp(-heroRect.top / heroTravel) : 0;
-      heroSticky.style.setProperty("--hero-opacity", (1 - heroProgress * 0.38).toFixed(4));
-      heroSticky.style.setProperty(
-        "--hero-depth",
-        `${(heroProgress * heroDepthDistance * -1).toFixed(2)}px`
-      );
-      heroSticky.style.setProperty("--hero-scale", (1 - heroProgress * 0.025).toFixed(4));
-    }
-
-    projectRows.forEach((projectRow) => {
-      const rect = projectRow.getBoundingClientRect();
-      const elementCenter = rect.top + rect.height / 2;
-      const offsetRatio = clamp(
-        (elementCenter - viewportCenter) / Math.max(1, viewportHeight * 0.75),
-        -1,
-        1
-      );
-      const focus = sceneMotionEnabled ? 1 - Math.abs(offsetRatio) : 1;
-      const mediaTranslation = clamp(
-        offsetRatio * parallaxDistance * -1,
-        -parallaxDistance,
-        parallaxDistance
-      );
-      projectRow.style.setProperty("--project-opacity", (0.92 + focus * 0.08).toFixed(4));
-      projectRow.style.setProperty(
-        "--project-depth",
-        `${((1 - focus) * projectDepthDistance).toFixed(2)}px`
-      );
-      projectRow.style.setProperty("--media-depth", (0.98 + focus * 0.02).toFixed(4));
-      projectRow.style.setProperty(
-        "--media-translate-y",
-        `${(sceneMotionEnabled ? mediaTranslation : 0).toFixed(2)}px`
-      );
+  function disarmReveal() {
+    revealObserver?.disconnect();
+    revealObserver = null;
+    window.clearTimeout(revealBackstopTimer);
+    revealBackstopTimer = null;
+    revealTargets.forEach((element) => {
+      element.classList.remove("is-priming");
     });
   }
 
-  function requestScrollMotionUpdate() {
-    if (scrollMotionArmed && scrollMotionFrame === null) {
-      scrollMotionFrame = window.requestAnimationFrame(updateScrollMotion);
-    }
-  }
-
-  function armScrollMotion() {
-    if (scrollMotionArmed) {
+  function armReveal() {
+    if (!shouldAnimateReveal() || revealObserver !== null) {
       return;
     }
-    scrollMotionArmed = true;
-    refreshScrollScenes();
-    window.addEventListener("scroll", requestScrollMotionUpdate, { passive: true });
-    window.addEventListener("resize", requestScrollMotionUpdate, { passive: true });
-    requestScrollMotionUpdate();
-  }
-
-  function clearScrollMotionStyles() {
-    progressFill?.style.removeProperty("--scroll-progress");
-    heroSticky?.style.removeProperty("--hero-opacity");
-    heroSticky?.style.removeProperty("--hero-depth");
-    heroSticky?.style.removeProperty("--hero-scale");
-    projectRows.forEach((projectRow) => {
-      projectRow.style.removeProperty("--project-opacity");
-      projectRow.style.removeProperty("--project-depth");
-      projectRow.style.removeProperty("--media-depth");
-      projectRow.style.removeProperty("--media-translate-y");
-      projectRow.classList.remove("is-active-scene");
+    revealTargets.forEach((element) => {
+      element.classList.add("is-priming");
     });
-    activeSceneElement?.classList.remove("is-active-scene");
-    activeSceneElement = null;
-    document.body.removeAttribute("data-scene");
-  }
-
-  function disarmScrollMotion() {
-    if (scrollMotionArmed) {
-      window.removeEventListener("scroll", requestScrollMotionUpdate);
-      window.removeEventListener("resize", requestScrollMotionUpdate);
-    }
-    scrollMotionArmed = false;
-    if (scrollMotionFrame !== null) {
-      window.cancelAnimationFrame(scrollMotionFrame);
-      scrollMotionFrame = null;
-    }
-    clearScrollMotionStyles();
+    revealObserver = new IntersectionObserver(
+      (entries, observer) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
+          entry.target.classList.remove("is-priming");
+          observer.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.14 }
+    );
+    revealTargets.forEach((element) => revealObserver.observe(element));
+    revealBackstopTimer = window.setTimeout(disarmReveal, 2500);
   }
 
   // --- Motion: nav compact morph after leaving the hero ---------------
@@ -948,6 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // signal, not spatial motion; the reduced-motion stylesheet keeps the
   // wordmark-mark's rotate(12deg) static and transition-free in both
   // states, so toggling is-compact never produces a visible rotation.
+  const heroSection = document.getElementById("top");
   const siteHeader = document.getElementById("header");
   if (supportsIntersectionObserver && heroSection && siteHeader) {
     const heroObserver = new IntersectionObserver(
@@ -958,970 +612,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     heroObserver.observe(heroSection);
   }
-
-  function localizedValue(value) {
-    if (typeof value === "string") {
-      return value;
-    }
-    if (!value || typeof value !== "object") {
-      throw new TypeError("Localized project values must be strings or objects.");
-    }
-    return value[window.siteI18n.language] ?? value.ja ?? value.en;
-  }
-
-  function validateLocalizedField(project, index, fieldName) {
-    const localized = project[fieldName];
-    if (!localized || typeof localized !== "object" || Array.isArray(localized)) {
-      throw new TypeError(`Project ${index + 1} field "${fieldName}" must be a localized object.`);
-    }
-    for (const language of ["ja", "en"]) {
-      requireNonEmptyString(
-        localized[language],
-        `Project ${index + 1} field "${fieldName}.${language}"`
-      );
-    }
-  }
-
-  function validateLocalProjectAsset(project, index, fieldName, expectedExtension, seenAssets) {
-    const assetPath = requireNonEmptyString(
-      project[fieldName],
-      `Project ${index + 1} field "${fieldName}"`
-    );
-    const assetUrl = new URL(window.siteI18n.resolveSitePath(assetPath), window.location.href);
-    const assetsUrl = new URL(
-      window.siteI18n.resolveSitePath("assets/"),
-      window.location.href
-    );
-    if (
-      assetUrl.origin !== window.location.origin ||
-      !assetUrl.pathname.startsWith(assetsUrl.pathname) ||
-      assetUrl.search ||
-      assetUrl.hash
-    ) {
-      throw new TypeError(`Project ${index + 1} field "${fieldName}" must be a local assets path.`);
-    }
-    if (!assetUrl.pathname.toLocaleLowerCase("en-US").endsWith(expectedExtension)) {
-      throw new TypeError(
-        `Project ${index + 1} field "${fieldName}" must use ${expectedExtension}.`
-      );
-    }
-
-    const normalizedAsset = assetUrl.pathname;
-    if (seenAssets.has(normalizedAsset)) {
-      throw new TypeError(`Duplicate project asset detected: ${assetPath}`);
-    }
-    seenAssets.add(normalizedAsset);
-  }
-
-  function validateProject(
-    project,
-    index,
-    seenSlugs,
-    seenLinks,
-    seenAssets,
-    seenProofTexts
-  ) {
-    if (!project || typeof project !== "object") {
-      throw new TypeError(`Project ${index + 1} must be an object.`);
-    }
-
-    validateStableSlug(project, index, seenSlugs);
-
-    for (const fieldName of localizedProjectFields) {
-      validateLocalizedField(project, index, fieldName);
-    }
-
-    const projectLink = requireNonEmptyString(project.link, `Project ${index + 1} field "link"`);
-    const url = new URL(projectLink, window.location.href);
-    if (!["http:", "https:"].includes(url.protocol)) {
-      throw new TypeError(`Project ${index + 1} has an unsupported link protocol.`);
-    }
-    const normalizedLink = url.toString();
-    if (seenLinks.has(normalizedLink)) {
-      throw new TypeError(`Duplicate project link detected: ${normalizedLink}`);
-    }
-    seenLinks.add(normalizedLink);
-
-    const hasSourceAction = Object.hasOwn(project, "sourceAction");
-    const hasSourceLink = Object.hasOwn(project, "sourceLink");
-    let sourceUrl = null;
-    if (hasSourceAction !== hasSourceLink) {
-      throw new TypeError(
-        `Project ${index + 1} fields "sourceAction" and "sourceLink" must be provided together.`
-      );
-    }
-    if (hasSourceAction) {
-      validateLocalizedField(project, index, "sourceAction");
-      for (const language of ["ja", "en"]) {
-        const primaryAction = project.action[language].trim().toLocaleLowerCase(language);
-        const sourceAction = project.sourceAction[language]
-          .trim()
-          .toLocaleLowerCase(language);
-        if (sourceAction === primaryAction) {
-          throw new TypeError(
-            `Project ${index + 1} field "sourceAction.${language}" must differ from "action.${language}".`
-          );
-        }
-      }
-
-      const sourceLink = requireNonEmptyString(
-        project.sourceLink,
-        `Project ${index + 1} field "sourceLink"`
-      );
-      try {
-        sourceUrl = new URL(sourceLink);
-      } catch {
-        throw new TypeError(
-          `Project ${index + 1} field "sourceLink" must be an absolute HTTPS URL.`
-        );
-      }
-      if (sourceUrl.protocol !== "https:") {
-        throw new TypeError(
-          `Project ${index + 1} field "sourceLink" must be an absolute HTTPS URL.`
-        );
-      }
-      const normalizedSourceLink = sourceUrl.toString();
-      if (normalizedSourceLink === normalizedLink) {
-        throw new TypeError(`Project ${index + 1} source link must differ from its primary link.`);
-      }
-      if (seenLinks.has(normalizedSourceLink)) {
-        throw new TypeError(`Duplicate project link detected: ${normalizedSourceLink}`);
-      }
-      seenLinks.add(normalizedSourceLink);
-    }
-
-    const hasProof = Object.hasOwn(project, "proof");
-    const hasProofLink = Object.hasOwn(project, "proofLink");
-    if (hasProof !== hasProofLink) {
-      throw new TypeError(
-        `Project ${index + 1} fields "proof" and "proofLink" must be provided together.`
-      );
-    }
-    if (hasProof) {
-      validateLocalizedField(project, index, "proof");
-      const comparisonFields = [
-        ...localizedProjectFields,
-        ...(hasSourceAction ? ["sourceAction"] : [])
-      ];
-      for (const language of ["ja", "en"]) {
-        const proofText = project.proof[language].trim();
-        const normalizedProofText = proofText.toLocaleLowerCase(language);
-        const duplicateField = comparisonFields.find(
-          (fieldName) =>
-            project[fieldName][language].trim().toLocaleLowerCase(language) ===
-            normalizedProofText
-        );
-        const duplicatesStack =
-          Array.isArray(project.stack) &&
-          project.stack.some(
-            (stackItem) =>
-              typeof stackItem === "string" &&
-              stackItem.trim().toLocaleLowerCase(language) === normalizedProofText
-          );
-        if (duplicateField || duplicatesStack) {
-          throw new TypeError(
-            `Project ${index + 1} field "proof.${language}" must add information beyond existing card copy.`
-          );
-        }
-
-        const proofTextKey = `${language}:${normalizedProofText}`;
-        if (seenProofTexts.has(proofTextKey)) {
-          throw new TypeError(`Duplicate project proof text detected for language "${language}".`);
-        }
-        seenProofTexts.add(proofTextKey);
-      }
-
-      const proofLink = requireNonEmptyString(
-        project.proofLink,
-        `Project ${index + 1} field "proofLink"`
-      );
-      let proofUrl;
-      try {
-        proofUrl = new URL(proofLink);
-      } catch {
-        throw new TypeError(
-          `Project ${index + 1} field "proofLink" must be an immutable GitHub blob HTTPS URL with a line anchor.`
-        );
-      }
-
-      const blobMatch = proofUrl.pathname.match(
-        /^\/([^/]+)\/([^/]+)\/blob\/([0-9a-f]{40})\/.+$/i
-      );
-      const lineMatch = proofUrl.hash.match(/^#L(\d+)(?:-L(\d+))?$/);
-      if (
-        proofUrl.protocol !== "https:" ||
-        proofUrl.hostname.toLocaleLowerCase("en-US") !== "github.com" ||
-        proofUrl.username ||
-        proofUrl.password ||
-        proofUrl.port ||
-        proofUrl.search ||
-        !blobMatch ||
-        !lineMatch
-      ) {
-        throw new TypeError(
-          `Project ${index + 1} field "proofLink" must be an immutable GitHub blob HTTPS URL with a line anchor.`
-        );
-      }
-      if (lineMatch[2] && Number(lineMatch[2]) < Number(lineMatch[1])) {
-        throw new TypeError(`Project ${index + 1} field "proofLink" has an invalid line range.`);
-      }
-
-      const proofRepositoryKey = `${blobMatch[1]}/${blobMatch[2].replace(/\.git$/i, "")}`
-        .toLocaleLowerCase("en-US");
-      const publicRepositoryKeys = new Set(
-        [githubRepositoryKey(url), githubRepositoryKey(sourceUrl)].filter(Boolean)
-      );
-      if (!publicRepositoryKeys.has(proofRepositoryKey)) {
-        throw new TypeError(
-          `Project ${index + 1} field "proofLink" must match an existing public GitHub repository action.`
-        );
-      }
-
-      const normalizedProofLink = proofUrl.toString();
-      if (seenLinks.has(normalizedProofLink)) {
-        throw new TypeError(`Duplicate project proof link detected: ${normalizedProofLink}`);
-      }
-      seenLinks.add(normalizedProofLink);
-    }
-
-    validateLocalProjectAsset(project, index, "image", ".jpg", seenAssets);
-    validateLocalProjectAsset(project, index, "desktopImageAvif", ".avif", seenAssets);
-    validateLocalProjectAsset(project, index, "mobileImageAvif", ".avif", seenAssets);
-
-    if (Object.hasOwn(project, "stack")) {
-      if (!Array.isArray(project.stack) || project.stack.length === 0) {
-        throw new TypeError(`Project ${index + 1} stack must be a non-empty array when present.`);
-      }
-      const normalizedStack = new Set();
-      project.stack.forEach((stackItem, stackIndex) => {
-        const stackValue = requireNonEmptyString(
-          stackItem,
-          `Project ${index + 1} stack item ${stackIndex + 1}`
-        );
-        const normalizedValue = stackValue.toLocaleLowerCase("en-US");
-        if (normalizedStack.has(normalizedValue)) {
-          throw new TypeError(`Project ${index + 1} has duplicate stack entry: ${stackValue}`);
-        }
-        normalizedStack.add(normalizedValue);
-      });
-    }
-  }
-
-  function createProjectAction(action, href, variant) {
-    const link = document.createElement("a");
-    const linkText = document.createElement("span");
-    const linkAnnouncement = document.createElement("span");
-    const linkArrow = document.createElement("span");
-
-    link.className = `project-link project-link--${variant}`;
-    link.href = href;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    linkText.textContent = localizedValue(action);
-    linkAnnouncement.className = "sr-only";
-    linkAnnouncement.textContent = window.siteI18n.t("accessibility.opensInNewTab");
-    linkArrow.className = "project-link-arrow";
-    linkArrow.setAttribute("aria-hidden", "true");
-    linkArrow.textContent = "\u2197";
-    link.append(linkText, linkAnnouncement, linkArrow);
-
-    return link;
-  }
-
-  // --- Motion: bounded, one-time project-row reveal -------------------
-  // Rows are fully visible in the base stylesheet with zero JS
-  // dependency. is-priming supplies the existing bounded transform cue;
-  // modern.css keeps project text fully opaque, and a hard timeout clears
-  // any stale priming state. The gate is re-evaluated on every render (not
-  // captured once), so a runtime prefers-reduced-motion change takes
-  // effect for the next render (e.g. a language toggle).
-  function shouldAnimateProjectReveal() {
-    return !prefersReducedMotion && supportsIntersectionObserver;
-  }
-
-  const projectRevealObserver = supportsIntersectionObserver
-    ? new IntersectionObserver(
-        (entries, observer) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.remove("is-priming");
-              observer.unobserve(entry.target);
-            }
-          });
-        },
-        { rootMargin: "0px 0px -10% 0px", threshold: 0.1 }
-      )
-    : null;
-
-  function disarmProjectReveal() {
-    projectRevealObserver?.disconnect();
-    document
-      .querySelectorAll(".project-row.is-priming")
-      .forEach((row) => row.classList.remove("is-priming"));
-  }
-
-  function projectFragmentTarget(hash) {
-    if (typeof hash !== "string" || !hash.startsWith("#")) {
-      return null;
-    }
-
-    let targetId;
-    try {
-      targetId = decodeURIComponent(hash.slice(1));
-    } catch {
-      return null;
-    }
-    if (!/^project-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(targetId)) {
-      return null;
-    }
-
-    const target = document.getElementById(targetId);
-    if (!target) {
-      return null;
-    }
-
-    const isEnhancedTarget =
-      projectsContainer.contains(target) && target.classList.contains("project-row");
-    const isVisibleFallbackTarget =
-      projectsFallback.classList.contains("is-visible") &&
-      projectsFallback.contains(target) &&
-      target.classList.contains("projects-fallback-card");
-    return isEnhancedTarget || isVisibleFallbackTarget ? target : null;
-  }
-
-  function focusProjectFragment(hash = window.location.hash) {
-    const target = projectFragmentTarget(hash);
-    if (!target) {
-      return false;
-    }
-
-    if (target.classList.contains("project-row")) {
-      target.classList.remove("is-priming");
-      projectRevealObserver?.unobserve(target);
-    }
-    target.focus({ preventScroll: true });
-    target.scrollIntoView({
-      behavior: prefersReducedMotion ? "auto" : "smooth",
-      block: "start"
-    });
-    return true;
-  }
-
-  let pendingProjectFragmentHash = null;
-  let projectFragmentFocusQueued = false;
-
-  function scheduleProjectFragmentFocus(hash = window.location.hash) {
-    pendingProjectFragmentHash = hash;
-    if (projectFragmentFocusQueued) {
-      return;
-    }
-
-    projectFragmentFocusQueued = true;
-    const commitFocus = () => {
-      const scheduledHash = pendingProjectFragmentHash;
-      pendingProjectFragmentHash = null;
-      projectFragmentFocusQueued = false;
-      focusProjectFragment(scheduledHash);
-    };
-    if (typeof window.requestAnimationFrame !== "function") {
-      queueMicrotask(commitFocus);
-      return;
-    }
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(commitFocus);
-    });
-  }
-
-  function handleProjectPermalinkClick(event) {
-    const permalink = event.target?.closest?.(
-      "a.project-permalink, a.project-directory-link, a.projects-fallback-permalink"
-    );
-    if (
-      !permalink ||
-      event.defaultPrevented ||
-      event.button !== 0 ||
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey
-    ) {
-      return;
-    }
-
-    const hash = permalink.getAttribute("href");
-    if (!hash || !projectFragmentTarget(hash)) {
-      return;
-    }
-
-    event.preventDefault();
-    if (window.location.hash !== hash) {
-      window.history.pushState(window.history.state, "", hash);
-    }
-    window.siteI18n.rememberInHistory();
-    scheduleProjectFragmentFocus(hash);
-  }
-
-  function handleProjectHashChange() {
-    window.siteI18n.rememberInHistory();
-    scheduleProjectFragmentFocus();
-  }
-
-  function handleProjectHistoryChange(event) {
-    if (!window.siteI18n.syncFromHistory(event.state)) {
-      scheduleProjectFragmentFocus();
-    }
-  }
-
-  function captureProjectCatalogueFocus() {
-    const focusedElement = document.activeElement;
-    if (
-      !focusedElement ||
-      focusedElement === document.body ||
-      focusedElement === document.documentElement
-    ) {
-      return { kind: "neutral" };
-    }
-    const isFallbackFocus = projectsFallback.contains(focusedElement);
-    const isDynamicFocus = projectsContainer.contains(focusedElement);
-    const isDirectoryFocus = projectsDirectory.contains(focusedElement);
-    if (!isFallbackFocus && !isDynamicFocus && !isDirectoryFocus) {
-      return { kind: "outside" };
-    }
-
-    if (isDirectoryFocus) {
-      const directoryLink = focusedElement.closest(".project-directory-link");
-      const projectId = directoryLink?.getAttribute("href")?.slice(1);
-      if (!/^project-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(projectId ?? "")) {
-        return { kind: "outside" };
-      }
-      return {
-        kind: "catalogue",
-        projectId,
-        scrollX: window.scrollX,
-        scrollY: window.scrollY,
-        source: "directory",
-        targetSelector: null,
-        wasProjectTarget: false
-      };
-    }
-
-    const projectCard = focusedElement.closest(
-      isFallbackFocus ? ".projects-fallback-card" : ".project-row"
-    );
-    if (!projectCard) {
-      return { kind: "outside" };
-    }
-
-    let targetSelector = null;
-    if (focusedElement.closest(".project-permalink")) {
-      targetSelector = ".project-permalink";
-    } else if (focusedElement.closest(".project-share-button")) {
-      targetSelector = ".project-share-button";
-    } else {
-      const projectLink = focusedElement.closest(".project-link");
-      const variant = ["primary", "secondary", "evidence"].find((name) =>
-        projectLink?.classList.contains(`project-link--${name}`)
-      );
-      if (variant) {
-        targetSelector = `.project-link--${variant}`;
-      }
-    }
-
-    return {
-      kind: "catalogue",
-      projectId: projectCard.id,
-      scrollX: window.scrollX,
-      scrollY: window.scrollY,
-      source: isFallbackFocus ? "fallback" : "dynamic",
-      targetSelector,
-      wasProjectTarget: focusedElement === projectCard
-    };
-  }
-
-  function restoreProjectCatalogueFocus(focusHandoff) {
-    if (focusHandoff.kind !== "catalogue") {
-      return false;
-    }
-
-    let target;
-    if (focusHandoff.source === "directory") {
-      target = projectsDirectory.querySelector(
-        `.project-directory-link[href="#${focusHandoff.projectId}"]`
-      );
-      if (!target) {
-        return false;
-      }
-    } else {
-      const projectCard = document.getElementById(focusHandoff.projectId);
-      if (
-        !projectCard ||
-        !projectsContainer.contains(projectCard) ||
-        !projectCard.classList.contains("project-row")
-      ) {
-        return false;
-      }
-
-      projectCard.classList.remove("is-priming");
-      projectRevealObserver?.unobserve(projectCard);
-      target = focusHandoff.targetSelector
-        ? projectCard.querySelector(focusHandoff.targetSelector) ?? projectCard
-        : projectCard;
-    }
-
-    target.focus({ preventScroll: true });
-    const restoreViewport = () => {
-      const previousScrollBehavior = document.documentElement.style.scrollBehavior;
-      document.documentElement.style.scrollBehavior = "auto";
-      window.scrollTo(focusHandoff.scrollX, focusHandoff.scrollY);
-      document.documentElement.style.scrollBehavior = previousScrollBehavior;
-    };
-    restoreViewport();
-    if (typeof window.requestAnimationFrame === "function") {
-      window.requestAnimationFrame(() => {
-        window.setTimeout(() => {
-          if (document.activeElement === target) {
-            restoreViewport();
-          }
-        }, 0);
-      });
-    }
-    return true;
-  }
-
-  function shouldScheduleProjectFragmentFocusAfterRender(focusHandoff) {
-    return (
-      focusHandoff.kind === "neutral" ||
-      (focusHandoff.kind === "catalogue" && focusHandoff.wasProjectTarget)
-    );
-  }
-
-  function createProjectRetryFocusHandoff(event) {
-    if (
-      event.detail !== 0 ||
-      event.currentTarget !== document.activeElement ||
-      !projectsContainer.contains(event.currentTarget)
-    ) {
-      return null;
-    }
-
-    return { pendingTarget: projectsStatus };
-  }
-
-  function focusProjectRetryPendingState(focusHandoff) {
-    if (!focusHandoff) {
-      return false;
-    }
-
-    focusHandoff.pendingTarget.setAttribute("tabindex", "-1");
-    focusHandoff.pendingTarget.focus({ preventScroll: true });
-    return document.activeElement === focusHandoff.pendingTarget;
-  }
-
-  function completeProjectRetryFocus(focusHandoff, target) {
-    if (!focusHandoff) {
-      return false;
-    }
-
-    const ownsFocus = document.activeElement === focusHandoff.pendingTarget;
-    focusHandoff.pendingTarget.removeAttribute("tabindex");
-    if (!ownsFocus || !target) {
-      return false;
-    }
-
-    if (target.classList.contains("project-row")) {
-      target.classList.remove("is-priming");
-      projectRevealObserver?.unobserve(target);
-    }
-    target.focus({ preventScroll: true });
-    return document.activeElement === target;
-  }
-
-  function updateProjectStatus(state) {
-    const translationKey = projectStatusKeys[state];
-    if (!translationKey) {
-      throw new RangeError(`Unsupported project state: ${state}`);
-    }
-
-    const isReady = state === "ready";
-    const hasFallbackOwnership = !isReady;
-    const translatedStatus = window.siteI18n.t(translationKey);
-    const statusMessage = isReady
-      ? translatedStatus.replace("{count}", String(projects.length))
-      : translatedStatus;
-
-    projectState = state;
-    projectsContainer.setAttribute("aria-busy", String(state === "loading"));
-    projectsContainer.classList.toggle("projects-list", isReady);
-    projectsStatus.classList.toggle("projects-list", !isReady);
-    projectsStatus.classList.toggle("sr-only", isReady);
-    projectsStatus.hidden = false;
-    projectsFallback.classList.toggle("is-visible", hasFallbackOwnership);
-    projectsFallback.setAttribute("aria-hidden", String(!hasFallbackOwnership));
-    projectsStatus.dataset.i18n = translationKey;
-
-    if (projectsStatus.textContent !== statusMessage) {
-      projectsStatus.textContent = statusMessage;
-    }
-  }
-
-  function clearProjectDirectory() {
-    projectsDirectory.hidden = true;
-    projectsDirectory.replaceChildren();
-  }
-
-  function resetProjectShareControllers({ discard = false } = {}) {
-    projectShareControllers.forEach((controller) => controller.reset());
-    if (discard) {
-      projectShareControllers = [];
-    }
-  }
-
-  function renderProjectDirectory() {
-    if (!projects) {
-      throw new Error("Project directory cannot render before project data is loaded.");
-    }
-
-    const list = document.createElement("ul");
-    list.className = "project-directory-list";
-    projects.forEach((project) => {
-      const item = document.createElement("li");
-      const link = document.createElement("a");
-      const title = document.createElement("span");
-      const kind = document.createElement("span");
-
-      link.className = "project-directory-link";
-      link.setAttribute("href", `#${projectTargetId(project.slug)}`);
-      title.className = "project-directory-title";
-      title.textContent = localizedValue(project.title);
-      kind.className = "project-directory-kind";
-      kind.textContent = localizedValue(project.kind);
-      link.append(title, kind);
-      item.append(link);
-      list.append(item);
-    });
-
-    projectsDirectory.setAttribute(
-      "aria-label",
-      window.siteI18n.t("projects.directoryLabel")
-    );
-    projectsDirectory.replaceChildren(list);
-    projectsDirectory.hidden = false;
-  }
-
-  function renderProjects(retryFocusHandoff = null) {
-    if (!projects) {
-      return;
-    }
-
-    const projectFocusHandoff = captureProjectCatalogueFocus();
-    resetProjectShareControllers({ discard: true });
-    projectRevealObserver?.disconnect();
-    const animateReveal = shouldAnimateProjectReveal();
-
-    const fragment = document.createDocumentFragment();
-    projects.forEach((project, index) => {
-      const article = document.createElement("article");
-      const media = document.createElement("div");
-      const picture = document.createElement("picture");
-      const desktopSource = document.createElement("source");
-      const mobileSource = document.createElement("source");
-      const image = document.createElement("img");
-      const content = document.createElement("div");
-      const headingGroup = document.createElement("div");
-      const headingLine = document.createElement("div");
-      const headingActions = document.createElement("div");
-      const title = document.createElement("h3");
-      const permalink = document.createElement("a");
-      const shareButton = document.createElement("button");
-      const shareStatus = document.createElement("p");
-      const kind = document.createElement("p");
-      const details = document.createElement("div");
-      const description = document.createElement("p");
-      const actions = document.createElement("div");
-
-      article.className = "project-row";
-      article.id = projectTargetId(project.slug);
-      article.tabIndex = -1;
-      article.dataset.scene = `project-${index + 1}`;
-      article.style.setProperty("--row-index", String(index));
-      if (animateReveal) {
-        article.classList.add("is-priming");
-      }
-      media.className = "project-media";
-      desktopSource.type = "image/avif";
-      desktopSource.media = projectPreviewDesktopMedia;
-      desktopSource.srcset = `${window.siteI18n.resolveSitePath(project.desktopImageAvif)} 960w`;
-      desktopSource.sizes = "60vw";
-      mobileSource.type = "image/avif";
-      mobileSource.media = projectPreviewMobileMedia;
-      mobileSource.srcset = `${window.siteI18n.resolveSitePath(project.mobileImageAvif)} 720w`;
-      mobileSource.sizes = "100vw";
-      image.alt = localizedValue(project.imageAlt);
-      image.width = 960;
-      image.height = 540;
-      image.loading = "lazy";
-      image.decoding = "async";
-      picture.append(desktopSource, mobileSource, image);
-      media.append(picture);
-      image.src = window.siteI18n.resolveSitePath(project.image);
-      content.className = "project-content";
-      headingGroup.className = "project-heading";
-      headingLine.className = "project-heading-line";
-      headingActions.className = "project-heading-actions";
-      const localizedTitle = localizedValue(project.title);
-      title.id = `${article.id}-title`;
-      title.textContent = localizedTitle;
-      permalink.className = "project-permalink";
-      permalink.setAttribute("href", `#${article.id}`);
-      permalink.setAttribute(
-        "aria-label",
-        window.siteI18n.t("projects.permalinkLabel").replace("{title}", localizedTitle)
-      );
-      permalink.textContent = window.siteI18n.t("projects.permalinkAction");
-      shareButton.className = "project-share-button";
-      shareButton.type = "button";
-      shareButton.hidden = true;
-      shareButton.setAttribute(
-        "aria-label",
-        window.siteI18n.t("projects.shareLabel").replace("{title}", localizedTitle)
-      );
-      shareButton.textContent = window.siteI18n.t("projects.shareAction");
-      shareStatus.id = `${article.id}-share-status`;
-      shareStatus.className = "project-share-status";
-      shareStatus.setAttribute("role", "status");
-      shareStatus.setAttribute("aria-live", "polite");
-      shareStatus.setAttribute("aria-atomic", "true");
-      shareStatus.hidden = true;
-      shareButton.setAttribute("aria-describedby", shareStatus.id);
-      kind.className = "project-kind";
-      kind.textContent = localizedValue(project.kind);
-      description.className = "project-description";
-      description.textContent = localizedValue(project.description);
-
-      headingActions.append(permalink, shareButton);
-      headingLine.append(title, headingActions);
-      headingGroup.append(headingLine, shareStatus, kind);
-      details.append(description);
-
-      projectShareControllers.push(
-        createProjectShareController({
-          title: localizedTitle,
-          button: shareButton,
-          permalink,
-          status: shareStatus,
-          getUrl: () =>
-            createProjectShareUrl(
-              project.slug,
-              window.siteI18n.stableUrl(window.siteI18n.language)
-            ),
-          share:
-            typeof window.navigator?.share === "function"
-              ? window.navigator.share.bind(window.navigator)
-              : null,
-          copyText: writeTextToClipboard,
-          translate: (key) => window.siteI18n.t(key),
-          schedule: (callback) => window.setTimeout(callback, 0)
-        })
-      );
-
-      if (project.stack?.length) {
-        const stack = document.createElement("p");
-        stack.className = "project-stack";
-        stack.textContent = project.stack.join(" · ");
-        details.append(stack);
-      }
-
-      actions.className = "project-actions";
-      actions.setAttribute("role", "group");
-      actions.setAttribute("aria-labelledby", title.id);
-      const primaryLink = createProjectAction(project.action, project.link, "primary");
-      actions.append(primaryLink);
-      if (Object.hasOwn(project, "sourceAction")) {
-        const sourceLink = createProjectAction(
-          project.sourceAction,
-          project.sourceLink,
-          "secondary"
-        );
-        actions.append(sourceLink);
-      }
-
-      content.append(headingGroup, details, actions);
-      if (Object.hasOwn(project, "proof")) {
-        const proof = document.createElement("div");
-        const proofText = document.createElement("p");
-        const proofLabel = document.createElement("span");
-        const proofStatement = document.createElement("span");
-        const proofLink = createProjectAction(
-          window.siteI18n.t("projects.proofAction"),
-          project.proofLink,
-          "evidence"
-        );
-
-        proof.className = "project-proof";
-        proofText.className = "project-proof-text";
-        proofLabel.className = "project-proof-label";
-        proofLabel.textContent = window.siteI18n.t("projects.proofLabel");
-        proofStatement.textContent = localizedValue(project.proof);
-        proofText.append(proofLabel, proofStatement);
-        proof.append(proofText, proofLink);
-        content.append(proof);
-      }
-      article.append(media, content);
-      fragment.append(article);
-    });
-
-    projectsFallback.replaceChildren();
-    projectsContainer.replaceChildren(fragment);
-    renderProjectDirectory();
-    projectRows = [...projectsContainer.querySelectorAll(".project-row")];
-    refreshScrollScenes();
-    requestScrollMotionUpdate();
-    updateProjectStatus("ready");
-    document.documentElement.classList.add(PROJECT_RUNTIME_READY_CLASS);
-
-    if (animateReveal) {
-      const rows = [...projectsContainer.querySelectorAll(".project-row")];
-      rows.forEach((row) => projectRevealObserver.observe(row));
-      // Safety net: if the observer never fires, clear every stale
-      // priming state after the bounded entrance window.
-      window.setTimeout(() => {
-        rows.forEach((row) => {
-          if (row.classList.contains("is-priming")) {
-            row.classList.remove("is-priming");
-            projectRevealObserver.unobserve(row);
-          }
-        });
-      }, 2500);
-    }
-
-    const restoredRetryFocus = completeProjectRetryFocus(
-      retryFocusHandoff,
-      projectRows[0]
-    );
-    if (restoredRetryFocus) {
-      scheduleProjectFragmentFocus();
-      return;
-    }
-
-    restoreProjectCatalogueFocus(projectFocusHandoff);
-    if (shouldScheduleProjectFragmentFocusAfterRender(projectFocusHandoff)) {
-      scheduleProjectFragmentFocus();
-    }
-  }
-
-  function renderProjectLoading() {
-    resetProjectShareControllers({ discard: true });
-    clearProjectDirectory();
-    projectsContainer.replaceChildren();
-    updateProjectStatus("loading");
-  }
-
-  function handleProjectRetry(event) {
-    return loadProjects(createProjectRetryFocusHandoff(event));
-  }
-
-  function renderProjectError(retryFocusHandoff = null) {
-    resetProjectShareControllers({ discard: true });
-    clearProjectDirectory();
-    const wrapper = document.createElement("div");
-    const retry = document.createElement("button");
-
-    retry.className = "retry-button";
-    retry.type = "button";
-    retry.setAttribute("aria-describedby", "projects-status");
-    retry.textContent = window.siteI18n.t("projects.retry");
-    retry.addEventListener("click", handleProjectRetry);
-    wrapper.append(retry);
-    projectsContainer.replaceChildren(wrapper);
-    updateProjectStatus("error");
-    const restoredRetryFocus = completeProjectRetryFocus(retryFocusHandoff, retry);
-    if (!retryFocusHandoff || restoredRetryFocus) {
-      scheduleProjectFragmentFocus();
-    }
-  }
-
-  async function loadProjects(retryFocusHandoff = null) {
-    const requestSequence = ++projectLoadSequence;
-    projectLoadController?.abort();
-    renderProjectLoading();
-    focusProjectRetryPendingState(retryFocusHandoff);
-
-    const controller = new AbortController();
-    projectLoadController = controller;
-    const timeoutId = window.setTimeout(
-      () => controller.abort(),
-      PROJECT_REQUEST_TIMEOUT_MS
-    );
-
-    try {
-      const response = await fetch(window.siteI18n.resolveSitePath("projects.json"), {
-        headers: { Accept: "application/json" },
-        signal: controller.signal
-      });
-      if (requestSequence !== projectLoadSequence) {
-        return;
-      }
-      if (!response.ok) {
-        throw new Error(`projects.json returned HTTP ${response.status}.`);
-      }
-
-      const data = await response.json();
-      if (requestSequence !== projectLoadSequence) {
-        return;
-      }
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new TypeError("projects.json must contain a non-empty array.");
-      }
-      const seenLinks = new Set();
-      const seenSlugs = new Set();
-      const seenAssets = new Set();
-      const seenProofTexts = new Set();
-      data.forEach((project, index) =>
-        validateProject(
-          project,
-          index,
-          seenSlugs,
-          seenLinks,
-          seenAssets,
-          seenProofTexts
-        )
-      );
-      projects = data;
-      renderProjects(retryFocusHandoff);
-    } catch (error) {
-      if (requestSequence !== projectLoadSequence) {
-        return;
-      }
-      console.error("Unable to load projects:", error);
-      renderProjectError(retryFocusHandoff);
-    } finally {
-      window.clearTimeout(timeoutId);
-      if (projectLoadController === controller) {
-        projectLoadController = null;
-      }
-    }
-  }
-
-  document.addEventListener("site-languagechange", () => {
-    contactEmailCopyController.reset();
-    cancelActiveDecodes();
-    updateNavigationLabel();
-    if (projectState === "ready") {
-      renderProjects();
-    } else if (projectState === "error") {
-      renderProjectError();
-    } else {
-      renderProjectLoading();
-    }
-  });
-  projectsDirectory.addEventListener("click", handleProjectPermalinkClick);
-  projectsFallback.addEventListener("click", handleProjectPermalinkClick);
-  projectsContainer.addEventListener("click", handleProjectPermalinkClick);
-  window.addEventListener("hashchange", handleProjectHashChange);
-  window.addEventListener("popstate", handleProjectHistoryChange);
-  window.addEventListener("pageshow", contactEmailCopyController.reset);
-  window.addEventListener("pageshow", () => resetProjectShareControllers());
-  window.addEventListener("pageshow", () => scheduleProjectFragmentFocus());
 
   const observedSections = [...document.querySelectorAll("main section[id]")];
   const navigationLinks = [...navMenu.querySelectorAll('a[href^="#"]')];
@@ -1948,19 +638,15 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     observedSections.forEach((section) => sectionObserver.observe(section));
   }
-
   // --- Motion: live prefers-reduced-motion lifecycle -------------------
-  // The preference is re-checked on every render/arm call above (not
-  // just captured once at load), so a runtime OS/browser-level toggle
-  // arms or disarms the shared scene lifecycle immediately, without
-  // creating duplicate listeners on repeated toggles.
+  // The preference is re-checked live, so a runtime OS/browser toggle
+  // arms or disarms the reveal immediately without duplicate listeners.
   function handleMotionPreferenceChange(event) {
     prefersReducedMotion = event.matches;
     if (prefersReducedMotion) {
-      disarmScrollMotion();
-      disarmProjectReveal();
+      disarmReveal();
     } else {
-      armScrollMotion();
+      armReveal();
     }
   }
 
@@ -1972,8 +658,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (!prefersReducedMotion) {
-    armScrollMotion();
+    armReveal();
   }
+
+  document.addEventListener("site-languagechange", () => {
+    contactEmailCopyController.reset();
+    cancelActiveDecodes();
+    updateNavigationLabel();
+  });
+  window.addEventListener("pageshow", contactEmailCopyController.reset);
 
   requireElement("current-year").textContent = String(new Date().getFullYear());
 
@@ -2008,8 +701,6 @@ document.addEventListener("DOMContentLoaded", () => {
       footerClockTimer = window.setInterval(renderFooterClock, 1000);
     }
   });
-
-  loadProjects();
 
   function loadAdSense() {
     const hasAdSlot = document.querySelector(

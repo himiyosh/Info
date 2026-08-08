@@ -122,14 +122,9 @@
   <div class="scroll-progress" aria-hidden="true">
     <span class="scroll-progress-fill"></span>
   </div>
-  <div class="viewport-stage" aria-hidden="true">
-    <span class="viewport-stage-layer viewport-stage-layer-hero"></span>
-    <span class="viewport-stage-layer viewport-stage-layer-about"></span>
-    <span class="viewport-stage-layer viewport-stage-layer-projects"></span>
-    <span class="viewport-stage-layer viewport-stage-layer-contact"></span>
-    <span class="viewport-stage-frame"></span>
-    <span class="viewport-stage-glow"></span>
-    <svg class="viewport-stage-topo" viewBox="0 0 1200 800" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+  <div class="site-backdrop" aria-hidden="true">
+    <span class="site-backdrop-glow"></span>
+    <svg class="site-backdrop-topo" viewBox="0 0 1200 800" preserveAspectRatio="none" aria-hidden="true" focusable="false">
       <path d="M-50,620 C180,560 300,660 520,600 S900,520 1250,580" />
       <path d="M-50,560 C200,500 340,610 560,545 S920,455 1250,520" />
       <path d="M-50,500 C220,440 380,560 600,490 S940,395 1250,460" />
@@ -197,7 +192,7 @@
   </header>
 
   <main id="main-content" tabindex="-1">
-    <section class="hero" id="top" tabindex="-1" data-scene="hero">
+    <section class="hero" id="top" tabindex="-1">
       <div class="hero-sticky">
         <div class="hero-stage">
           <p class="hero-role" data-i18n="hero.role">Engineer / Rookie Dad</p>
@@ -266,344 +261,192 @@
       </div>
     </div>
 
-    <section class="about section-shell" id="about" tabindex="-1" data-scene="about">
-      <div class="section-heading">
-        <p class="section-eyebrow" data-i18n="about.eyebrow">ABOUT</p>
-        <h2 data-decode data-i18n="about.title">好奇心を、実用へ。</h2>
-      </div>
-      <div class="about-copy">
-        <p data-i18n="about.content">
-          某グローバルIT企業で、テクノロジー領域の課題解決に取り組⁠んでいます。役に立つ知識や技術を見つけ、試し、分かりやすい形にすることが好きです。
-        </p>
-        <p data-i18n="about.site">
-          このサイトでは、個人で公開している小さなツールと実験を紹介しています。内容はすべて個人の見解です。
-        </p>
-        <p class="about-statement" data-i18n="about.statement">
-          好奇心を、実用へ。
-        </p>
-        <div class="facts">
-          <span class="fact"><b>09</b> <span data-i18n="about.factProjects">公開プロジェクト</span></span>
-          <span class="fact"><b>JA / EN</b> <span data-i18n="about.factBilingual">バイリンガル対応</span></span>
-          <span class="fact"><b>OSS</b> <span data-i18n="about.factSource">ソース公開中心</span></span>
+    <section class="about section-shell" id="about" tabindex="-1">
+      <div class="about-grid">
+        <div class="section-heading about-sticky">
+          <p class="section-eyebrow" data-i18n="about.eyebrow">ABOUT</p>
+          <h2 data-decode data-i18n="about.title">好奇心を、実用へ。</h2>
+        </div>
+        <div class="about-copy">
+          <p data-i18n="about.content">
+            某グローバルIT企業で、テクノロジー領域の課題解決に取り組⁠んでいます。役に立つ知識や技術を見つけ、試し、分かりやすい形にすることが好きです。
+          </p>
+          <p data-i18n="about.site">
+            このサイトでは、個人で公開している小さなツールと実験を紹介しています。内容はすべて個人の見解です。
+          </p>
+          <div class="facts">
+            <span class="fact"><b>09</b> <span data-i18n="about.factProjects">公開プロジェクト</span></span>
+            <span class="fact"><b>JA / EN</b> <span data-i18n="about.factBilingual">バイリンガル対応</span></span>
+            <span class="fact"><b>OSS</b> <span data-i18n="about.factSource">ソース公開中心</span></span>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="projects" id="projects" tabindex="-1" data-scene="projects">
+    <section class="projects" id="projects" tabindex="-1">
       <a class="skip-link projects-skip-link" href="#contact" data-i18n="projects.skipToContact">
         連絡先へスキップ
       </a>
       <div class="section-shell">
-        <div class="projects-intro">
-          <p class="section-eyebrow" data-i18n="projects.eyebrow">WORKS — 09 PUBLIC PROJECTS</p>
-          <h2 data-decode data-i18n="projects.title">小さな不便を、道具に。</h2>
-          <p data-i18n="projects.intro">
+        <div class="section-head">
+          <div class="projects-intro">
+            <p class="section-eyebrow" data-i18n="projects.eyebrow">WORKS — 09 PUBLIC PROJECTS</p>
+            <h2 data-decode data-i18n="projects.title">小さな不便を、道具に。</h2>
+          </div>
+          <p class="section-lede" data-i18n="projects.intro">
             日々の不便を小さくするために作った、公開中のサイト、サービス、ツールです。
           </p>
-          <nav
-            class="project-directory"
-            id="projects-directory"
-            aria-label="プロジェクト一覧"
-            data-i18n-aria-label="projects.directoryLabel"
-            hidden
-          ></nav>
         </div>
-        <p
-          class="projects-status"
-          id="projects-status"
-          role="status"
-          aria-atomic="true"
-          data-i18n="projects.loading"
-          data-i18n-dynamic=""
-          hidden
+        <div class="featured">
+          <article class="card wide" id="project-techdb">
+            <div class="thumb" data-initial="T" data-label="PREVIEW">
+              <span class="badge">AIニュース / 自動化ポータル</span>
+              <picture>
+                <source type="image/avif" srcset="assets/techdb-preview-960w.avif" />
+                <img src="assets/techdb-preview.jpg" alt="AI関連ニュースとトレンドを一覧表示するTechDBのダッシュボード" width="960" height="540" loading="lazy" decoding="async" />
+              </picture>
+            </div>
+            <div class="body">
+              <h3>TechDB</h3>
+              <p>AIエコシステムの更新情報を14カテゴリで収集・要約し、読む順番や検索、運用状況を一か所にまとめる自動更新ポータルです。</p>
+              <div class="tags"><span>Astro</span><span>TypeScript</span><span>Cloudflare</span><span>AI agents</span></div>
+              <div class="links">
+                <a class="link" href="https://techdb.studio344.net/" target="_blank" rel="noopener noreferrer">
+                  TechDBを開く
+                  <span class="sr-only">（新しいタブで開きます）</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+                <a class="link" href="https://github.com/himiyosh/tech-dashboard" target="_blank" rel="noopener noreferrer">
+                  GitHub でソースを見る
+                  <span class="sr-only">（新しいタブで開きます）</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+          </article>
+          <article class="card" id="project-jojo-aiagent">
+            <div class="thumb" data-initial="A" data-label="PREVIEW">
+              <span class="badge">公開スライドデッキ</span>
+              <picture>
+                <source type="image/avif" srcset="assets/jojo-aiagent-preview-960w.avif" />
+                <img src="assets/jojo-aiagent-preview.jpg" alt="Prompt→Context→Harness→Loop の章立てを表示する JoJo-AIAgent のスライド表紙" width="960" height="540" loading="lazy" decoding="async" />
+              </picture>
+            </div>
+            <div class="body">
+              <h3>AIエージェント、いま何が起きている?</h3>
+              <p>AIエージェントの全体像を Prompt→Context→Harness→Loop の流れで整理し、モバイル Reader でも追える入門向け公開スライドデッキです。</p>
+              <div class="tags"><span>Slidev</span><span>Vue</span><span>Playwright</span><span>GitHub Pages</span></div>
+              <div class="links">
+                <a class="link" href="https://himiyosh.github.io/JoJo-AIAgent/" target="_blank" rel="noopener noreferrer">
+                  デッキを開く
+                  <span class="sr-only">（新しいタブで開きます）</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+                <a class="link" href="https://github.com/himiyosh/JoJo-AIAgent" target="_blank" rel="noopener noreferrer">
+                  GitHub でソースを見る
+                  <span class="sr-only">（新しいタブで開きます）</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+          </article>
+          <article class="card" id="project-jojo-git">
+            <div class="thumb" data-initial="G" data-label="PREVIEW">
+              <span class="badge">公開スライドデッキ</span>
+              <picture>
+                <source type="image/avif" srcset="assets/jojo-git-preview-960w.avif" />
+                <img src="assets/jojo-git-preview.jpg" alt="4領域モデルでGit操作を整理した JoJo-Git のスライド表紙" width="960" height="540" loading="lazy" decoding="async" />
+              </picture>
+            </div>
+            <div class="body">
+              <h3>Git、こわくない</h3>
+              <p>Git初心者向けに、clone/fetch/pull/fork と merge/rebase の判断を4領域モデルで視覚的に整理した Slidev デッキです。Reader の検索・モバイル・印刷にも対応しています。</p>
+              <div class="tags"><span>Slidev</span><span>Vue</span><span>Playwright</span><span>GitHub Pages</span></div>
+              <div class="links">
+                <a class="link" href="https://himiyosh.github.io/JoJo-Git/" target="_blank" rel="noopener noreferrer">
+                  デッキを開く
+                  <span class="sr-only">（新しいタブで開きます）</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+                <a class="link" href="https://github.com/himiyosh/JoJo-Git" target="_blank" rel="noopener noreferrer">
+                  GitHub でソースを見る
+                  <span class="sr-only">（新しいタブで開きます）</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div
+          class="panel"
+          role="list"
+          aria-label="その他の公開プロジェクト"
+          data-i18n-aria-label="projects.panelLabel"
         >
-          プロジェクトを読み込んでいます。
-        </p>
-        <div id="projects-container" aria-busy="false"></div>
-        <div class="projects-fallback" id="projects-fallback" role="note">
-          <p data-i18n="projects.fallback">
-            JavaScript なしでも公開プロジェクトへ直接アクセスできます
-          </p>
-          <ul class="projects-fallback-list">
-            <li>
-              <article class="projects-fallback-card" id="project-portfolio" tabindex="-1" aria-labelledby="project-portfolio-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-portfolio-fallback-title">Portfolio</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-portfolio" aria-label="「Portfolio」プロジェクトへの固定リンク">固定リンク</a>
-                  <p class="project-kind projects-fallback-kind">個人サイト / オープンソース</p>
-                </header>
-                <p class="project-description projects-fallback-description">このポートフォリオのソースコード。日本語と英語の切り替え、レスポンシブ表示、アクセシビリティを備えた静的サイトです。</p>
-                <p class="project-stack projects-fallback-stack">HTML · CSS · JavaScript</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-portfolio-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://github.com/himiyosh/Info" target="_blank" rel="noopener noreferrer">
-                    <span>GitHub でコードを見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">公開根拠</span>
-                    <span>公開成果物は許可リストに限定し、テスト・ワークフロー・内部ドキュメントを配信対象から除外しています。</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/Info/blob/a1e0e2bb1e2acefce7e9795b08a4486776ddb3bb/README.md#L25-L33" target="_blank" rel="noopener noreferrer">
-                    <span>根拠を見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-techdb" tabindex="-1" aria-labelledby="project-techdb-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-techdb-fallback-title">TechDB</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-techdb" aria-label="「TechDB」プロジェクトへの固定リンク">固定リンク</a>
-                  <p class="project-kind projects-fallback-kind">AIニュース / 自動化ポータル</p>
-                </header>
-                <p class="project-description projects-fallback-description">AIエコシステムの更新情報を14カテゴリで収集・要約し、読む順番や検索、運用状況を一か所にまとめる自動更新ポータルです。</p>
-                <p class="project-stack projects-fallback-stack">Astro · TypeScript · Cloudflare · AI agents</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-techdb-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://techdb.studio344.net/" target="_blank" rel="noopener noreferrer">
-                    <span>TechDBを開く</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/tech-dashboard" target="_blank" rel="noopener noreferrer">
-                    <span>GitHub でソースを見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">公開根拠</span>
-                    <span>自動収集データは、秘密情報検査・型検査・ユニットテスト・Web build・ブラウザーE2Eを通過した場合だけ公開用コミットへ進みます。</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/tech-dashboard/blob/6fde819e689fb8f19a238b1877484d8db596c59b/.github/workflows/publisher.yml#L71-L89" target="_blank" rel="noopener noreferrer">
-                    <span>根拠を見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-jojo-aiagent" tabindex="-1" aria-labelledby="project-jojo-aiagent-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-jojo-aiagent-fallback-title">AIエージェント、いま何が起きている?</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-jojo-aiagent" aria-label="「AIエージェント、いま何が起きている?」プロジェクトへの固定リンク">固定リンク</a>
-                  <p class="project-kind projects-fallback-kind">公開スライドデッキ</p>
-                </header>
-                <p class="project-description projects-fallback-description">AIエージェントの全体像を Prompt→Context→Harness→Loop の流れで整理し、モバイル Reader でも追える入門向け公開スライドデッキです。</p>
-                <p class="project-stack projects-fallback-stack">Slidev · Vue · Playwright · GitHub Pages</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-jojo-aiagent-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://himiyosh.github.io/JoJo-AIAgent/" target="_blank" rel="noopener noreferrer">
-                    <span>デッキを開く</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/JoJo-AIAgent" target="_blank" rel="noopener noreferrer">
-                    <span>GitHub でソースを見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">公開根拠</span>
-                    <span>Reader は見出し・本文・全タブ状態・発表者ノート・出典を横断検索し、目次から任意のスライドへ直接移動できます。</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/JoJo-AIAgent/blob/95e404c45bc9cd8a4c0ccbf637acc29021c8e437/README.md#L34-L40" target="_blank" rel="noopener noreferrer">
-                    <span>根拠を見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-jojo-git" tabindex="-1" aria-labelledby="project-jojo-git-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-jojo-git-fallback-title">Git、こわくない</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-jojo-git" aria-label="「Git、こわくない」プロジェクトへの固定リンク">固定リンク</a>
-                  <p class="project-kind projects-fallback-kind">公開スライドデッキ</p>
-                </header>
-                <p class="project-description projects-fallback-description">Git初心者向けに、clone/fetch/pull/fork と merge/rebase の判断を4領域モデルで視覚的に整理した Slidev デッキです。Reader の検索・モバイル・印刷にも対応しています。</p>
-                <p class="project-stack projects-fallback-stack">Slidev · Vue · Playwright · GitHub Pages</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-jojo-git-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://himiyosh.github.io/JoJo-Git/" target="_blank" rel="noopener noreferrer">
-                    <span>デッキを開く</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/JoJo-Git" target="_blank" rel="noopener noreferrer">
-                    <span>GitHub でソースを見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">公開根拠</span>
-                    <span>Reader はスライド本文・実レンダリング・公開登壇者ノートからビルド時に生成され、本文を二重管理しません。</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/JoJo-Git/blob/c62e726c212551ac91a3c245167e0a0fc9877bb4/README.md#L31-L40" target="_blank" rel="noopener noreferrer">
-                    <span>根拠を見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-ucfitness" tabindex="-1" aria-labelledby="project-ucfitness-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-ucfitness-fallback-title">UCFitness</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-ucfitness" aria-label="「UCFitness」プロジェクトへの固定リンク">固定リンク</a>
-                  <p class="project-kind projects-fallback-kind">フィットネスサービス</p>
-                </header>
-                <p class="project-description projects-fallback-description">Fitbitの歩数、残り歩数、達成率、仲間とのランキング、UCやバッジを一つの画面で追えるフィットネスサービスです。</p>
-                <p class="project-stack projects-fallback-stack">Fitbit · PWA</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-ucfitness-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://ucfitness.studio344.net/" target="_blank" rel="noopener noreferrer">
-                    <span>UCFitnessを開く</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-encode-decode-tool" tabindex="-1" aria-labelledby="project-encode-decode-tool-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-encode-decode-tool-fallback-title">Encode / Decode Tool</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-encode-decode-tool" aria-label="「Encode / Decode Tool」プロジェクトへの固定リンク">固定リンク</a>
-                  <p class="project-kind projects-fallback-kind">エンコード / デコードツール</p>
-                </header>
-                <p class="project-description projects-fallback-description">URL、Base64、JWT、Unicode、QRコードをブラウザーでエンコード・デコードできる、複数形式対応のユーティリティです。</p>
-                <p class="project-stack projects-fallback-stack">React · Tailwind CSS · Vite</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-encode-decode-tool-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://himiyosh.github.io/encode-decode-tool/" target="_blank" rel="noopener noreferrer">
-                    <span>ツールを開く</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/encode-decode-tool" target="_blank" rel="noopener noreferrer">
-                    <span>GitHub でソースを見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">公開根拠</span>
-                    <span>テキスト変換とQR画像処理はブラウザー内で完結し、入力テキスト・生成QR・選択画像をアップロードしません。</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/encode-decode-tool/blob/a1e40092f538f85f34a935188e67ef5aa657481f/README.md#L33-L35" target="_blank" rel="noopener noreferrer">
-                    <span>根拠を見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-network-plus" tabindex="-1" aria-labelledby="project-network-plus-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-network-plus-fallback-title">Network+</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-network-plus" aria-label="「Network+」プロジェクトへの固定リンク">固定リンク</a>
-                  <p class="project-kind projects-fallback-kind">Edge DevTools拡張</p>
-                </header>
-                <p class="project-description projects-fallback-description">Microsoft Edge DevToolsに、複数キーワード検索、カラム別フィルター、リクエスト詳細、HAR出力を追加するネットワーク分析拡張です。</p>
-                <p class="project-stack projects-fallback-stack">Manifest V3 · JavaScript · Edge DevTools · Jest</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-network-plus-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://github.com/himiyosh/network-plus-extension" target="_blank" rel="noopener noreferrer">
-                    <span>GitHubでコードを見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">公開根拠</span>
-                    <span>コピーとHAR出力は既定で認証情報・Cookie・クエリ値・本文をサニタイズし、完全出力は警告確認後の1回だけ有効です。</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/network-plus-extension/blob/f1d53ce821c6b7ca8cf11b7101f800087ab19ac4/README.md#L128-L140" target="_blank" rel="noopener noreferrer">
-                    <span>根拠を見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-url-decoder" tabindex="-1" aria-labelledby="project-url-decoder-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-url-decoder-fallback-title">URLDecoder</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-url-decoder" aria-label="「URLDecoder」プロジェクトへの固定リンク">固定リンク</a>
-                  <p class="project-kind projects-fallback-kind">Web ツール</p>
-                </header>
-                <p class="project-description projects-fallback-description">URL のエンコードとデコードをブラウザーで行う、シンプルなユーティリティです。</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-url-decoder-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://himiyosh.github.io/URLDecoder/" target="_blank" rel="noopener noreferrer">
-                    <span>ツールを開く</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/URLDecoder" target="_blank" rel="noopener noreferrer">
-                    <span>GitHub でソースを見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">公開根拠</span>
-                    <span>入力を encodeURIComponent / decodeURIComponent で処理し、変換結果または失敗理由を出力欄に表示します。</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/URLDecoder/blob/fa686afa5196dd7dc9432c7ab916d5376dc69954/index.html#L108-L126" target="_blank" rel="noopener noreferrer">
-                    <span>根拠を見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-image-resizer" tabindex="-1" aria-labelledby="project-image-resizer-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-image-resizer-fallback-title">ImageResizer</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-image-resizer" aria-label="「ImageResizer」プロジェクトへの固定リンク">固定リンク</a>
-                  <p class="project-kind projects-fallback-kind">Web ツール</p>
-                </header>
-                <p class="project-description projects-fallback-description">画像を 192px または 32px の正方形アイコンに変換する、ブラウザー上のツールです。</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-image-resizer-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://himiyosh.github.io/ImageResizer/" target="_blank" rel="noopener noreferrer">
-                    <span>ツールを開く</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/ImageResizer" target="_blank" rel="noopener noreferrer">
-                    <span>GitHub でソースを見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">公開根拠</span>
-                    <span>選択画像をブラウザー内で読み込み、192px と 32px の canvas に描画して PNG ダウンロードリンクを生成します。</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/ImageResizer/blob/f79765b06964bc1918dad7222f1c657d5d0312ca/index.html#L48-L84" target="_blank" rel="noopener noreferrer">
-                    <span>根拠を見る</span>
-                    <span class="sr-only">（新しいタブで開きます）</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-          </ul>
+          <div class="panel-head" aria-hidden="true">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span data-i18n="projects.panelHead">projects — live &amp; open source</span>
+          </div>
+          <div class="row" role="listitem" id="project-ucfitness">
+            <span class="status" aria-hidden="true">200 OK</span>
+            <a class="row-link" href="https://ucfitness.studio344.net/" target="_blank" rel="noopener noreferrer">
+              <span class="name">UCFitness</span>
+              <span class="sr-only">（新しいタブで開きます）</span>
+            </a>
+            <span class="type">フィットネスサービス</span>
+            <span class="stack">Fitbit · PWA</span>
+            <span class="go" aria-hidden="true">OPEN ↗</span>
+          </div>
+          <div class="row" role="listitem" id="project-encode-decode-tool">
+            <span class="status" aria-hidden="true">200 OK</span>
+            <a class="row-link" href="https://himiyosh.github.io/encode-decode-tool/" target="_blank" rel="noopener noreferrer">
+              <span class="name">Encode / Decode Tool</span>
+              <span class="sr-only">（新しいタブで開きます）</span>
+            </a>
+            <span class="type">エンコード / デコードツール</span>
+            <span class="stack">React · Tailwind CSS · Vite</span>
+            <span class="go" aria-hidden="true">OPEN ↗</span>
+          </div>
+          <div class="row" role="listitem" id="project-network-plus">
+            <span class="status src" aria-hidden="true">SOURCE</span>
+            <a class="row-link" href="https://github.com/himiyosh/network-plus-extension" target="_blank" rel="noopener noreferrer">
+              <span class="name">Network+</span>
+              <span class="sr-only">（新しいタブで開きます）</span>
+            </a>
+            <span class="type">Edge DevTools拡張</span>
+            <span class="stack">Manifest V3 · JavaScript · Edge DevTools · Jest</span>
+            <span class="go" aria-hidden="true">CODE ↗</span>
+          </div>
+          <div class="row" role="listitem" id="project-url-decoder">
+            <span class="status" aria-hidden="true">200 OK</span>
+            <a class="row-link" href="https://himiyosh.github.io/URLDecoder/" target="_blank" rel="noopener noreferrer">
+              <span class="name">URLDecoder</span>
+              <span class="sr-only">（新しいタブで開きます）</span>
+            </a>
+            <span class="type">Web ツール</span>
+            <span class="stack">HTML · JavaScript</span>
+            <span class="go" aria-hidden="true">OPEN ↗</span>
+          </div>
+          <div class="row" role="listitem" id="project-image-resizer">
+            <span class="status" aria-hidden="true">200 OK</span>
+            <a class="row-link" href="https://himiyosh.github.io/ImageResizer/" target="_blank" rel="noopener noreferrer">
+              <span class="name">ImageResizer</span>
+              <span class="sr-only">（新しいタブで開きます）</span>
+            </a>
+            <span class="type">Web ツール</span>
+            <span class="stack">HTML · Canvas</span>
+            <span class="go" aria-hidden="true">OPEN ↗</span>
+          </div>
+          <div class="row" role="listitem" id="project-portfolio">
+            <span class="status src" aria-hidden="true">SOURCE</span>
+            <a class="row-link" href="https://github.com/himiyosh/Info" target="_blank" rel="noopener noreferrer">
+              <span class="name">Portfolio</span>
+              <span class="sr-only">（新しいタブで開きます）</span>
+            </a>
+            <span class="type">個人サイト / オープンソース</span>
+            <span class="stack">HTML · CSS · JavaScript</span>
+            <span class="go" aria-hidden="true">CODE ↗</span>
+          </div>
         </div>
       </div>
     </section>
@@ -640,19 +483,19 @@
       </div>
     </section>
 
-    <section class="contact section-shell" id="contact" tabindex="-1" aria-labelledby="contact-title" data-scene="contact">
+    <section class="contact section-shell" id="contact" tabindex="-1" aria-labelledby="contact-title">
       <div class="contact-panel">
-        <div>
-          <p class="section-eyebrow" data-i18n="contact.eyebrow">CONTACT</p>
+        <div class="contact-heading">
+          <p class="section-eyebrow section-eyebrow--center" data-i18n="contact.eyebrow">CONTACT</p>
           <h2 id="contact-title" data-decode data-i18n="contact.title">話しましょう。</h2>
-          <p data-i18n="contact.intro">
+          <p class="contact-lede" data-i18n="contact.intro">
             技術や公開プロジェクトについてのご連絡は、メールまたは GitHub からどうぞ。
           </p>
         </div>
         <div class="contact-links">
-          <div class="contact-email-method">
-            <a id="contact-email-link" href="mailto:himiyosh@gmail.com">
-              <span data-i18n="contact.emailLabel">Email</span>
+          <div class="contact-email-method mail-row">
+            <a id="contact-email-link" class="mail" href="mailto:himiyosh@gmail.com">
+              <span class="sr-only" data-i18n="contact.emailLabel">Email</span>
               <strong id="contact-email-address">himiyosh@gmail.com</strong>
             </a>
             <button
@@ -674,50 +517,36 @@
               hidden
             ></p>
           </div>
-          <a href="https://github.com/himiyosh" target="_blank" rel="me noopener noreferrer">
-            <span>GitHub</span>
-            <strong>@himiyosh</strong>
-            <span class="sr-only" data-i18n="accessibility.opensInNewTab">（新しいタブで開きます）</span>
-          </a>
+          <div class="sub-links">
+            <a class="link" href="https://github.com/himiyosh" target="_blank" rel="me noopener noreferrer">
+              GITHUB — @himiyosh
+              <span class="sr-only" data-i18n="accessibility.opensInNewTab">（新しいタブで開きます）</span>
+              <span class="ext" aria-hidden="true">↗</span>
+            </a>
+          </div>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer" data-scene="footer">
-    <div class="footer-marquee">
-      <div class="footer-marquee-track" aria-hidden="true">
-        <span class="footer-marquee-set">
-          <span data-i18n="about.statement">好奇心を、実用へ。</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">好奇心を、実用へ。</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">好奇心を、実用へ。</span>
-          <span aria-hidden="true">◆</span>
-        </span>
-        <span class="footer-marquee-set">
-          <span data-i18n="about.statement">好奇心を、実用へ。</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">好奇心を、実用へ。</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">好奇心を、実用へ。</span>
-          <span aria-hidden="true">◆</span>
-        </span>
+  <footer class="site-footer">
+    <div class="footer-meta foot">
+      <div class="foot-left">
+        <p
+          class="footer-clock"
+          id="footer-clock"
+          aria-label="現在時刻(日本標準時)"
+          data-i18n-aria-label="footer.clockLabel"
+        >--:--:-- JST</p>
+        <p class="footer-copyright">&copy; <span id="current-year">2026</span> himiyosh</p>
+        <p class="footer-disclaimer" data-i18n="disclaimer">
+          このサイトは個人で運営しており、所属組織の公式見解を代表するものではありません。
+        </p>
       </div>
-      <p class="sr-only" data-i18n="about.statement">好奇心を、実用へ。</p>
-    </div>
-    <div class="footer-meta">
-      <p
-        class="footer-clock"
-        id="footer-clock"
-        aria-label="現在時刻(日本標準時)"
-        data-i18n-aria-label="footer.clockLabel"
-      >--:--:-- JST</p>
-      <p>&copy; <span id="current-year">2026</span> himiyosh</p>
-      <p class="footer-disclaimer" data-i18n="disclaimer">
-        このサイトは個人で運営しており、所属組織の公式見解を代表するものではありません。
-      </p>
-      <a href="#top" data-i18n="footer.backToTop">ページ上部へ</a>
+      <div class="foot-right">
+        <a class="top-link" href="#top" data-i18n="footer.backToTop">ページ上部へ</a>
+        <p class="footer-statement" data-i18n="about.statement">好奇心を、実用へ。</p>
+      </div>
     </div>
   </footer>
 

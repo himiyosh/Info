@@ -121,14 +121,9 @@
   <div class="scroll-progress" aria-hidden="true">
     <span class="scroll-progress-fill"></span>
   </div>
-  <div class="viewport-stage" aria-hidden="true">
-    <span class="viewport-stage-layer viewport-stage-layer-hero"></span>
-    <span class="viewport-stage-layer viewport-stage-layer-about"></span>
-    <span class="viewport-stage-layer viewport-stage-layer-projects"></span>
-    <span class="viewport-stage-layer viewport-stage-layer-contact"></span>
-    <span class="viewport-stage-frame"></span>
-    <span class="viewport-stage-glow"></span>
-    <svg class="viewport-stage-topo" viewBox="0 0 1200 800" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+  <div class="site-backdrop" aria-hidden="true">
+    <span class="site-backdrop-glow"></span>
+    <svg class="site-backdrop-topo" viewBox="0 0 1200 800" preserveAspectRatio="none" aria-hidden="true" focusable="false">
       <path d="M-50,620 C180,560 300,660 520,600 S900,520 1250,580" />
       <path d="M-50,560 C200,500 340,610 560,545 S920,455 1250,520" />
       <path d="M-50,500 C220,440 380,560 600,490 S940,395 1250,460" />
@@ -196,7 +191,7 @@
   </header>
 
   <main id="main-content" tabindex="-1">
-    <section class="hero" id="top" tabindex="-1" data-scene="hero">
+    <section class="hero" id="top" tabindex="-1">
       <div class="hero-sticky">
         <div class="hero-stage">
           <p class="hero-role" data-i18n="hero.role">{{t:hero.role}}</p>
@@ -265,67 +260,56 @@
       </div>
     </div>
 
-    <section class="about section-shell" id="about" tabindex="-1" data-scene="about">
-      <div class="section-heading">
-        <p class="section-eyebrow" data-i18n="about.eyebrow">{{t:about.eyebrow}}</p>
-        <h2 data-decode data-i18n="about.title">{{t:about.title}}</h2>
-      </div>
-      <div class="about-copy">
-        <p data-i18n="about.content">
-          {{t:about.content}}
-        </p>
-        <p data-i18n="about.site">
-          {{t:about.site}}
-        </p>
-        <p class="about-statement" data-i18n="about.statement">
-          {{t:about.statement}}
-        </p>
-        <div class="facts">
-          <span class="fact"><b>09</b> <span data-i18n="about.factProjects">{{t:about.factProjects}}</span></span>
-          <span class="fact"><b>JA / EN</b> <span data-i18n="about.factBilingual">{{t:about.factBilingual}}</span></span>
-          <span class="fact"><b>OSS</b> <span data-i18n="about.factSource">{{t:about.factSource}}</span></span>
+    <section class="about section-shell" id="about" tabindex="-1">
+      <div class="about-grid">
+        <div class="section-heading about-sticky">
+          <p class="section-eyebrow" data-i18n="about.eyebrow">{{t:about.eyebrow}}</p>
+          <h2 data-decode data-i18n="about.title">{{t:about.title}}</h2>
+        </div>
+        <div class="about-copy">
+          <p data-i18n="about.content">
+            {{t:about.content}}
+          </p>
+          <p data-i18n="about.site">
+            {{t:about.site}}
+          </p>
+          <div class="facts">
+            <span class="fact"><b>09</b> <span data-i18n="about.factProjects">{{t:about.factProjects}}</span></span>
+            <span class="fact"><b>JA / EN</b> <span data-i18n="about.factBilingual">{{t:about.factBilingual}}</span></span>
+            <span class="fact"><b>OSS</b> <span data-i18n="about.factSource">{{t:about.factSource}}</span></span>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="projects" id="projects" tabindex="-1" data-scene="projects">
+    <section class="projects" id="projects" tabindex="-1">
       <a class="skip-link projects-skip-link" href="#contact" data-i18n="projects.skipToContact">
         {{t:projects.skipToContact}}
       </a>
       <div class="section-shell">
-        <div class="projects-intro">
-          <p class="section-eyebrow" data-i18n="projects.eyebrow">{{t:projects.eyebrow}}</p>
-          <h2 data-decode data-i18n="projects.title">{{t:projects.title}}</h2>
-          <p data-i18n="projects.intro">
+        <div class="section-head">
+          <div class="projects-intro">
+            <p class="section-eyebrow" data-i18n="projects.eyebrow">{{t:projects.eyebrow}}</p>
+            <h2 data-decode data-i18n="projects.title">{{t:projects.title}}</h2>
+          </div>
+          <p class="section-lede" data-i18n="projects.intro">
             {{t:projects.intro}}
           </p>
-          <nav
-            class="project-directory"
-            id="projects-directory"
-            aria-label="{{t:projects.directoryLabel}}"
-            data-i18n-aria-label="projects.directoryLabel"
-            hidden
-          ></nav>
         </div>
-        <p
-          class="projects-status"
-          id="projects-status"
-          role="status"
-          aria-atomic="true"
-          data-i18n="projects.loading"
-          data-i18n-dynamic=""
-          hidden
+        <div class="featured">
+          {{projectFeaturedCards}}
+        </div>
+        <div
+          class="panel"
+          role="list"
+          aria-label="{{t:projects.panelLabel}}"
+          data-i18n-aria-label="projects.panelLabel"
         >
-          {{t:projects.loading}}
-        </p>
-        <div id="projects-container" aria-busy="false"></div>
-        <div class="projects-fallback" id="projects-fallback" role="note">
-          <p data-i18n="projects.fallback">
-            {{t:projects.fallback}}
-          </p>
-          <ul class="projects-fallback-list">
-            {{projectFallbackSummaries}}
-          </ul>
+          <div class="panel-head" aria-hidden="true">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span data-i18n="projects.panelHead">{{t:projects.panelHead}}</span>
+          </div>
+          {{projectPanelRows}}
         </div>
       </div>
     </section>
@@ -362,19 +346,19 @@
       </div>
     </section>
 
-    <section class="contact section-shell" id="contact" tabindex="-1" aria-labelledby="contact-title" data-scene="contact">
+    <section class="contact section-shell" id="contact" tabindex="-1" aria-labelledby="contact-title">
       <div class="contact-panel">
-        <div>
-          <p class="section-eyebrow" data-i18n="contact.eyebrow">{{t:contact.eyebrow}}</p>
+        <div class="contact-heading">
+          <p class="section-eyebrow section-eyebrow--center" data-i18n="contact.eyebrow">{{t:contact.eyebrow}}</p>
           <h2 id="contact-title" data-decode data-i18n="contact.title">{{t:contact.title}}</h2>
-          <p data-i18n="contact.intro">
+          <p class="contact-lede" data-i18n="contact.intro">
             {{t:contact.intro}}
           </p>
         </div>
         <div class="contact-links">
-          <div class="contact-email-method">
-            <a id="contact-email-link" href="mailto:himiyosh@gmail.com">
-              <span data-i18n="contact.emailLabel">{{t:contact.emailLabel}}</span>
+          <div class="contact-email-method mail-row">
+            <a id="contact-email-link" class="mail" href="mailto:himiyosh@gmail.com">
+              <span class="sr-only" data-i18n="contact.emailLabel">{{t:contact.emailLabel}}</span>
               <strong id="contact-email-address">himiyosh@gmail.com</strong>
             </a>
             <button
@@ -396,50 +380,36 @@
               hidden
             ></p>
           </div>
-          <a href="https://github.com/himiyosh" target="_blank" rel="me noopener noreferrer">
-            <span>GitHub</span>
-            <strong>@himiyosh</strong>
-            <span class="sr-only" data-i18n="accessibility.opensInNewTab">{{t:accessibility.opensInNewTab}}</span>
-          </a>
+          <div class="sub-links">
+            <a class="link" href="https://github.com/himiyosh" target="_blank" rel="me noopener noreferrer">
+              GITHUB — @himiyosh
+              <span class="sr-only" data-i18n="accessibility.opensInNewTab">{{t:accessibility.opensInNewTab}}</span>
+              <span class="ext" aria-hidden="true">↗</span>
+            </a>
+          </div>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer" data-scene="footer">
-    <div class="footer-marquee">
-      <div class="footer-marquee-track" aria-hidden="true">
-        <span class="footer-marquee-set">
-          <span data-i18n="about.statement">{{t:about.statement}}</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">{{t:about.statement}}</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">{{t:about.statement}}</span>
-          <span aria-hidden="true">◆</span>
-        </span>
-        <span class="footer-marquee-set">
-          <span data-i18n="about.statement">{{t:about.statement}}</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">{{t:about.statement}}</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">{{t:about.statement}}</span>
-          <span aria-hidden="true">◆</span>
-        </span>
+  <footer class="site-footer">
+    <div class="footer-meta foot">
+      <div class="foot-left">
+        <p
+          class="footer-clock"
+          id="footer-clock"
+          aria-label="{{t:footer.clockLabel}}"
+          data-i18n-aria-label="footer.clockLabel"
+        >--:--:-- JST</p>
+        <p class="footer-copyright">&copy; <span id="current-year">2026</span> himiyosh</p>
+        <p class="footer-disclaimer" data-i18n="disclaimer">
+          {{t:disclaimer}}
+        </p>
       </div>
-      <p class="sr-only" data-i18n="about.statement">{{t:about.statement}}</p>
-    </div>
-    <div class="footer-meta">
-      <p
-        class="footer-clock"
-        id="footer-clock"
-        aria-label="{{t:footer.clockLabel}}"
-        data-i18n-aria-label="footer.clockLabel"
-      >--:--:-- JST</p>
-      <p>&copy; <span id="current-year">2026</span> himiyosh</p>
-      <p class="footer-disclaimer" data-i18n="disclaimer">
-        {{t:disclaimer}}
-      </p>
-      <a href="#top" data-i18n="footer.backToTop">{{t:footer.backToTop}}</a>
+      <div class="foot-right">
+        <a class="top-link" href="#top" data-i18n="footer.backToTop">{{t:footer.backToTop}}</a>
+        <p class="footer-statement" data-i18n="about.statement">{{t:about.statement}}</p>
+      </div>
     </div>
   </footer>
 
