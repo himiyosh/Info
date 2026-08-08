@@ -199,13 +199,13 @@
     <section class="hero" id="top" tabindex="-1" data-scene="hero">
       <div class="hero-sticky">
         <div class="hero-stage">
+          <p class="hero-role" data-i18n="hero.role">{{t:hero.role}}</p>
           <h1>
             <span data-decode data-i18n="hero.titleLine1">{{t:hero.titleLine1}}</span>
             <span class="hero-title-accent" data-decode data-i18n="hero.titleLine2">{{t:hero.titleLine2}}</span>
           </h1>
         </div>
         <div class="hero-support">
-          <p class="hero-role" data-i18n="hero.role">{{t:hero.role}}</p>
           <p class="hero-lede" data-i18n="hero.lede">
             {{t:hero.lede}}
           </p>
@@ -236,15 +236,38 @@
               data-i18n-alt="hero.imageAlt"
             />
           </picture>
+          <span class="hero-tick hero-tick-tl" aria-hidden="true"></span>
+          <span class="hero-tick hero-tick-tr" aria-hidden="true"></span>
+          <span class="hero-tick hero-tick-bl" aria-hidden="true"></span>
+          <span class="hero-tick hero-tick-br" aria-hidden="true"></span>
           <figcaption data-i18n="hero.caption">
             {{t:hero.caption}}
           </figcaption>
         </figure>
+        <p class="scroll-cue" aria-hidden="true" data-i18n="footer.scrollCue">{{t:footer.scrollCue}}</p>
       </div>
     </section>
 
+    <div class="hero-marquee" aria-hidden="true">
+      <div class="hero-marquee-track">
+        <span class="hero-marquee-set">
+          <span data-i18n="about.statement">{{t:about.statement}}</span>
+          <i aria-hidden="true">◆</i>
+          <span>Curiosity into practice</span>
+          <i aria-hidden="true">◆</i>
+        </span>
+        <span class="hero-marquee-set">
+          <span data-i18n="about.statement">{{t:about.statement}}</span>
+          <i aria-hidden="true">◆</i>
+          <span>Curiosity into practice</span>
+          <i aria-hidden="true">◆</i>
+        </span>
+      </div>
+    </div>
+
     <section class="about section-shell" id="about" tabindex="-1" data-scene="about">
       <div class="section-heading">
+        <p class="section-eyebrow" data-i18n="about.eyebrow">{{t:about.eyebrow}}</p>
         <h2 data-decode data-i18n="about.title">{{t:about.title}}</h2>
       </div>
       <div class="about-copy">
@@ -257,6 +280,11 @@
         <p class="about-statement" data-i18n="about.statement">
           {{t:about.statement}}
         </p>
+        <div class="facts">
+          <span class="fact"><b>09</b> <span data-i18n="about.factProjects">{{t:about.factProjects}}</span></span>
+          <span class="fact"><b>JA / EN</b> <span data-i18n="about.factBilingual">{{t:about.factBilingual}}</span></span>
+          <span class="fact"><b>OSS</b> <span data-i18n="about.factSource">{{t:about.factSource}}</span></span>
+        </div>
       </div>
     </section>
 
@@ -266,6 +294,7 @@
       </a>
       <div class="section-shell">
         <div class="projects-intro">
+          <p class="section-eyebrow" data-i18n="projects.eyebrow">{{t:projects.eyebrow}}</p>
           <h2 data-decode data-i18n="projects.title">{{t:projects.title}}</h2>
           <p data-i18n="projects.intro">
             {{t:projects.intro}}
@@ -301,9 +330,42 @@
       </div>
     </section>
 
+    <section class="stack section-shell" id="stack" tabindex="-1">
+      <div class="section-heading">
+        <p class="section-eyebrow" data-i18n="stack.eyebrow">{{t:stack.eyebrow}}</p>
+        <h2 data-decode data-i18n="stack.title">{{t:stack.title}}</h2>
+      </div>
+      <div class="toolbox">
+        <div class="tool-group">
+          <h3 data-i18n="stack.build">{{t:stack.build}}</h3>
+          <div class="chips">
+            <span>HTML</span><span>CSS</span><span>JavaScript</span><span>TypeScript</span>
+            <span>React</span><span>Vue</span><span>Astro</span><span>Vite</span>
+            <span>Slidev</span><span>Tailwind CSS</span>
+          </div>
+        </div>
+        <div class="tool-group">
+          <h3 data-i18n="stack.platform">{{t:stack.platform}}</h3>
+          <div class="chips">
+            <span>GitHub Pages</span><span>Cloudflare</span><span>PWA</span>
+            <span>Edge DevTools</span><span>Manifest V3</span><span>Fitbit API</span>
+          </div>
+        </div>
+        <div class="tool-group">
+          <h3 data-i18n="stack.quality">{{t:stack.quality}}</h3>
+          <div class="chips">
+            <span>Playwright</span><span>Jest</span><span>GitHub Actions</span>
+            <span data-i18n="stack.chipAccessibility">{{t:stack.chipAccessibility}}</span>
+            <span data-i18n="stack.chipI18n">{{t:stack.chipI18n}}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="contact section-shell" id="contact" tabindex="-1" aria-labelledby="contact-title" data-scene="contact">
       <div class="contact-panel">
         <div>
+          <p class="section-eyebrow" data-i18n="contact.eyebrow">{{t:contact.eyebrow}}</p>
           <h2 id="contact-title" data-decode data-i18n="contact.title">{{t:contact.title}}</h2>
           <p data-i18n="contact.intro">
             {{t:contact.intro}}
@@ -367,6 +429,12 @@
       <p class="sr-only" data-i18n="about.statement">{{t:about.statement}}</p>
     </div>
     <div class="footer-meta">
+      <p
+        class="footer-clock"
+        id="footer-clock"
+        aria-label="{{t:footer.clockLabel}}"
+        data-i18n-aria-label="footer.clockLabel"
+      >--:--:-- JST</p>
       <p>&copy; <span id="current-year">2026</span> himiyosh</p>
       <p class="footer-disclaimer" data-i18n="disclaimer">
         {{t:disclaimer}}

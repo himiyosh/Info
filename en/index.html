@@ -200,13 +200,13 @@
     <section class="hero" id="top" tabindex="-1" data-scene="hero">
       <div class="hero-sticky">
         <div class="hero-stage">
+          <p class="hero-role" data-i18n="hero.role">Engineer / Rookie Dad</p>
           <h1>
             <span data-decode data-i18n="hero.titleLine1">Technology,</span>
             <span class="hero-title-accent" data-decode data-i18n="hero.titleLine2">made useful.</span>
           </h1>
         </div>
         <div class="hero-support">
-          <p class="hero-role" data-i18n="hero.role">Engineer / Rookie Dad</p>
           <p class="hero-lede" data-i18n="hero.lede">
             Solving problems, sharing what I learn, and turning curiosity into practical work. This is himiyosh&#39;s personal portfolio.
           </p>
@@ -237,15 +237,38 @@
               data-i18n-alt="hero.imageAlt"
             />
           </picture>
+          <span class="hero-tick hero-tick-tl" aria-hidden="true"></span>
+          <span class="hero-tick hero-tick-tr" aria-hidden="true"></span>
+          <span class="hero-tick hero-tick-bl" aria-hidden="true"></span>
+          <span class="hero-tick hero-tick-br" aria-hidden="true"></span>
           <figcaption data-i18n="hero.caption">
             Staying curious, on and off the screen.
           </figcaption>
         </figure>
+        <p class="scroll-cue" aria-hidden="true" data-i18n="footer.scrollCue">SCROLL</p>
       </div>
     </section>
 
+    <div class="hero-marquee" aria-hidden="true">
+      <div class="hero-marquee-track">
+        <span class="hero-marquee-set">
+          <span data-i18n="about.statement">Curiosity, put to work.</span>
+          <i aria-hidden="true">◆</i>
+          <span>Curiosity into practice</span>
+          <i aria-hidden="true">◆</i>
+        </span>
+        <span class="hero-marquee-set">
+          <span data-i18n="about.statement">Curiosity, put to work.</span>
+          <i aria-hidden="true">◆</i>
+          <span>Curiosity into practice</span>
+          <i aria-hidden="true">◆</i>
+        </span>
+      </div>
+    </div>
+
     <section class="about section-shell" id="about" tabindex="-1" data-scene="about">
       <div class="section-heading">
+        <p class="section-eyebrow" data-i18n="about.eyebrow">ABOUT</p>
         <h2 data-decode data-i18n="about.title">Curiosity, put to work.</h2>
       </div>
       <div class="about-copy">
@@ -258,6 +281,11 @@
         <p class="about-statement" data-i18n="about.statement">
           Curiosity, put to work.
         </p>
+        <div class="facts">
+          <span class="fact"><b>09</b> <span data-i18n="about.factProjects">public projects</span></span>
+          <span class="fact"><b>JA / EN</b> <span data-i18n="about.factBilingual">bilingual throughout</span></span>
+          <span class="fact"><b>OSS</b> <span data-i18n="about.factSource">source-first, open</span></span>
+        </div>
       </div>
     </section>
 
@@ -267,6 +295,7 @@
       </a>
       <div class="section-shell">
         <div class="projects-intro">
+          <p class="section-eyebrow" data-i18n="projects.eyebrow">WORKS — 09 PUBLIC PROJECTS</p>
           <h2 data-decode data-i18n="projects.title">Small frictions, made into tools.</h2>
           <p data-i18n="projects.intro">
             Public sites, services, and tools built to make small, everyday tasks a little easier.
@@ -579,9 +608,42 @@
       </div>
     </section>
 
+    <section class="stack section-shell" id="stack" tabindex="-1">
+      <div class="section-heading">
+        <p class="section-eyebrow" data-i18n="stack.eyebrow">STACK</p>
+        <h2 data-decode data-i18n="stack.title">The toolbox.</h2>
+      </div>
+      <div class="toolbox">
+        <div class="tool-group">
+          <h3 data-i18n="stack.build">BUILD</h3>
+          <div class="chips">
+            <span>HTML</span><span>CSS</span><span>JavaScript</span><span>TypeScript</span>
+            <span>React</span><span>Vue</span><span>Astro</span><span>Vite</span>
+            <span>Slidev</span><span>Tailwind CSS</span>
+          </div>
+        </div>
+        <div class="tool-group">
+          <h3 data-i18n="stack.platform">PLATFORM</h3>
+          <div class="chips">
+            <span>GitHub Pages</span><span>Cloudflare</span><span>PWA</span>
+            <span>Edge DevTools</span><span>Manifest V3</span><span>Fitbit API</span>
+          </div>
+        </div>
+        <div class="tool-group">
+          <h3 data-i18n="stack.quality">QUALITY</h3>
+          <div class="chips">
+            <span>Playwright</span><span>Jest</span><span>GitHub Actions</span>
+            <span data-i18n="stack.chipAccessibility">Accessibility</span>
+            <span data-i18n="stack.chipI18n">i18n (JA / EN)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="contact section-shell" id="contact" tabindex="-1" aria-labelledby="contact-title" data-scene="contact">
       <div class="contact-panel">
         <div>
+          <p class="section-eyebrow" data-i18n="contact.eyebrow">CONTACT</p>
           <h2 id="contact-title" data-decode data-i18n="contact.title">Let&#39;s talk.</h2>
           <p data-i18n="contact.intro">
             For questions about technology or these public projects, reach out by email or GitHub.
@@ -645,6 +707,12 @@
       <p class="sr-only" data-i18n="about.statement">Curiosity, put to work.</p>
     </div>
     <div class="footer-meta">
+      <p
+        class="footer-clock"
+        id="footer-clock"
+        aria-label="Current time (Japan Standard Time)"
+        data-i18n-aria-label="footer.clockLabel"
+      >--:--:-- JST</p>
       <p>&copy; <span id="current-year">2026</span> himiyosh</p>
       <p class="footer-disclaimer" data-i18n="disclaimer">
         This is a personal site and does not represent the official views of my employer.

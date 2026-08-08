@@ -43,7 +43,11 @@
         caption: "画面の内外で、好奇心を持ち続ける。"
       },
       about: {
+        eyebrow: "ABOUT",
         title: "好奇心を、実用へ。",
+        factProjects: "公開プロジェクト",
+        factBilingual: "バイリンガル対応",
+        factSource: "ソース公開中心",
         content:
           "某グローバルIT企業で、テクノロジー領域の課題解決に取り組\u2060んでいます。役に立つ知識や技術を見つけ、試し、分かりやすい形にすることが好きです。",
         site:
@@ -51,6 +55,7 @@
         statement: "好奇心を、実用へ。"
       },
       projects: {
+        eyebrow: "WORKS — 09 PUBLIC PROJECTS",
         title: "小さな不便を、道具に。",
         intro: "日々の不便を小さくするために作った、公開中のサイト、サービス、ツールです。",
         skipToContact: "連絡先へスキップ",
@@ -72,6 +77,7 @@
           "共有できませんでした。固定リンクのコンテキストメニューからリンクをコピーしてください。"
       },
       contact: {
+        eyebrow: "CONTACT",
         title: "話しましょう。",
         intro: "技術や公開プロジェクトについてのご連絡は、メールまたは GitHub からどうぞ。",
         emailLabel: "Email",
@@ -79,6 +85,15 @@
         copySuccess: "メールアドレスをコピーしました。",
         copyManualSelected: "コピーできませんでした。選択中のアドレスを手動でコピーしてください。",
         copyFailure: "コピーできませんでした。表示中のアドレスを手動でコピーしてください。"
+      },
+      stack: {
+        eyebrow: "STACK",
+        title: "道具箱。",
+        build: "BUILD",
+        platform: "PLATFORM",
+        quality: "QUALITY",
+        chipAccessibility: "アクセシビリティ",
+        chipI18n: "i18n(JA / EN)"
       },
       theme: {
         toLight: "白妙(ライトモード)に切り替え",
@@ -98,7 +113,9 @@
         contactAction: "お問い合わせ"
       },
       footer: {
-        backToTop: "ページ上部へ"
+        backToTop: "ページ上部へ",
+        clockLabel: "現在時刻(日本標準時)",
+        scrollCue: "SCROLL"
       },
       disclaimer:
         "このサイトは個人で運営しており、所属組織の公式見解を代表するものではありません。"
@@ -139,7 +156,11 @@
         caption: "Staying curious, on and off the screen."
       },
       about: {
+        eyebrow: "ABOUT",
         title: "Curiosity, put to work.",
+        factProjects: "public projects",
+        factBilingual: "bilingual throughout",
+        factSource: "source-first, open",
         content:
           "I work on technology challenges at a global IT company. I enjoy finding useful knowledge and techniques, testing them, and making them easier to understand.",
         site:
@@ -147,6 +168,7 @@
         statement: "Curiosity, put to work."
       },
       projects: {
+        eyebrow: "WORKS — 09 PUBLIC PROJECTS",
         title: "Small frictions, made into tools.",
         intro: "Public sites, services, and tools built to make small, everyday tasks a little easier.",
         skipToContact: "Skip to Contact",
@@ -168,6 +190,7 @@
           "Sharing failed. Use the permalink's context menu to copy the link."
       },
       contact: {
+        eyebrow: "CONTACT",
         title: "Let's talk.",
         intro: "For questions about technology or these public projects, reach out by email or GitHub.",
         emailLabel: "Email",
@@ -175,6 +198,15 @@
         copySuccess: "Email address copied.",
         copyManualSelected: "Copy failed. Copy the selected address manually.",
         copyFailure: "Copy failed. Select the visible address and copy it manually."
+      },
+      stack: {
+        eyebrow: "STACK",
+        title: "The toolbox.",
+        build: "BUILD",
+        platform: "PLATFORM",
+        quality: "QUALITY",
+        chipAccessibility: "Accessibility",
+        chipI18n: "i18n (JA / EN)"
       },
       theme: {
         toLight: "Switch to Shirotae (light mode)",
@@ -194,7 +226,9 @@
         contactAction: "Contact"
       },
       footer: {
-        backToTop: "Back to top"
+        backToTop: "Back to top",
+        clockLabel: "Current time (Japan Standard Time)",
+        scrollCue: "SCROLL"
       },
       disclaimer:
         "This is a personal site and does not represent the official views of my employer."

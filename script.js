@@ -516,6 +516,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let themeStatusTimer = null;
   let themeHoldTimer = null;
   let themeEggFiredAt = 0;
+  let themeEggPending = false;
 
   function storedTheme() {
     try {
@@ -612,13 +613,22 @@ document.addEventListener("DOMContentLoaded", () => {
     themeToggle.classList.add("theme-toggle-charging");
     window.clearTimeout(themeHoldTimer);
     themeHoldTimer = window.setTimeout(() => {
-      themeEggFiredAt = Date.now();
+      themeEggPending = true;
       themeToggle.classList.remove("theme-toggle-charging");
       setTheme("akatsuki", { announceKey: "theme.akatsukiUnlocked" });
     }, 3000);
   });
   ["pointerup", "pointerleave", "pointercancel"].forEach((type) =>
     themeToggle.addEventListener(type, () => {
+      // The suppression window has to start when the pointer is released,
+      // not when the egg fires: the charge animation ends exactly at the
+      // unlock, so a hold that runs a little long would otherwise let the
+      // trailing click through and immediately undo the theme it just
+      // revealed — persisting that undo and dropping OS-scheme following.
+      if (themeEggPending) {
+        themeEggPending = false;
+        themeEggFiredAt = Date.now();
+      }
       window.clearTimeout(themeHoldTimer);
       themeToggle.classList.remove("theme-toggle-charging");
     })
@@ -1966,6 +1976,39 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   requireElement("current-year").textContent = String(new Date().getFullYear());
+
+  // --- Footer: live Japan Standard Time -------------------------------
+  // The template ships a static placeholder so the printed and
+  // no-JavaScript footers still read as a clock rather than an empty line.
+  // Teardown rides pagehide: the shared scene lifecycle deliberately owns
+  // no page-visibility listener, and a contract keeps it that way.
+  const footerClock = requireElement("footer-clock");
+  const jstFormatter = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+  let footerClockTimer = null;
+
+  function renderFooterClock() {
+    footerClock.textContent = `${jstFormatter.format(new Date())} JST`;
+  }
+
+  renderFooterClock();
+  footerClockTimer = window.setInterval(renderFooterClock, 1000);
+  window.addEventListener("pagehide", () => {
+    window.clearInterval(footerClockTimer);
+    footerClockTimer = null;
+  });
+  window.addEventListener("pageshow", () => {
+    if (footerClockTimer === null) {
+      renderFooterClock();
+      footerClockTimer = window.setInterval(renderFooterClock, 1000);
+    }
+  });
+
   loadProjects();
 
   function loadAdSense() {
