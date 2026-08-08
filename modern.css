@@ -20,73 +20,6 @@ main,
   z-index: var(--z-base);
 }
 
-.viewport-stage {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: clip;
-  background: var(--color-scene-hero);
-  pointer-events: none;
-}
-
-.viewport-stage-layer,
-.viewport-stage-frame {
-  position: absolute;
-  display: block;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--dur-long) var(--ease-in-out);
-}
-
-.viewport-stage-layer {
-  inset: 0;
-}
-
-.viewport-stage-layer-hero {
-  background: var(--color-scene-hero);
-  opacity: 1;
-}
-
-.viewport-stage-layer-about {
-  background: var(--color-scene-about);
-}
-
-.viewport-stage-layer-projects {
-  background: var(--color-scene-projects);
-}
-
-.viewport-stage-layer-contact {
-  background: var(--color-scene-contact);
-}
-
-.viewport-stage-frame {
-  inset-block: 12%;
-  inset-inline: 58% 4%;
-  border: var(--rule-hair) solid var(--color-rule);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  opacity: 0.42;
-}
-
-body[data-scene="hero"] .viewport-stage-layer-hero,
-body[data-scene="about"] .viewport-stage-layer-about,
-body[data-scene="projects"] .viewport-stage-layer-projects,
-body[data-scene^="project-"] .viewport-stage-layer-projects,
-body[data-scene="contact"] .viewport-stage-layer-contact,
-body[data-scene="footer"] .viewport-stage-layer-contact {
-  opacity: 1;
-}
-
-body:not([data-scene="hero"]) .viewport-stage-layer-hero {
-  opacity: 0;
-}
-
-body[data-scene="about"] .viewport-stage-frame,
-body[data-scene="projects"] .viewport-stage-frame,
-body[data-scene^="project-"] .viewport-stage-frame {
-  opacity: 0.7;
-}
-
 .site-header {
   inset-block-start: var(--space-sm);
   width: calc(100% - (var(--space-sm) * 2));
@@ -308,11 +241,6 @@ html:lang(ja) :where(.button, .text-link) {
   padding-block: var(--space-3xl);
 }
 
-.about {
-  background: var(--color-transparent);
-  border-block-start: 0;
-}
-
 .section-heading h2,
 .projects-intro h2,
 .contact h2 {
@@ -342,42 +270,10 @@ html:lang(ja) :where(.section-heading h2, .projects-intro h2, .contact h2) {
   margin: 0;
 }
 
-.about-copy .about-statement {
-  margin-block-start: var(--space-xl);
-  padding-block-start: var(--space-lg);
-  color: var(--color-ink);
-  border-block-start: var(--rule-hair) solid var(--color-rule);
-  font-family: var(--font-heading);
-  font-size: clamp(2.25rem, 5vw, 4.5rem);
-  font-weight: 600;
-  font-variation-settings: "wght" 600;
-  letter-spacing: -0.03em;
-  line-height: 1.03;
-  text-transform: none;
-}
-
-html:lang(ja) .about-copy .about-statement {
-  font-family: var(--font-heading-ja);
-  font-weight: 700;
-}
-
 .projects {
   background: var(--color-transparent);
   color: var(--color-ink);
   border-block: 0;
-}
-
-.projects .section-shell {
-  width: 100%;
-  max-width: none;
-  padding-inline: 0;
-}
-
-.projects-intro {
-  width: 100%;
-  max-width: var(--content-width);
-  margin-inline: auto;
-  padding-inline: var(--page-gutter);
 }
 
 .projects-intro h2,
@@ -385,223 +281,8 @@ html:lang(ja) .about-copy .about-statement {
   color: var(--color-ink);
 }
 
-.project-directory {
-  padding-block-start: var(--space-sm);
-  border-block-start: var(--rule-hair) solid var(--color-rule);
-}
-
-.project-directory-link {
-  color: var(--color-ink-2);
-  font-family: var(--font-body);
-}
-
-.project-directory-kind {
-  color: var(--color-muted);
-}
-
-html:lang(ja) .project-directory-link {
-  font-family: var(--font-body-ja);
-}
-
-.project-directory-link:focus-visible {
-  outline-color: var(--color-focus);
-}
-
-.projects-status,
-.projects-fallback {
-  width: 100%;
-  max-width: var(--content-width);
-  margin-inline: auto;
-  padding-inline: var(--page-gutter);
-  color: var(--color-ink);
-}
-
-.projects-fallback {
-  padding-block-end: var(--space-2xl);
-}
-
-.projects-fallback-card {
-  background: var(--color-surface);
-  color: var(--color-ink);
-  border-color: var(--color-rule);
-}
-
-.projects-fallback-title {
-  font-family: var(--font-heading);
-  font-size: clamp(1.75rem, 4vw, 2.75rem);
-  font-weight: 600;
-  font-variation-settings: "wght" 600;
-  letter-spacing: -0.025em;
-  line-height: 1.05;
-}
-
-html:lang(ja) .projects-fallback-title {
-  font-family: var(--font-heading-ja);
-  font-weight: 700;
-}
-
-.projects-list {
-  margin-block-start: var(--space-2xl);
-  gap: 0;
-}
-
-.project-row {
-  min-width: 0;
-  min-height: auto;
-  padding: var(--space-2xl) var(--page-gutter);
-  background: var(--color-project-a);
-  color: var(--color-ink);
-  border: 0;
-  border-block-start: var(--rule-hair) solid var(--color-rule);
-  box-shadow: none;
-}
-
-.project-row:nth-child(odd) {
-  background: var(--color-project-a);
-  color: var(--color-ink);
-}
-
-.project-row:nth-child(even) {
-  background: var(--color-project-b);
-  color: var(--color-ink);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .js-enabled .project-row.is-priming {
-    opacity: 1;
-  }
-}
-
-.project-media {
-  overflow: clip;
-  background: var(--color-paper-2);
-  border: var(--rule-hair) solid var(--color-rule);
-  border-radius: var(--radius-md);
-  animation: none;
-  transform: translateY(var(--media-translate-y, 0)) scale(var(--media-depth, 1));
-  transform-origin: center;
-}
-
-.project-media img {
-  border-radius: var(--radius-md);
-  filter: saturate(0.78) contrast(1.03);
-}
-
-.project-content {
-  opacity: var(--project-opacity, 1);
-  transform: translateY(var(--project-depth, 0));
-}
-
-.project-heading h3 {
-  font-family: var(--font-heading);
-  font-size: clamp(2.25rem, 5.5vw, 4.75rem);
-  font-weight: 600;
-  font-variation-settings: "wght" 600;
-  letter-spacing: -0.03em;
-  line-height: 1.03;
-  overflow-wrap: break-word;
-  text-transform: none;
-  text-wrap: balance;
-}
-
-.project-permalink {
-  color: var(--color-ink-2);
-  border-color: var(--color-rule);
-  font-family: var(--font-body);
-  font-weight: 700;
-}
-
-.project-share-button {
-  background: var(--color-transparent);
-  color: var(--color-ink-2);
-  border-color: var(--color-rule);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-body);
-  font-weight: 700;
-}
-
-html:lang(ja) .project-permalink {
-  font-family: var(--font-body-ja);
-}
-
-html:lang(ja) .project-share-button {
-  font-family: var(--font-body-ja);
-}
-
-.project-share-status {
-  color: var(--color-ink-2);
-}
-
-html:lang(ja) .project-heading h3 {
-  font-family: var(--font-heading-ja);
-  font-weight: 700;
-}
-
-.project-kind,
-.project-stack {
-  color: var(--color-ink-2);
-}
-
-.project-proof {
-  border-block-start-color: var(--color-rule);
-}
-
-.project-proof-label,
-.project-link--evidence {
-  color: var(--color-ink-2);
-}
-
-.project-proof-label {
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-variation-settings: normal;
-  letter-spacing: 0.01em;
-  text-transform: none;
-}
-
-.project-actions {
-  gap: var(--space-2xs) var(--space-sm);
-}
-
-.project-link {
-  border-block-end: var(--rule-hair) solid currentcolor;
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  font-variation-settings: normal;
-  letter-spacing: 0.01em;
-  text-transform: none;
-}
-
-.project-link--secondary {
-  padding-inline: var(--space-sm);
-  color: var(--color-ink-2);
-  border: var(--rule-hair) solid currentcolor;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-html:lang(ja) .project-link {
-  font-family: var(--font-body-ja);
-}
-
-html:lang(ja) .project-proof-label {
-  font-family: var(--font-body-ja);
-}
-
 .contact {
   padding-block: var(--space-4xl);
-}
-
-.contact-panel {
-  padding: clamp(1.5rem, 6vw, 4.5rem);
-  background: var(--color-surface);
-  color: var(--color-ink);
-  border: var(--rule-hair) solid var(--color-rule);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-cinematic);
 }
 
 .contact-panel h2,
@@ -643,7 +324,6 @@ html:lang(ja) .contact-copy-button {
   color: var(--color-ink-2);
 }
 
-.projects-list .project-row :where(a, button):focus-visible,
 .contact-panel :where(a, button):focus-visible {
   outline-color: var(--color-focus);
 }
@@ -651,46 +331,6 @@ html:lang(ja) .contact-copy-button {
 .site-footer {
   background: var(--color-paper);
   border-block-start: var(--rule-hair) solid var(--color-rule);
-}
-
-.footer-marquee {
-  overflow: visible;
-  background: var(--color-transparent);
-  color: var(--color-ink);
-  border-block-end: 0;
-}
-
-.footer-marquee-track {
-  width: 100%;
-  max-width: var(--content-width);
-  margin-inline: auto;
-  padding: var(--space-3xl) var(--page-gutter) var(--space-xl);
-  display: block;
-}
-
-.footer-marquee-set {
-  min-width: 0;
-  padding: 0;
-  display: block;
-  font-family: var(--font-heading);
-  font-size: clamp(2.5rem, 7vw, 5.5rem);
-  font-weight: 900;
-  font-variation-settings: normal;
-  letter-spacing: 0.03em;
-  line-height: 1.3;
-  text-transform: none;
-  animation: none;
-  transform: none;
-}
-
-html:lang(ja) .footer-marquee-set {
-  font-family: var(--font-heading-ja);
-  font-weight: 700;
-}
-
-.footer-marquee-set:not(:first-child),
-.footer-marquee-set:first-child > :not(:first-child) {
-  display: none;
 }
 
 .footer-meta {
@@ -723,23 +363,6 @@ html:lang(ja) .footer-meta a {
     transform: translateY(-1px);
   }
 
-  .project-link:hover {
-    transform: translateX(var(--space-2xs));
-  }
-
-  .project-link--secondary:hover {
-    background: var(--color-surface-raised);
-    color: var(--color-ink);
-  }
-
-  .project-permalink:hover {
-    color: var(--color-ink);
-  }
-
-  .project-share-button:hover {
-    color: var(--color-ink);
-  }
-
   .contact-links a:hover {
     background: var(--color-paper-2);
     color: var(--color-ink);
@@ -756,9 +379,7 @@ html:lang(ja) .footer-meta a {
     .hero h1,
     .section-heading h2,
     .projects-intro h2,
-    .contact h2,
-    .project-heading h3,
-    .footer-marquee-set
+    .contact h2
   ) {
     min-width: 0;
     overflow-wrap: anywhere;
@@ -800,15 +421,7 @@ html:lang(ja) .footer-meta a {
     box-shadow: none;
   }
 
-  .hero {
-    min-height: 165svh;
-    padding-block: 0;
-  }
-
   .hero-sticky {
-    position: sticky;
-    inset-block-start: calc(var(--header-height) + var(--space-lg));
-    min-height: calc(100svh - var(--header-height) - (var(--space-lg) * 2));
     grid-template-columns: minmax(0, 1.08fr) minmax(18rem, 0.72fr);
     grid-template-areas:
       "stage visual"
@@ -830,88 +443,16 @@ html:lang(ja) .footer-meta a {
     grid-area: support;
   }
 
-  /* The scene-era About and Projects rules lived here: a 165svh section,
-   * a heading stuck at 32svh, 38svh of copy padding, and a 68svh intro
-   * band. The prototype composition owns this layout through .about-grid,
-   * .about-sticky, and .section-head, so these are gone. Keeping them
-   * cost About its second column and put an empty screen above Projects. */
-
-  .project-row {
-    min-height: 100svh;
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.72fr);
-    align-items: center;
-    gap: clamp(2rem, 7vw, 7rem);
-  }
-
-  .project-media img {
-    max-height: 68svh;
-    aspect-ratio: 16 / 10;
-  }
-}
-
-html:not(.js-enabled) .hero,
-html:not(.js-enabled) .about,
-html:not(.js-enabled) .project-row {
-  min-height: auto;
-}
-
-html:not(.js-enabled) .hero {
-  padding-block: var(--space-3xl);
-}
-
-html:not(.js-enabled) .hero-sticky,
-html:not(.js-enabled) .about-sticky {
-  position: relative;
-  inset-block-start: auto;
-  opacity: 1;
-  transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .viewport-stage-layer,
-  .viewport-stage-frame {
-    transition: none;
-  }
-
-  .hero,
-  .about,
-  .project-row {
-    min-height: auto;
-  }
-
-  .hero {
-    padding-block: var(--space-3xl);
-  }
-
-  .hero-sticky,
-  .about-sticky {
-    position: relative;
-    inset-block-start: auto;
-  }
-
-  .hero-sticky,
-  .project-content,
-  .project-media {
+  .hero-sticky {
     opacity: 1 !important;
     transform: none !important;
   }
 
-  .button-primary,
-  .project-link {
+  .button-primary {
     transform: none !important;
-  }
-
-  .project-share-button {
-    transform: none !important;
-  }
-
-  .project-permalink {
-    transform: none !important;
-  }
-
-  .project-media,
-  .footer-marquee-set {
-    animation: none !important;
   }
 }
 
@@ -955,7 +496,6 @@ html:not(.js-enabled) .about-sticky {
   }
 
   .scroll-progress,
-  .viewport-stage,
   .skip-link,
   .sr-only,
   .menu-toggle,
@@ -963,17 +503,8 @@ html:not(.js-enabled) .about-sticky {
   .wordmark-mark,
   .hero-actions,
   .hero-visual,
-  .project-directory,
-  .projects-status,
-  .retry-button,
-  .project-media,
-  .project-permalink,
-  .projects-fallback-permalink,
-  .project-share-button,
-  .project-share-status,
   .contact-copy-button,
   .contact-copy-status,
-  .footer-marquee,
   .footer-meta > a {
     display: none !important;
   }
@@ -1004,8 +535,7 @@ html:not(.js-enabled) .about-sticky {
 
   .hero,
   .about,
-  .projects-intro,
-  .project-row {
+  .projects-intro {
     min-height: 0 !important;
   }
 
@@ -1072,8 +602,6 @@ html:not(.js-enabled) .about-sticky {
   .section-shell,
   .projects .section-shell,
   .projects-intro,
-  .projects-status,
-  .projects-fallback,
   .footer-meta {
     width: auto;
     max-width: none;
@@ -1112,15 +640,6 @@ html:not(.js-enabled) .about-sticky {
     color: var(--color-print-ink);
   }
 
-  .about-copy .about-statement {
-    margin-block-start: 4mm;
-    padding-block-start: 3mm;
-    color: var(--color-print-ink);
-    border-block-start-color: var(--color-print-rule);
-    font-size: 12pt;
-    line-height: 1.35;
-  }
-
   .projects {
     background: var(--color-print-paper);
     color: var(--color-print-ink);
@@ -1141,105 +660,6 @@ html:not(.js-enabled) .about-sticky {
     margin-block: 2mm 0;
   }
 
-  .projects-list,
-  .projects-fallback-list {
-    margin-block-start: 0;
-    display: block;
-  }
-
-  .project-row,
-  .projects-fallback-card {
-    min-width: 0;
-    min-height: 0 !important;
-    margin: 0;
-    padding: 5mm 0;
-    display: block;
-    overflow: visible !important;
-    background: var(--color-print-paper) !important;
-    color: var(--color-print-ink) !important;
-    border: 0;
-    border-block-start: var(--rule-hair) solid var(--color-print-rule);
-    border-radius: var(--radius-none);
-    box-shadow: none;
-    opacity: 1 !important;
-    transform: none !important;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .project-content {
-    display: block;
-    overflow: visible !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .project-heading-line,
-  .projects-fallback-heading {
-    display: block;
-  }
-
-  .project-heading h3,
-  .projects-fallback-title {
-    margin: 0;
-    color: var(--color-print-ink);
-    font-size: 15pt;
-    line-height: 1.15;
-    overflow-wrap: anywhere;
-  }
-
-  .project-heading-actions {
-    display: none;
-  }
-
-  .project-kind,
-  .project-stack,
-  .projects-fallback-kind,
-  .projects-fallback-stack {
-    margin-block-start: 1.5mm;
-    color: var(--color-print-muted);
-    font-size: 8.5pt;
-  }
-
-  .project-description,
-  .projects-fallback-description {
-    max-width: none;
-    margin-block-start: 2.5mm;
-    color: var(--color-print-ink);
-    font-size: 9.5pt;
-    line-height: 1.5;
-    overflow-wrap: anywhere;
-  }
-
-  .project-actions,
-  .projects-fallback-actions {
-    margin-block-start: 3mm;
-    display: grid;
-    justify-items: start;
-    gap: 2mm;
-  }
-
-  .project-link {
-    width: auto;
-    max-width: 100%;
-    min-height: 0;
-    padding: 0;
-    display: block;
-    color: var(--color-print-ink);
-    border: 0;
-    font-size: 8.5pt;
-    line-height: 1.35;
-    text-decoration: underline;
-    text-underline-offset: 1.5pt;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
-  .project-link-arrow {
-    display: none;
-  }
-
-  .project-link[href^="http"]::after,
   .contact-links a[href^="http"]::after {
     content: " — " attr(href);
     display: block;
@@ -1252,44 +672,6 @@ html:not(.js-enabled) .about-sticky {
     text-decoration: none;
     white-space: normal;
     overflow-wrap: anywhere;
-  }
-
-  .project-proof,
-  .projects-fallback-proof {
-    max-width: none;
-    margin-block-start: 3mm;
-    padding-block-start: 3mm;
-    display: block;
-    color: var(--color-print-ink);
-    border-block-start-color: var(--color-print-rule);
-  }
-
-  .project-proof-text {
-    color: var(--color-print-ink);
-    font-size: 8.5pt;
-    line-height: 1.45;
-  }
-
-  .project-proof-label {
-    margin-block-end: 1mm;
-    color: var(--color-print-muted);
-  }
-
-  .projects-fallback {
-    padding-block-end: 0;
-  }
-
-  .projects-fallback > p {
-    display: none;
-  }
-
-  .projects-fallback-list {
-    padding: 0;
-  }
-
-  .projects-fallback-list > li {
-    break-inside: avoid;
-    page-break-inside: avoid;
   }
 
   .contact {
@@ -1540,23 +922,9 @@ html:lang(ja) .hero h1 {
   font-size: clamp(2.6rem, 7vw, 5.4rem);
 }
 
-/* Project titles use the body face at card scale in the prototype; the
- * lang-scoped form is required because a lang-scoped rule earlier in this
- * file pins the Japanese display face at a higher specificity. */
-.project-heading h3,
-html:lang(ja) .project-heading h3 {
-  font-family: var(--font-body);
-  font-size: 1.35rem;
-  font-weight: 700;
-  font-variation-settings: normal;
-  letter-spacing: normal;
-  line-height: 1.4;
-}
-
 .hero-lede,
 .about-copy p,
-.projects-intro > p,
-.project-description {
+.projects-intro > p {
   line-height: 1.85;
 }
 
@@ -1803,97 +1171,6 @@ html:lang(ja) :where(.button-primary, .text-link) {
   transform: translate(-50%, 0);
 }
 
-/* Project directory as a Network+ homage panel: decorative window
- * chrome via pseudo-elements only, so the measured directory grid,
- * ellipsis, and focus contracts stay untouched. */
-.project-directory {
-  overflow: clip;
-  /* Reset the section's inherited top padding so the window chrome sits
-   * flush against the panel's rounded edge. */
-  padding-block-start: 0;
-  background: var(--color-paper-2);
-  border: var(--rule-hair) solid var(--color-rule);
-  border-radius: var(--radius-md);
-}
-
-.project-directory::before {
-  content: "";
-  display: block;
-  height: 2.25rem;
-  background:
-    radial-gradient(circle at 1.3rem 50%, var(--color-accent) 4px, var(--color-transparent) 5px),
-    radial-gradient(circle at 2.5rem 50%, var(--color-rule) 4px, var(--color-transparent) 5px),
-    radial-gradient(circle at 3.7rem 50%, var(--color-rule) 4px, var(--color-transparent) 5px),
-    var(--color-surface);
-  border-block-end: var(--rule-hair) solid var(--color-rule);
-}
-
-.project-directory-list {
-  padding: 0;
-}
-
-/* Row rhythm from the prototype's .row: hairline separator, generous
- * padding, status dot, name that takes the accent on hover, and the
- * advancing go arrow. The pinned two-child link structure (title, kind)
- * is preserved — the dot and arrow are pseudo-elements. */
-.project-directory-link {
-  padding: 1.15rem 1.4rem;
-  transition:
-    background-color var(--dur-micro) var(--ease-out),
-    color var(--dur-micro) var(--ease-out);
-}
-
-.project-directory-link::before {
-  content: "";
-  flex: 0 0 auto;
-  width: 7px;
-  height: 7px;
-  border-radius: var(--radius-pill);
-  background: var(--color-ok);
-  box-shadow: 0 0 8px color-mix(in oklab, var(--color-ok) 70%, transparent);
-}
-
-.project-directory-link::after {
-  content: "↓";
-  flex: 0 0 auto;
-  color: var(--color-accent);
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  transition: transform var(--dur-micro) var(--ease-out);
-}
-
-/* One hairline per boundary: the separator is drawn on the trailing edge
- * only, and released on the final row so it never doubles against the
- * panel border. Column count changes across three breakpoints, so this
- * must not be expressed with :nth-child. */
-.project-directory-list > li .project-directory-link {
-  border-block-end: var(--rule-hair) solid
-    color-mix(in oklab, var(--color-rule) 45%, transparent);
-}
-
-.project-directory-list > li:last-child .project-directory-link {
-  border-block-end: 0;
-}
-
-.project-directory-link:hover {
-  background: color-mix(in oklab, var(--color-accent) 9%, transparent);
-  color: var(--color-accent);
-}
-
-.project-directory-link:hover::after {
-  transform: translateY(3px);
-}
-
-.project-directory-title {
-  font-weight: 700;
-}
-
-.project-directory-kind {
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: 0.06em;
-}
-
 /* Mode-change crossfade (View Transitions API; script.js skips the
  * transition entirely under reduced motion). */
 ::view-transition-old(root),
@@ -1911,8 +1188,7 @@ html:lang(ja) :where(.button-primary, .text-link) {
     animation: none !important;
   }
 
-  .button-primary:hover::after,
-  .project-directory-link:hover::after {
+  .button-primary:hover::after {
     transform: none !important;
   }
 
@@ -1981,15 +1257,9 @@ html:lang(ja) :where(.button-primary, .text-link) {
     line-height: 1.1;
   }
 
-  .project-heading h3 {
-    font-size: 15pt;
-    line-height: 1.15;
-  }
-
   .hero-lede,
   .about-copy p,
-  .projects-intro > p,
-  .project-description {
+  .projects-intro > p {
     line-height: 1.5;
   }
 
@@ -2292,43 +1562,6 @@ html:lang(ja) .contact-copy-button {
   border-color: var(--color-ok);
 }
 
-/* Project stack entries as mono chips, matching the prototype's tags. */
-.project-stack {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.project-stack span {
-  padding: 0.28rem 0.6rem;
-  border: var(--rule-hair) solid
-    color-mix(in oklab, var(--color-rule) 45%, transparent);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  letter-spacing: 0.05em;
-}
-
-.project-link,
-html:lang(ja) .project-link {
-  color: var(--color-accent);
-  font-size: 0.8rem;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-}
-
-/* Screen only. A monospace family on these links reproducibly kills the
- * renderer during Page.printToPDF — bisected to this single declaration,
- * and it reproduces with a plain system mono stack too, so it is a paged
- * layout fault rather than anything about the bundled subsets. The links
- * keep the accent colour and tracking, which carry the treatment. */
-@media screen {
-  .project-link,
-  html:lang(ja) .project-link {
-    font-family: var(--font-mono);
-  }
-}
-
 .footer-meta a,
 html:lang(ja) .footer-meta a {
   font-family: var(--font-mono);
@@ -2366,24 +1599,9 @@ html:lang(ja) .footer-meta a {
     transform: rotate(20deg);
   }
 
-  .project-directory-link:hover {
-    background: color-mix(in oklab, var(--color-accent) 9%, transparent);
-    color: var(--color-accent);
-  }
-
-  .project-directory-link:hover::after {
-    transform: translateY(3px);
-  }
-
   .hero-visual:hover {
     transform: rotate(0deg);
   }
-}
-
-/* The panel clips its rounded corners, which also clipped the outward
- * focus ring on the first and last column. Ride the ring inside. */
-.project-directory-link:focus-visible {
-  outline-offset: -3px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2449,10 +1667,14 @@ html:lang(ja) .footer-meta a {
   pointer-events: none;
 }
 
-/* Sections breathe on the prototype's rhythm and width. */
+/* Sections breathe on the prototype's rhythm and width. The prototype's
+ * .container is width:min(1160px,92vw) with zero inline padding — the
+ * 92vw clamp itself is the gutter — so the legacy --page-gutter padding
+ * must not narrow the shell. */
 .section-shell {
   max-width: min(1160px, 92vw);
   padding-block: clamp(5rem, 12vh, 8.5rem);
+  padding-inline: 0;
 }
 
 .hero {

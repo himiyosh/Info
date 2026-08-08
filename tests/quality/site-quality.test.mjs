@@ -310,10 +310,15 @@ test("rich redesign foundation uses local tokens and layers the modern system la
     /Hallmark · genre: modern-minimal · macrostructure: Feature Stack[\s\S]*theme: Graphite Blue/,
     "The additive layer must record the restored Feature Stack and locked Graphite Blue system"
   );
-  assert.match(
+  assert.doesNotMatch(
     modernSource,
-    /\.footer-marquee-set\s*\{[^}]*animation:\s*none;/s,
-    "The modern Ft5 footer must explicitly disable the legacy marquee animation"
+    /footer-marquee/,
+    "The legacy footer marquee must stay fully retired from the modern layer"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /footer-marquee/,
+    "The legacy footer marquee must stay fully retired from the foundation layer"
   );
   await Promise.all([
     stat(path.join(repoRoot, "assets/fonts/BigShouldersDisplay-latin-variable.woff2")),
@@ -361,42 +366,31 @@ test("footer renders the clock, the statement, and the recovery link once each",
     "Retired footer marquee machinery must stay retired"
   );
 });
-test("every desktop project row keeps the image on the left, in DOM order", async () => {
+test("panel rows keep the prototype's fixed column order with no nth-child reordering", async () => {
   const stylesSource = await readUtf8("styles.css");
+  const modernSource = await readUtf8("modern.css");
   const projects = JSON.parse(await readUtf8("projects.json"));
 
-  const desktopBlock = stylesSource.match(
-    /@media\s*\(min-width:\s*48rem\)\s*\{([\s\S]*)\}\s*@media\s*\(prefers-reduced-motion:\s*reduce\)/
-  )?.[1];
-  assert.ok(desktopBlock, "Expected a min-width: 48rem media query block");
+  // The scene-era two-column rows are retired for good: their selectors
+  // must not creep back into either stylesheet and silently restyle the
+  // panel rows that reuse project ids.
+  for (const source of [stylesSource, modernSource]) {
+    assert.doesNotMatch(
+      source,
+      /\.project-row|\.project-media|\.project-content/,
+      "Retired scene-row selectors must not return to the shipped stylesheets"
+    );
+  }
 
+  assert.match(
+    modernSource,
+    /\.row\s*\{[^}]*grid-template-columns:\s*5\.2rem 1\.15fr 0\.8fr 1\.2fr auto;/s,
+    "Panel rows must keep the prototype's fixed five-column grid: status, name, type, stack, go"
+  );
   assert.doesNotMatch(
-    desktopBlock,
-    /\.project-row:nth-child\((?:even|odd)\)\s+\.project-media/,
-    "No nth-child rule may move .project-media to a different grid column/row on desktop"
-  );
-  assert.doesNotMatch(
-    desktopBlock,
-    /\.project-row:nth-child\((?:even|odd)\)\s+\.project-content/,
-    "No nth-child rule may move .project-content to a different grid column/row on desktop"
-  );
-  assert.match(
-    desktopBlock,
-    /\.project-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*0\.9fr\)\s*minmax\(0,\s*1\.1fr\);/s,
-    "Desktop rows must use a fixed two-column grid: media first (left), content second (right)"
-  );
-
-  // The odd/even accent-color scene variation must still be present and
-  // untouched — only the column swap is removed.
-  assert.match(
-    stylesSource,
-    /\.project-row:nth-child\(odd\)\s*\{\s*background:\s*var\(--color-accent\);/,
-    "Odd-row accent color variation must still exist"
-  );
-  assert.match(
-    stylesSource,
-    /\.project-row:nth-child\(even\)\s*\{\s*background:\s*var\(--color-accent-2\);/,
-    "Even-row accent-2 color variation must still exist"
+    modernSource,
+    /\.row:nth-child\([^)]*\)[^{]*\{[^}]*(?:grid-column|grid-row|order:)/s,
+    "No nth-child rule may reorder panel-row columns"
   );
 
   assert.ok(projects.length >= 2, "Expected at least two projects to validate row order against");
@@ -407,8 +401,7 @@ test("headings wrap intentionally: safety-net overflow-wrap, language-aware brea
 
   const headingSelectors = [
     /\.hero h1\s*\{([^}]*)\}/s,
-    /\.section-heading h2,\s*\n\.projects-intro h2,\s*\n\.contact h2\s*\{([^}]*)\}/s,
-    /\.project-heading h3\s*\{([^}]*)\}/s
+    /\.section-heading h2,\s*\n\.projects-intro h2,\s*\n\.contact h2\s*\{([^}]*)\}/s
   ];
 
   for (const selectorPattern of headingSelectors) {
@@ -433,12 +426,12 @@ test("headings wrap intentionally: safety-net overflow-wrap, language-aware brea
 
   assert.match(
     stylesSource,
-    /html:lang\(ja\)\s+:where\(\.project-heading h3,\s*\.section-heading h2,\s*\.projects-intro h2,\s*\.contact h2\)\s*\{\s*word-break:\s*keep-all;/,
+    /html:lang\(ja\)\s+:where\(\.section-heading h2,\s*\.projects-intro h2,\s*\.contact h2\)\s*\{\s*word-break:\s*keep-all;/,
     "Non-hero Japanese display headings must use word-break: keep-all so words don't split mid-character-group"
   );
   assert.match(
     stylesSource,
-    /:where\(\.project-heading h3,\s*\.section-heading h2,\s*\.projects-intro h2,\s*\.contact h2\)\s*\{\s*hyphens:\s*auto;/,
+    /:where\(\.section-heading h2,\s*\.projects-intro h2,\s*\.contact h2\)\s*\{\s*hyphens:\s*auto;/,
     "Non-hero headings must have a hyphens: auto safety net for long Latin words"
   );
 });
@@ -667,7 +660,7 @@ test("cards and panel keep the prototype grid at every breakpoint", async () => 
 test("modern typography preserves natural language wrapping and stable no-JS/reduced-motion flow", async () => {
   const modernSource = await readUtf8("modern.css");
 
-  for (const selector of [".hero h1", ".project-heading h3"]) {
+  for (const selector of [".hero h1"]) {
     const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const rule = modernSource.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`, "s"))?.[1];
     assert.ok(rule, `Expected modern heading rule for ${selector}`);
@@ -675,15 +668,18 @@ test("modern typography preserves natural language wrapping and stable no-JS/red
     assert.match(rule, /text-wrap:\s*balance/);
     assert.doesNotMatch(rule, /overflow-wrap:\s*anywhere/);
   }
-  assert.match(
+  // The scene machinery is gone: the resting layout is normal flow in every
+  // mode, so no oversized chapter heights may exist to collapse. The hero is
+  // the single full-viewport section, exactly as in the prototype.
+  assert.doesNotMatch(
     modernSource,
-    /html:not\(\.js-enabled\) \.hero,\s*html:not\(\.js-enabled\) \.about,\s*html:not\(\.js-enabled\) \.project-row\s*\{\s*min-height:\s*auto;/,
-    "No-JS mode must collapse cinematic chapter heights to normal flow"
+    /min-height:\s*(?!100svh)[0-9]+svh/,
+    "No cinematic chapter heights may exist — the resting layout is normal flow"
   );
   assert.match(
     modernSource,
-    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.hero,\s*\.about,\s*\.project-row\s*\{\s*min-height:\s*auto;/,
-    "Reduced motion must collapse cinematic chapter heights to normal flow"
+    /\.hero\s*\{[^}]*min-height:\s*100svh;/s,
+    "The hero must stay the one full-viewport section, as in the prototype"
   );
   assert.match(modernSource, /html,\s*body\s*\{\s*overflow-x:\s*clip;/);
   assert.match(
@@ -708,8 +704,8 @@ test("modern typography preserves natural language wrapping and stable no-JS/red
   );
   assert.match(
     modernSource,
-    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.button-primary,\s*\.project-link\s*\{\s*transform:\s*none\s*!important;/,
-    "Decorative CTA and project-link transforms must be removed under reduced motion"
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.button-primary\s*\{\s*transform:\s*none\s*!important;/,
+    "Decorative CTA transforms must be removed under reduced motion"
   );
 });
 

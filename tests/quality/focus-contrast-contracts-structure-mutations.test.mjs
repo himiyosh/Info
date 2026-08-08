@@ -482,7 +482,6 @@ mutationTest(
   "focus contrast structure guard binds the final focus selector assertion",
   async () => {
     const reviewedFocusRule = [
-      ".projects-list .project-row :where(a, button):focus-visible,",
       ".contact-panel :where(a, button):focus-visible {",
       "  outline-color: var(--color-focus);",
       "}"
@@ -501,7 +500,7 @@ mutationTest(
           )
         }
       },
-      /modern\.css must override both project and contact focus rings with --color-focus/
+      /modern\.css must override the contact focus ring with --color-focus/
     );
   }
 );
@@ -510,9 +509,9 @@ mutationTest(
   "focus contrast structure guard binds the on-dark focus exclusion assertion",
   async () => {
     const reviewedOnDarkSelector =
-      ".js-enabled .nav-menu :focus-visible:not(.language-toggle),";
+      ".js-enabled .nav-menu :focus-visible:not(.language-toggle) {";
     const brokenOnDarkSelector =
-      ".js-enabled .nav-menu :focus-visible,";
+      ".js-enabled .nav-menu :focus-visible {";
     await assertMutationRejected(
       {
         runtimeOverrides: {
@@ -563,7 +562,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { focusContrast: `${focusContrastSource} ` },
-      /focus-contrast-contracts\.test\.mjs must be exactly 7773 bytes/
+      /focus-contrast-contracts\.test\.mjs must be exactly 7888 bytes/
     );
   }
 );
@@ -573,7 +572,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
-      /site-quality\.test\.mjs must be exactly 29088 bytes/
+      /site-quality\.test\.mjs must be exactly 28655 bytes/
     );
   }
 );

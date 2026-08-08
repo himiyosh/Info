@@ -168,6 +168,41 @@ preview-site/index.html に置き換えた**。ユーザーが機能喪失を承
 - 既知の注意: `.project-link` に等幅書体を当てると Chrome の printToPDF が
   落ちるため screen 限定(印刷契約は削除済みだが記録として残す)。
 
+### 独立レビュー(PR #88, verdict=fail)への対応(2026-08-08)
+
+レビューの不合格理由「旧レイアウト CSS が新構造を破壊」(A 表8宣言)と
+付随指摘 C-1/C-2 に対応した。
+
+- **旧構造専用 CSS の全面削除**。A 表の8宣言に加え、残存していた全ブレーク
+  ポイントの旧シーン規則(no-JS 用 868 行帯、reduce 用 896 行帯、大画面用
+  1120/1152/1322 行帯)と、ページに存在しないセレクターのルール一式
+  (`.project-row` 系 / `.project-directory` 系 / `.projects-fallback` 系 /
+  viewport-stage / footer-marquee / share 系ほか)を機械的棚卸しで削除。
+  styles.css + modern.css から**計 1,400 行超**を除去し、孤児化した
+  @keyframes(footer-marquee / project-parallax)も削除した。
+- **セレクター分割の副作用を修正**: `:where(...)` 内カンマの分割で括弧が
+  壊れ modern.css のパースが 52 ルールで停止していた6箇所を原本準拠で修復
+  (styles.css の focus 系 3 箇所 + 見出し `:where` 2 箇所、modern.css 2箇所)。
+- **シェルのガター撤去**: プロトタイプの `.container` は
+  `width:min(1160px,92vw)` のみでガターは 92vw が担う。`.section-shell` に
+  残っていた `--page-gutter` の左右パディングを 0 にし、カラム実測が
+  プロトタイプと一致(About 2×548px、コンタクト中央 1160px)。
+- **死んだ CSS を要求していた契約を新構成へ移植**(削除ではなく書き換え):
+  focus-contrast の3assertion → `.row .type/.stack` の muted、
+  `.contact-copy-status` の ink-2、contact の focus 上書きへ。
+  site-quality の行契約 → パネル行5カラム+nth-child 並べ替え禁止+
+  旧セレクター復活禁止へ。reduced-motion → hero-sticky/CTA/hero-marquee/
+  カード・行トランジションの無効化へ。
+- **ブラウザ実測契約を新設** `prototype-geometry-browser.test.mjs`(5件):
+  実生成ページ+実 CSS を headless Chrome で描画し、ja/en の
+  About 2等分カラム・sticky・見出しと本文の非重複・シェル幅≥1100px・
+  Projects 見出し帯 ≤400px・行5カラム・コンタクト中央1カラム・
+  横オーバーフロー 0 を実測で固定。**WCAG 1.4.12 text-spacing 耐性
+  (320/768px、C-2 指摘の黙殺分)を iframe 実測で復活**。
+  (headless の最小窓幅 500px のため、320px は同一オリジン iframe で実測)
+- テスト: **45ファイル・276テスト全通過**(ピンは repin 収束で再導出、
+  site-quality 境界 28,655 バイト)。生成ページに差分なし(CSS のみの修正)。
+
 ### テスト実行に関する注意
 
 `npm test` の**単発実行はこの環境で完走しない**。「live in one focused
