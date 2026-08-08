@@ -271,7 +271,7 @@ mutationTest(
   "public discovery structure guard rejects adjacent monolith contracts leaking into the focused module",
   async () => {
     const reviewedAssertionMessage = JSON.stringify(
-      "Static summary primary actions must exactly match the canonical project destinations"
+      "Baked primary actions must exactly match the canonical project destinations"
     );
     const adjacentContractLeak = replaceOncePreservingBytes(
       publicDiscoverySource,
@@ -423,7 +423,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { publicDiscovery: `${publicDiscoverySource} ` },
-      /public-discovery-contracts\.test\.mjs must be exactly 4993 bytes/
+      /public-discovery-contracts\.test\.mjs must be exactly 5329 bytes/
     );
   }
 );
@@ -433,7 +433,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
-      /site-quality\.test\.mjs must be exactly 31213 bytes/
+      /site-quality\.test\.mjs must be exactly 29088 bytes/
     );
   }
 );

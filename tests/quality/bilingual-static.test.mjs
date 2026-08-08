@@ -8,7 +8,9 @@ import { test } from "node:test";
 import {
   pages,
   renderPage,
-  renderProjectFallbackSummaries
+  renderProjectFeaturedCards,
+  renderProjectPanelRows,
+  validateProjects
 } from "../../scripts/generate-static-pages.mjs";
 
 const require = createRequire(import.meta.url);
@@ -71,53 +73,45 @@ function elementContent(source, tagName, className) {
   )?.[1];
 }
 
-function actionEntry(source, variant) {
-  const anchor = source.match(
-    new RegExp(
-      `(<a\\b[^>]*\\bclass="[^"]*\\bproject-link--${variant}\\b[^"]*"[^>]*>)([\\s\\S]*?)<\\/a>`,
-      "i"
-    )
-  );
-  if (!anchor) {
-    return null;
-  }
-  return {
-    label: normalizeText(anchor[2].match(/<span>([\s\S]*?)<\/span>/i)?.[1] ?? ""),
-    link: decodeHtml(attributeValue(anchor[1], "href") ?? "")
-  };
+function featuredCards(source) {
+  return [...source.matchAll(
+    /(<article\b[^>]*\bclass="card[^"]*"[^>]*>)([\s\S]*?)<\/article>/gi
+  )].map(([, openingTag, body]) => {
+    const links = [...body.matchAll(
+      /<a class="link" href="([^"]+)"[^>]*>\s*([\s\S]*?)\s*<span class="sr-only">/gi
+    )].map(([, href, label]) => ({
+      label: normalizeText(decodeHtml(label)),
+      link: decodeHtml(href)
+    }));
+    const tagsBlock = body.match(/<div class="tags">([\s\S]*?)<\/div>/i)?.[1] ?? "";
+    return {
+      badge: normalizeText(decodeHtml(body.match(/<span class="badge">([\s\S]*?)<\/span>/i)?.[1] ?? "")),
+      description: normalizeText(decodeHtml(body.match(/<h3>[\s\S]*?<\/h3>\s*<p>([\s\S]*?)<\/p>/i)?.[1] ?? "")),
+      imageAlt: decodeHtml(attributeValue(body.match(/<img\b[^>]*>/i)?.[0] ?? "", "alt") ?? ""),
+      primary: links[0] ?? null,
+      source: links[1] ?? null,
+      tags: [...tagsBlock.matchAll(/<span>([\s\S]*?)<\/span>/gi)].map(([, tag]) => decodeHtml(tag)),
+      targetId: attributeValue(openingTag, "id"),
+      title: normalizeText(decodeHtml(body.match(/<h3>([\s\S]*?)<\/h3>/i)?.[1] ?? "")),
+      wide: /\bcard wide\b/.test(openingTag)
+    };
+  });
 }
 
-function fallbackSummaries(source) {
+function panelRows(source) {
   return [...source.matchAll(
-    /(<article\b[^>]*\bclass="[^"]*\bprojects-fallback-card\b[^"]*"[^>]*>)([\s\S]*?)<\/article>/gi
+    /(<div class="row"[^>]*>)([\s\S]*?)<\/div>/gi
   )].map(([, openingTag, body]) => {
-    const permalink = body.match(
-      /<a\b[^>]*\bclass="[^"]*\bprojects-fallback-permalink\b[^"]*"[^>]*>/i
-    )?.[0];
-    const proofText = elementContent(body, "p", "project-proof-text") ?? "";
+    const statusTag = body.match(/<span class="status( src)?" aria-hidden="true">([\s\S]*?)<\/span>/i);
     return {
-      description: normalizeText(
-        elementContent(body, "p", "projects-fallback-description") ?? ""
-      ),
-      kind: normalizeText(elementContent(body, "p", "projects-fallback-kind") ?? ""),
-      permalink: decodeHtml(attributeValue(permalink ?? "", "href") ?? ""),
-      primary: actionEntry(body, "primary"),
-      proof: actionEntry(body, "evidence")
-        ? {
-            link: actionEntry(body, "evidence").link,
-            statement: normalizeText(
-              proofText.match(
-                /<span\b[^>]*\bclass="project-proof-label"[^>]*>[\s\S]*?<\/span>\s*<span>([\s\S]*?)<\/span>/i
-              )?.[1] ?? ""
-            )
-          }
-        : null,
-      source: actionEntry(body, "secondary"),
-      stack: elementContent(body, "p", "projects-fallback-stack")
-        ? normalizeText(elementContent(body, "p", "projects-fallback-stack")).split(" · ")
-        : null,
+      go: normalizeText(decodeHtml(body.match(/<span class="go" aria-hidden="true">([\s\S]*?)<\/span>/i)?.[1] ?? "")),
+      link: decodeHtml(attributeValue(body.match(/<a class="row-link"[^>]*>/i)?.[0] ?? "", "href") ?? ""),
+      name: normalizeText(decodeHtml(body.match(/<span class="name">([\s\S]*?)<\/span>/i)?.[1] ?? "")),
+      sourceHosted: Boolean(statusTag?.[1]),
+      stack: normalizeText(decodeHtml(body.match(/<span class="stack">([\s\S]*?)<\/span>/i)?.[1] ?? "")).split(" · "),
+      status: normalizeText(decodeHtml(statusTag?.[2] ?? "")),
       targetId: attributeValue(openingTag, "id"),
-      title: normalizeText(elementContent(body, "h3", "projects-fallback-title") ?? "")
+      type: normalizeText(decodeHtml(body.match(/<span class="type">([\s\S]*?)<\/span>/i)?.[1] ?? ""))
     };
   });
 }
@@ -177,7 +171,8 @@ test("checked-in language pages are deterministic outputs of one template and lo
   );
   assert.match(template, /\{\{language\}\}/);
   assert.match(template, /\{\{t:hero\.titleLine1\}\}/);
-  assert.match(template, /^\s*\{\{projectFallbackSummaries\}\}\s*$/m);
+  assert.match(template, /^\s*\{\{projectFeaturedCards\}\}\s*$/m);
+  assert.match(template, /^\s*\{\{projectPanelRows\}\}\s*$/m);
   assert.equal(
     [...generatorSource.matchAll(/readFile\(projectsPath,\s*"utf8"\)/g)].length,
     1,
@@ -213,49 +208,52 @@ test("checked-in language pages are deterministic outputs of one template and lo
   assert.match(packageJson.scripts["check:quality"], /npm run check:generated/);
 });
 
-test("fallback generation validates fragments and escapes every inserted project value", () => {
-  const rendered = renderProjectFallbackSummaries([
-    {
-      slug: "unsafe-looking-project",
-      link: `https://example.test/?query="<tag>"&mode='safe'`,
-      title: { en: `A <title> & "label"` },
-      kind: { en: "Tool 'type' & <kind>" },
-      description: { en: `A <description> & "detail"` },
-      action: { en: `Open <primary> & "inspect"` },
-      stack: [`Stack <one>`, `Stack & "two"`],
-      sourceAction: { en: `View <source> & "code"` },
-      sourceLink: `https://example.test/source?query="<source>"&mode='safe'`,
-      proof: { en: `Proof <statement> & "detail"` },
-      proofLink: `https://example.test/proof?query="<proof>"&mode='safe'`
-    }
-  ], "en");
+test("baked project markup escapes every inserted value and rejects bad slugs", () => {
+  const hostile = (slug) => ({
+    slug,
+    link: `https://example.test/?query="<tag>"&mode='safe'`,
+    title: { ja: `題名 <t>`, en: `A <title> & "label"` },
+    kind: { ja: `種別`, en: "Tool 'type' & <kind>" },
+    description: { ja: `説明`, en: `A <description> & "detail"` },
+    imageAlt: { ja: `代替`, en: `Alt <text> & "quote"` },
+    action: { ja: `開く`, en: `Open <primary> & "inspect"` },
+    stack: [`Stack <one>`, `Stack & "two"`],
+    sourceAction: { ja: `ソース`, en: `View <source> & "code"` },
+    sourceLink: `https://example.test/source?query="<source>"&mode='safe'`,
+    image: "assets/example-preview.jpg",
+    desktopImageAvif: "assets/example-preview-960w.avif",
+    mobileImageAvif: "assets/example-preview-720w.avif"
+  });
+  const page = { language: "en", siteRoot: "" };
 
+  const card = renderProjectFeaturedCards([hostile("unsafe-card")], page);
   assert.match(
-    rendered,
+    card,
     /href="https:\/\/example\.test\/\?query=&quot;&lt;tag&gt;&quot;&amp;mode=&#39;safe&#39;"/
   );
-  assert.match(rendered, />A &lt;title&gt; &amp; &quot;label&quot;<\/h3>/);
-  assert.match(rendered, />Tool &#39;type&#39; &amp; &lt;kind&gt;<\/p>/);
-  assert.match(rendered, />A &lt;description&gt; &amp; &quot;detail&quot;<\/p>/);
-  assert.match(rendered, />Stack &lt;one&gt; · Stack &amp; &quot;two&quot;<\/p>/);
-  assert.match(rendered, />Open &lt;primary&gt; &amp; &quot;inspect&quot;<\/span>/);
-  assert.match(rendered, />View &lt;source&gt; &amp; &quot;code&quot;<\/span>/);
-  assert.match(rendered, />Proof &lt;statement&gt; &amp; &quot;detail&quot;<\/span>/);
-  assert.doesNotMatch(
-    rendered,
-    /<tag>|<title>|<kind>|<description>|<primary>|<source>|<proof>|<one>/
+  assert.match(card, />A &lt;title&gt; &amp; &quot;label&quot;<\/h3>/);
+  assert.match(card, />Tool &#39;type&#39; &amp; &lt;kind&gt;<\/span>/);
+  assert.match(card, />A &lt;description&gt; &amp; &quot;detail&quot;<\/p>/);
+  assert.match(card, /alt="Alt &lt;text&gt; &amp; &quot;quote&quot;"/);
+  assert.match(card, /<span>Stack &lt;one&gt;<\/span><span>Stack &amp; &quot;two&quot;<\/span>/);
+  assert.doesNotMatch(card, /<tag>|<title>|<kind>|<description>|<primary>|<source>|<one>/);
+
+  const rows = renderProjectPanelRows(
+    [hostile("card-a"), hostile("card-b"), hostile("card-c"), hostile("unsafe-row")],
+    page
   );
+  assert.match(rows, /<span class="name">A &lt;title&gt; &amp; &quot;label&quot;<\/span>/);
+  assert.match(rows, /<span class="stack">Stack &lt;one&gt; · Stack &amp; &quot;two&quot;<\/span>/);
+  assert.doesNotMatch(rows, /<tag>|<title>|<one>/);
+
   assert.throws(
-    () => renderProjectFallbackSummaries([
+    () => validateProjects([
       {
-        slug: `"bad"><slug`,
-        link: "https://example.test/",
-        title: { en: "Title" },
-        kind: { en: "Kind" },
-        description: { en: "Description" },
-        action: { en: "Open" }
+        ...hostile(`"bad"><slug`),
+        proof: undefined,
+        proofLink: undefined
       }
-    ], "en"),
+    ]),
     /lowercase kebab-case/
   );
 });
@@ -334,64 +332,85 @@ test("both routes provide complete localized initial HTML and no-JavaScript proj
       }
     }
 
-    const fallback = source.match(
-      /<div\b[^>]*id="projects-fallback"[^>]*>([\s\S]*?)<\/div>/i
-    )?.[1];
-    assert.ok(fallback, `${page.outputPath} must retain the no-JavaScript fallback`);
-    assert.ok(
-      normalizeText(fallback).startsWith(translations[language].projects.fallback),
-      `${page.outputPath} must localize fallback context`
-    );
-    const entries = fallbackSummaries(fallback);
-    assert.equal(entries.length, 9, `${page.outputPath} must render all nine fallback summaries`);
+    const cards = featuredCards(source);
+    assert.equal(cards.length, 3, `${page.outputPath} must render three featured cards`);
+    assert.ok(cards[0].wide, "The first featured card must span the grid");
+    const featured = projects.slice(0, 3);
     assert.deepEqual(
-      entries.map(({ targetId }) => targetId),
-      projects.map((project) => `project-${project.slug}`)
+      cards.map(({ targetId }) => targetId),
+      featured.map((project) => `project-${project.slug}`)
     );
     assert.deepEqual(
-      entries.map(({ permalink }) => permalink),
-      projects.map((project) => `#project-${project.slug}`)
+      cards.map(({ title }) => title),
+      featured.map((project) => project.title[language])
     );
     assert.deepEqual(
-      entries.map(({ primary }) => primary.link),
-      projects.map((project) => project.link)
+      cards.map(({ badge }) => badge),
+      featured.map((project) => project.kind[language])
     );
     assert.deepEqual(
-      entries.map(({ primary }) => primary.label),
-      projects.map((project) => project.action[language])
+      cards.map(({ description }) => description),
+      featured.map((project) => project.description[language])
     );
     assert.deepEqual(
-      entries.map(({ title }) => title),
-      projects.map((project) => project.title[language])
+      cards.map(({ imageAlt }) => imageAlt),
+      featured.map((project) => project.imageAlt[language])
     );
     assert.deepEqual(
-      entries.map(({ kind }) => kind),
-      projects.map((project) => project.kind[language])
+      cards.map(({ tags }) => tags),
+      featured.map((project) => project.stack)
     );
     assert.deepEqual(
-      entries.map(({ description }) => description),
-      projects.map((project) => project.description[language])
+      cards.map(({ primary }) => primary),
+      featured.map((project) => ({
+        label: project.action[language],
+        link: project.link
+      }))
     );
     assert.deepEqual(
-      entries.map(({ stack }) => stack),
-      projects.map((project) => project.stack ?? null)
-    );
-    assert.deepEqual(
-      entries.map(({ source }) => source),
-      projects.map((project) =>
+      cards.map(({ source: sourceEntry }) => sourceEntry),
+      featured.map((project) =>
         project.sourceAction
           ? { label: project.sourceAction[language], link: project.sourceLink }
           : null
       )
     );
+
+    const rows = panelRows(source);
+    assert.equal(rows.length, 6, `${page.outputPath} must render six panel rows`);
+    const listed = projects.slice(3);
     assert.deepEqual(
-      entries.map(({ proof }) => proof),
-      projects.map((project) =>
-        project.proof
-          ? { link: project.proofLink, statement: project.proof[language] }
-          : null
-      )
+      rows.map(({ targetId }) => targetId),
+      listed.map((project) => `project-${project.slug}`)
     );
+    assert.deepEqual(
+      rows.map(({ name }) => name),
+      listed.map((project) => project.title[language])
+    );
+    assert.deepEqual(
+      rows.map(({ type }) => type),
+      listed.map((project) => project.kind[language])
+    );
+    assert.deepEqual(
+      rows.map(({ link }) => link),
+      listed.map((project) => project.link)
+    );
+    assert.deepEqual(
+      rows.map(({ stack }) => stack),
+      listed.map((project) => project.stack)
+    );
+    for (const row of rows) {
+      const expectedSource = new URL(row.link).hostname === "github.com";
+      assert.equal(row.sourceHosted, expectedSource, `${row.targetId} status variant`);
+      assert.equal(
+        row.status,
+        translations[language].projects[expectedSource ? "statusSource" : "statusLive"]
+      );
+      assert.equal(
+        row.go,
+        translations[language].projects[expectedSource ? "goCode" : "goOpen"]
+      );
+    }
   }
 });
 
@@ -451,15 +470,10 @@ test("both routes resolve shared assets locally and load one shared project cata
     readUtf8("script.js"),
     readUtf8("i18n.js")
   ]);
-  assert.equal([...scriptSource.matchAll(/\bfetch\s*\(/g)].length, 1);
-  assert.match(
-    scriptSource,
-    /fetch\(window\.siteI18n\.resolveSitePath\("projects\.json"\)/
-  );
-  assert.match(
-    scriptSource,
-    /window\.siteI18n\.resolveSitePath\(project\.(?:image|desktopImageAvif|mobileImageAvif)\)/
-  );
+  // Projects are baked into both routes at build time, so the runtime
+  // performs no fetches at all: the catalogue cannot fail to load and the
+  // page is complete with JavaScript disabled.
+  assert.equal([...scriptSource.matchAll(/\bfetch\s*\(/g)].length, 0);
   assert.doesNotMatch(i18nSource, /\bfetch\s*\(/);
 });
 

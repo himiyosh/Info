@@ -726,7 +726,7 @@ test("exactly eight public projects expose reviewed immutable proof citations", 
 });
 
 test("project runtime rejects incomplete, malformed, duplicate, and primary-equal source actions", async () => {
-  const scriptSource = await readUtf8("script.js");
+  const scriptSource = await readUtf8("scripts/generate-static-pages.mjs");
   const projects = JSON.parse(await readUtf8("projects.json"));
   const validatorDeclarations = [
     "requireNonEmptyString",
@@ -747,14 +747,11 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
       reservedProjectSlugs: new Set([
         "top",
         "about",
-        "projects",
+        "works",
+        "stack",
         "contact",
         "main-content"
-      ]),
-      window: {
-        location: new URL("https://example.test/"),
-        siteI18n: { resolveSitePath: (relativePath) => relativePath }
-      }
+      ])
     },
     { timeout: 1000 }
   );
@@ -884,54 +881,39 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
 });
 
 test("project action groups preserve primary-first safe localized links and responsive focus behavior", async () => {
-  const scriptSource = await readUtf8("script.js");
+  const generatorSource = await readUtf8("scripts/generate-static-pages.mjs");
   const stylesSource = await readUtf8("styles.css");
   const modernSource = await readUtf8("modern.css");
-  const createActionBody = extractObjectLiteral(
-    scriptSource,
-    "function createProjectAction"
-  );
-  const renderProjectsBody = extractObjectLiteral(scriptSource, "function renderProjects");
+  const indexHtml = await readUtf8("index.html");
+  const cardsBody = extractObjectLiteral(generatorSource, "export function renderProjectFeaturedCards");
+  const rowsBody = extractObjectLiteral(generatorSource, "export function renderProjectPanelRows");
+  const linkBody = extractObjectLiteral(generatorSource, "function externalLinkMarkup");
 
-  assert.match(createActionBody, /link\.target = "_blank"/);
-  assert.match(createActionBody, /link\.rel = "noopener noreferrer"/);
-  assert.match(createActionBody, /linkText\.textContent = localizedValue\(action\)/);
-  assert.match(
-    createActionBody,
-    /window\.siteI18n\.t\("accessibility\.opensInNewTab"\)/
-  );
-  assert.match(createActionBody, /linkArrow\.setAttribute\("aria-hidden", "true"\)/);
-  assert.match(renderProjectsBody, /actions\.className = "project-actions"/);
-  assert.match(renderProjectsBody, /actions\.setAttribute\("role", "group"\)/);
-  assert.match(renderProjectsBody, /actions\.setAttribute\("aria-labelledby", title\.id\)/);
-  assert.match(
-    renderProjectsBody,
-    /createProjectAction\(project\.action, project\.link, "primary"\)/
-  );
-  assert.match(
-    renderProjectsBody,
-    /createProjectAction\(\s*project\.sourceAction,\s*project\.sourceLink,\s*"secondary"/
-  );
+  // Every baked external action opens safely and announces the new tab.
+  assert.match(linkBody, /target="_blank" rel="noopener noreferrer"/);
+  assert.match(linkBody, /accessibility\.opensInNewTab/);
+  assert.match(linkBody, /aria-hidden="true"/);
+  assert.match(rowsBody, /target="_blank" rel="noopener noreferrer"/);
+  assert.match(rowsBody, /accessibility\.opensInNewTab/);
+
+  // Primary before source inside every card's links group.
+  const primaryFirst = cardsBody.indexOf("externalLinkMarkup(link, action, language");
+  const sourceSecond = cardsBody.indexOf("externalLinkMarkup(source.url, source.text, language");
   assert.ok(
-    renderProjectsBody.indexOf("actions.append(primaryLink)") <
-      renderProjectsBody.indexOf("actions.append(sourceLink)"),
+    primaryFirst > -1 && sourceSecond > primaryFirst,
     "Primary live action must precede the secondary source action in DOM and focus order"
   );
 
-  assert.match(
-    stylesSource,
-    /\.project-actions\s*\{[^}]*max-width:\s*100%;[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*gap:/s,
-    "Action groups must wrap instead of overflowing narrow project cards"
-  );
-  assert.match(
-    stylesSource,
-    /\.project-link\s*\{[^}]*max-width:\s*100%;[^}]*min-height:\s*44px;[^}]*white-space:\s*nowrap;/s,
-    "Every project action must retain a 44px single-line target"
-  );
+  // Rendered output: no unsafe external anchors anywhere in the catalogue.
+  for (const anchor of indexHtml.matchAll(/<a\b[^>]*href="https?:[^"]+"[^>]*>/gi)) {
+    assert.match(anchor[0], /rel="(?:me )?noopener noreferrer"/, anchor[0]);
+    assert.match(anchor[0], /target="_blank"/, anchor[0]);
+  }
+
   assert.match(
     modernSource,
-    /\.project-link--secondary\s*\{[^}]*color:\s*var\(--color-ink-2\);[^}]*border:\s*var\(--rule-hair\) solid currentcolor;[^}]*font-size:\s*var\(--text-sm\);/s,
-    "The source action must use a quieter outlined hierarchy"
+    /\.link\s*\{[^}]*display:\s*inline-flex;[^}]*gap:\s*0\.45rem;/s,
+    "Card actions must keep their inline-flex row with the arrow"
   );
   assert.match(
     stylesSource,
@@ -940,8 +922,8 @@ test("project action groups preserve primary-first safe localized links and resp
   );
   assert.match(
     modernSource,
-    /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.project-link\s*\{[^}]*transform:\s*none !important;/,
-    "Project action motion must remain disabled under reduced motion"
+    /\.row-link\s*\{[^}]*outline-offset:\s*-3px;/s,
+    "The stretched row link must ride its focus ring inside the row"
   );
   assert.match(
     stylesSource,
@@ -949,43 +931,6 @@ test("project action groups preserve primary-first safe localized links and resp
     "The page root must retain horizontal overflow protection"
   );
 });
-
-test("project proof renders as a compact cited surface after primary actions", async () => {
-  const scriptSource = await readUtf8("script.js");
-  const stylesSource = await readUtf8("styles.css");
-  const modernSource = await readUtf8("modern.css");
-  const i18nSource = await readUtf8("i18n.js");
-  const renderProjectsBody = extractObjectLiteral(scriptSource, "function renderProjects");
-
-  assert.match(renderProjectsBody, /if \(Object\.hasOwn\(project, "proof"\)\)/);
-  assert.match(renderProjectsBody, /proofText\.append\(proofLabel, proofStatement\)/);
-  assert.match(
-    renderProjectsBody,
-    /createProjectAction\(\s*window\.siteI18n\.t\("projects\.proofAction"\),\s*project\.proofLink,\s*"evidence"/
-  );
-  assert.ok(
-    renderProjectsBody.indexOf("content.append(headingGroup, details, actions)") <
-      renderProjectsBody.indexOf("content.append(proof)"),
-    "Evidence must follow the primary live/source action group in DOM and focus order"
-  );
-  assert.match(i18nSource, /proofLabel:\s*"公開根拠"/);
-  assert.match(i18nSource, /proofAction:\s*"根拠を見る"/);
-  assert.match(i18nSource, /proofLabel:\s*"Public evidence"/);
-  assert.match(i18nSource, /proofAction:\s*"View evidence"/);
-  assert.match(
-    stylesSource,
-    /\.project-proof\s*\{[^}]*min-width:\s*0;[^}]*max-width:\s*48rem;[^}]*display:\s*grid;[^}]*border-block-start:/s
-  );
-  assert.match(
-    stylesSource,
-    /\.project-link--evidence\s*\{[^}]*font-size:\s*var\(--text-sm\);/s
-  );
-  assert.match(
-    modernSource,
-    /\.project-proof-label,\s*\.project-link--evidence\s*\{[^}]*color:\s*var\(--color-ink-2\);/s
-  );
-});
-
 test("mobile project AVIF pairs meet dimension and bandwidth budgets", async () => {
   const projects = JSON.parse(await readUtf8("projects.json"));
   assert.equal(projects.length, 9, "The current catalogue must provide all nine AVIF/JPEG pairs");
@@ -1064,16 +1009,19 @@ test("desktop project AVIF pairs meet exact format, dimensions, and bandwidth bu
 });
 
 test("project runtime validation requires distinct local JPEG and AVIF assets", async () => {
-  const scriptSource = await readUtf8("script.js");
+  const generatorSource = await readUtf8("scripts/generate-static-pages.mjs");
   const validateAssetBody = extractObjectLiteral(
-    scriptSource,
+    generatorSource,
     "function validateLocalProjectAsset"
   );
-  const validateProjectBody = extractObjectLiteral(scriptSource, "function validateProject");
-  const loadProjectsBody = extractObjectLiteral(scriptSource, "async function loadProjects");
+  const validateProjectBody = extractObjectLiteral(generatorSource, "function validateProject");
+  const validateProjectsBody = extractObjectLiteral(
+    generatorSource,
+    "export function validateProjects"
+  );
 
   assert.match(validateAssetBody, /requireNonEmptyString\(\s*project\[fieldName\]/);
-  assert.match(validateAssetBody, /assetUrl\.origin !== window\.location\.origin/);
+  assert.match(validateAssetBody, /assetUrl\.origin !==/);
   assert.match(validateAssetBody, /!assetUrl\.pathname\.startsWith\(assetsUrl\.pathname\)/);
   assert.match(validateAssetBody, /assetUrl\.search/);
   assert.match(validateAssetBody, /assetUrl\.hash/);
@@ -1092,205 +1040,28 @@ test("project runtime validation requires distinct local JPEG and AVIF assets", 
     validateProjectBody,
     /validateLocalProjectAsset\(project, index, "mobileImageAvif", "\.avif", seenAssets\)/
   );
-  assert.match(loadProjectsBody, /const seenAssets = new Set\(\)/);
+  assert.match(validateProjectsBody, /const seenAssets = new Set\(\)/);
   assert.match(
-    loadProjectsBody,
-    /validateProject\(\s*project,\s*index,\s*seenSlugs,\s*seenLinks,\s*seenAssets,\s*seenProofTexts\s*\)/,
+    validateProjectsBody,
+    /validateProject\(project, index, seenSlugs, seenLinks, seenAssets, seenProofTexts\)/,
     "JPEG and AVIF paths must share one uniqueness set so cross-field collisions are rejected"
   );
+  // The build additionally pins the responsive naming convention.
+  assert.match(validateProjectsBody, /-960w\.avif/);
+  assert.match(validateProjectsBody, /-720w\.avif/);
 });
-
 test("project rendering emits mutually exclusive AVIF sources before lazy JPEG fallbacks", async () => {
-  const scriptSource = await readUtf8("script.js");
-  const renderProjectsBody = extractObjectLiteral(scriptSource, "function renderProjects");
-
-  assert.match(
-    scriptSource,
-    new RegExp(
-      `const projectPreviewDesktopMedia = \"${escapeRegExp(projectPreviewDesktopMedia)}\";`
-    ),
-    "Desktop AVIF media gate must match the existing desktop breakpoint"
-  );
-  assert.match(
-    scriptSource,
-    new RegExp(
-      `const projectPreviewMobileMedia = \"${escapeRegExp(projectPreviewMobileMedia)}\";`
-    ),
-    "Project AVIF media gate must match the existing mobile breakpoint"
-  );
-  assert.match(renderProjectsBody, /document\.createElement\("picture"\)/);
-  assert.equal(
-    [...renderProjectsBody.matchAll(/document\.createElement\("source"\)/g)].length,
-    2,
-    "Each project picture must create exactly one desktop and one mobile source"
-  );
-  assert.match(renderProjectsBody, /desktopSource\.type = "image\/avif"/);
-  assert.match(renderProjectsBody, /desktopSource\.media = projectPreviewDesktopMedia/);
-  assert.match(
-    renderProjectsBody,
-    /desktopSource\.srcset = `\$\{window\.siteI18n\.resolveSitePath\(project\.desktopImageAvif\)\} 960w`/
-  );
-  assert.match(renderProjectsBody, /desktopSource\.sizes = "60vw"/);
-  assert.match(renderProjectsBody, /mobileSource\.type = "image\/avif"/);
-  assert.match(renderProjectsBody, /mobileSource\.media = projectPreviewMobileMedia/);
-  assert.match(
-    renderProjectsBody,
-    /mobileSource\.srcset = `\$\{window\.siteI18n\.resolveSitePath\(project\.mobileImageAvif\)\} 720w`/
-  );
-  assert.match(renderProjectsBody, /mobileSource\.sizes = "100vw"/);
-  assert.match(
-    renderProjectsBody,
-    /picture\.append\(desktopSource, mobileSource, image\)/,
-    "Desktop and mobile AVIF sources must precede the JPEG img fallback inside picture"
-  );
-  assert.ok(
-    renderProjectsBody.indexOf("picture.append(desktopSource, mobileSource, image)") <
-      renderProjectsBody.indexOf("media.append(picture)"),
-    "Completed picture must be appended to the project media container"
-  );
-  assert.ok(
-    renderProjectsBody.indexOf("picture.append(desktopSource, mobileSource, image)") <
-      renderProjectsBody.indexOf("image.src = window.siteI18n.resolveSitePath(project.image)"),
-    "Both AVIF choices must join picture before src assignment to avoid a duplicate JPEG download"
-  );
-  assert.ok(
-    renderProjectsBody.indexOf("media.append(picture)") <
-      renderProjectsBody.indexOf("image.src = window.siteI18n.resolveSitePath(project.image)"),
-    "The completed picture must join its disconnected media container before fallback src assignment"
-  );
-
-  assert.match(
-    renderProjectsBody,
-    /image\.src = window\.siteI18n\.resolveSitePath\(project\.image\)/
-  );
-  assert.match(renderProjectsBody, /image\.alt = localizedValue\(project\.imageAlt\)/);
-  assert.match(renderProjectsBody, /image\.width = 960/);
-  assert.match(renderProjectsBody, /image\.height = 540/);
-  assert.match(renderProjectsBody, /image\.loading = "lazy"/);
-  assert.match(renderProjectsBody, /image\.decoding = "async"/);
-  assert.doesNotMatch(
-    renderProjectsBody,
-    /fetchpriority|fetchPriority|loading = "eager"/,
-    "Project cards must remain lazy and must not compete with the hero LCP resource"
-  );
-});
-
-test("project catalogue status stays concise, atomic, and separate from rendered results", async () => {
   const indexHtml = await readUtf8("index.html");
-  const i18nSource = await readUtf8("i18n.js");
-  const scriptSource = await readUtf8("script.js");
-  const translations = parseTranslations(i18nSource);
+  const cardBlocks = [...indexHtml.matchAll(
+    /<article\b[^>]*\bclass="card[^"]*"[^>]*>[\s\S]*?<\/article>/gi
+  )].map(([block]) => block);
+  assert.equal(cardBlocks.length, 3);
 
-  const openingTags = [...indexHtml.matchAll(/<(?:div|p)\b[^>]*>/gi)].map((match) => ({
-    tag: match[0],
-    index: match.index
-  }));
-  const statusTag = openingTags.find(({ tag }) => readHtmlAttribute(tag, "id") === "projects-status");
-  const resultsTag = openingTags.find(({ tag }) => readHtmlAttribute(tag, "id") === "projects-container");
-
-  assert.ok(statusTag, "A pre-existing #projects-status element must be present");
-  assert.ok(resultsTag, "A separate #projects-container element must be present");
-  assert.equal(readHtmlAttribute(statusTag.tag, "role"), "status");
-  assert.equal(readHtmlAttribute(statusTag.tag, "aria-atomic"), "true");
-  assert.equal(readHtmlAttribute(statusTag.tag, "data-i18n"), "projects.loading");
-  assert.match(
-    statusTag.tag,
-    /\shidden(?:\s|>)/i,
-    "The loading announcement must stay hidden when scripts do not run"
-  );
-  assert.notEqual(
-    readHtmlAttribute(statusTag.tag, "data-i18n-dynamic"),
-    undefined,
-    "The script-managed status must avoid transient generic i18n announcements"
-  );
-  assert.ok(
-    statusTag.index < resultsTag.index,
-    "The dedicated status must be a sibling before the rendered catalogue"
-  );
-  assert.equal(readHtmlAttribute(resultsTag.tag, "aria-live"), undefined);
-  assert.equal(readHtmlAttribute(resultsTag.tag, "role"), undefined);
-  assert.equal(
-    readHtmlAttribute(resultsTag.tag, "aria-busy"),
-    "false",
-    "Static summaries are complete, so the no-JavaScript results surface must not remain busy"
-  );
-
-  const statusMarkup = indexHtml.slice(
-    statusTag.index,
-    indexHtml.indexOf("</p>", statusTag.index) + "</p>".length
-  );
-  assert.match(statusMarkup, /プロジェクトを読み込んでいます。/);
-  assert.doesNotMatch(statusMarkup, /projects-container|project-row/);
-
-  for (const language of ["ja", "en"]) {
-    assert.match(translations[language].projects.ready, /\{count\}/);
-    for (const state of ["loading", "ready", "error"]) {
-      assert.equal(
-        typeof translations[language].projects[state],
-        "string",
-        `${language} must provide concise ${state} project status copy`
-      );
-    }
+  for (const block of cardBlocks) {
+    const sourceIndex = block.search(/<source type="image\/avif" srcset="[^"]+-960w\.avif"/);
+    const imgIndex = block.search(/<img src="[^"]+\.jpg"[^>]*loading="lazy"[^>]*decoding="async"/);
+    assert.ok(sourceIndex > -1, "Every card must offer its AVIF source");
+    assert.ok(imgIndex > sourceIndex, "The AVIF source must precede the lazy JPEG fallback");
+    assert.match(block, /<img[^>]*width="960" height="540"/);
   }
-
-  assert.match(
-    i18nSource,
-    /querySelectorAll\("\[data-i18n\]:not\(\[data-i18n-dynamic\]\)"\)/,
-    "Generic translation updates must leave the stateful live status to script.js"
-  );
-
-  const statusKeys = vm.runInNewContext(
-    `(${extractObjectLiteral(scriptSource, "const projectStatusKeys =")})`,
-    Object.create(null),
-    { timeout: 1000 }
-  );
-  assert.deepEqual(
-    { ...statusKeys },
-    {
-      loading: "projects.loading",
-      ready: "projects.ready",
-      error: "projects.error"
-    }
-  );
-
-  const updateStatusBody = extractObjectLiteral(scriptSource, "function updateProjectStatus");
-  assert.match(updateStatusBody, /projectsStatus\.dataset\.i18n = translationKey/);
-  assert.match(updateStatusBody, /projectsStatus\.textContent = statusMessage/);
-  assert.match(updateStatusBody, /replace\("\{count\}", String\(projects\.length\)\)/);
-  assert.match(
-    updateStatusBody,
-    /projectsContainer\.setAttribute\("aria-busy", String\(state === "loading"\)\)/
-  );
-  assert.match(updateStatusBody, /projectsStatus\.classList\.toggle\("sr-only", isReady\)/);
-  assert.match(updateStatusBody, /projectsStatus\.hidden = false/);
-  assert.match(updateStatusBody, /projectsContainer\.classList\.toggle\("projects-list", isReady\)/);
-
-  const renderProjectsBody = extractObjectLiteral(scriptSource, "function renderProjects");
-  const renderLoadingBody = extractObjectLiteral(scriptSource, "function renderProjectLoading");
-  const renderErrorBody = extractObjectLiteral(scriptSource, "function renderProjectError");
-  const loadProjectsBody = extractObjectLiteral(scriptSource, "async function loadProjects");
-  assert.match(renderProjectsBody, /projectsContainer\.replaceChildren\(fragment\)/);
-  assert.match(renderProjectsBody, /updateProjectStatus\("ready"\)/);
-  assert.match(renderLoadingBody, /updateProjectStatus\("loading"\)/);
-  assert.match(renderLoadingBody, /projectsContainer\.replaceChildren\(\)/);
-  assert.match(renderErrorBody, /retry\.setAttribute\("aria-describedby", "projects-status"\)/);
-  assert.match(renderErrorBody, /updateProjectStatus\("error"\)/);
-  assert.ok(
-    loadProjectsBody.indexOf("renderProjectLoading()") <
-      loadProjectsBody.indexOf('fetch(window.siteI18n.resolveSitePath("projects.json")'),
-    "Loading status and busy state must be restored before retrying the fetch"
-  );
-  assert.doesNotMatch(
-    `${updateStatusBody}\n${renderLoadingBody}\n${renderErrorBody}`,
-    /projects(?:Status|Container)\.setAttribute\("role", "status"\)/,
-    "The catalogue must reuse its pre-existing status instead of creating a second one"
-  );
-
-  const languageChangeHandler = scriptSource.slice(
-    scriptSource.indexOf('document.addEventListener("site-languagechange"'),
-    scriptSource.indexOf("const observedSections", scriptSource.indexOf('document.addEventListener("site-languagechange"'))
-  );
-  assert.match(languageChangeHandler, /projectState === "ready"[\s\S]*renderProjects\(\)/);
-  assert.match(languageChangeHandler, /projectState === "error"[\s\S]*renderProjectError\(\)/);
-  assert.match(languageChangeHandler, /else[\s\S]*renderProjectLoading\(\)/);
 });

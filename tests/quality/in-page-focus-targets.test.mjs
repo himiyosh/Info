@@ -82,9 +82,9 @@ test("Projects exposes one localized focus-revealed bypass to the named Contact 
     [englishHtml, "Skip to Contact"]
   ]) {
     const projectsSection = source.match(
-      /<section\b[^>]*\bid="projects"[^>]*>([\s\S]*?)<\/section>\s*<section\b[^>]*\bid="contact"/i
+      /<section\b[^>]*\bid="projects"[^>]*>([\s\S]*?)<\/section>\s*<section\b[^>]*\bid="stack"/i
     )?.[1];
-    assert.ok(projectsSection, "Projects must remain directly before Contact");
+    assert.ok(projectsSection, "Projects must remain directly before the toolbox");
 
     const bypassLinks = [
       ...projectsSection.matchAll(
@@ -96,20 +96,16 @@ test("Projects exposes one localized focus-revealed bypass to the named Contact 
     assert.equal(getAttribute(bypassLinks[0][1], "data-i18n"), "projects.skipToContact");
     assert.equal(normalizeText(bypassLinks[0][2]), expectedLabel);
     assert.doesNotMatch(bypassLinks[0][1], /\b(?:hidden|aria-hidden)=/i);
+    const firstCardIndex = projectsSection.search(/<article\b[^>]*\bclass="card/i);
+    const firstRowIndex = projectsSection.search(/<div class="row"/i);
+    assert.ok(firstCardIndex > -1 && firstRowIndex > -1, "Projects must bake its catalogue");
     assert.ok(
-      projectsSection.indexOf(bypassLinks[0][0]) <
-        projectsSection.indexOf('id="projects-directory"'),
+      projectsSection.indexOf(bypassLinks[0][0]) < firstCardIndex,
       "The bypass must be the first control at Projects entry"
     );
     assert.ok(
-      projectsSection.indexOf(bypassLinks[0][0]) <
-        projectsSection.indexOf('id="projects-container"'),
-      "Dynamic project replacement must not own the bypass"
-    );
-    assert.ok(
-      projectsSection.indexOf(bypassLinks[0][0]) <
-        projectsSection.indexOf('id="projects-fallback"'),
-      "Fallback visibility changes must not own the bypass"
+      projectsSection.indexOf(bypassLinks[0][0]) < firstRowIndex,
+      "The bypass must precede every panel row"
     );
 
     const elementsById = getElementsById(source);

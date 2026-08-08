@@ -594,6 +594,32 @@ document.addEventListener("DOMContentLoaded", () => {
     revealBackstopTimer = window.setTimeout(disarmReveal, 2500);
   }
 
+  // --- Motion: scroll progress fallback --------------------------------
+  // Where CSS scroll-timelines are supported the bar animates with zero
+  // script; elsewhere one passive listener feeds the same custom property
+  // through a batched frame. Decorative (aria-hidden) and hidden under
+  // reduced motion, so it is never essential.
+  if (!CSS.supports("animation-timeline: scroll()")) {
+    let scrollProgressFrame = null;
+
+    function updateScrollProgress() {
+      scrollProgressFrame = null;
+      const root = document.documentElement;
+      const maxScroll = root.scrollHeight - root.clientHeight;
+      const ratio = maxScroll > 0 ? Math.min(1, Math.max(0, root.scrollTop / maxScroll)) : 0;
+      root.style.setProperty("--scroll-progress", ratio.toFixed(4));
+    }
+
+    function requestScrollProgressUpdate() {
+      if (scrollProgressFrame === null) {
+        scrollProgressFrame = window.requestAnimationFrame(updateScrollProgress);
+      }
+    }
+
+    window.addEventListener("scroll", requestScrollProgressUpdate, { passive: true });
+    updateScrollProgress();
+  }
+
   // --- Motion: nav compact morph after leaving the hero ---------------
   // Paint-only (background-color / box-shadow / decorative transform):
   // header min-height and padding never change, so this never shifts

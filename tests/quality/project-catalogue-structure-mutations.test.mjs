@@ -61,7 +61,7 @@ const catalogueBodyStart = catalogueSource.indexOf(
   `test(${JSON.stringify(catalogueTestNames[0])}`
 );
 
-assert.equal(catalogueTestNames.length, 11, "Mutation fixtures require the fixed 11-test inventory");
+assert.equal(catalogueTestNames.length, 9, "Mutation fixtures require the fixed 9-test inventory");
 assert.notEqual(catalogueBodyStart, -1, "Mutation fixtures require the catalogue body boundary");
 const monolithFixtureSource = padWithComment(
   "export {};\n",
@@ -91,6 +91,14 @@ async function linkRuntimeFixtures(rootDirectory) {
     )
   );
   await symlink(path.join(repoRoot, "assets"), path.join(rootDirectory, "assets"), "dir");
+  // The catalogue contracts now read the generator, which owns validation
+  // and the baked card/row renderers.
+  const scriptsDirectory = path.join(rootDirectory, "scripts");
+  await mkdir(scriptsDirectory);
+  await symlink(
+    path.join(repoRoot, "scripts/generate-static-pages.mjs"),
+    path.join(scriptsDirectory, "generate-static-pages.mjs")
+  );
   const githubDirectory = path.join(rootDirectory, ".github");
   await mkdir(githubDirectory);
   await symlink(
@@ -343,14 +351,14 @@ mutationTest("project catalogue structure guard binds mutation wrapper source", 
 mutationTest("project catalogue structure guard rejects focused-module padding", async () => {
   await assertMutationRejected(
     { catalogue: `${catalogueSource} ` },
-    /project-catalogue\.test\.mjs must be exactly 52002 bytes/
+    /project-catalogue\.test\.mjs must be exactly 42064 bytes/
   );
 });
 
 mutationTest("project catalogue structure guard rejects monolith padding", async () => {
   await assertMutationRejected(
     { monolith: `${monolithFixtureSource} ` },
-    /site-quality\.test\.mjs must be exactly 31213 bytes/
+    /site-quality\.test\.mjs must be exactly 29088 bytes/
   );
 });
 

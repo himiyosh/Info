@@ -31,19 +31,19 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const publicDiscoveryExpectedBytes = 4_993;
+const publicDiscoveryExpectedBytes = 5_329;
 const publicDiscoveryBodyStartExpectedBytes = 273;
 const publicDiscoveryHeaderExpectedSha256 =
   "0e56555309f1cd482e5b0a071cf213f6859415387ac7983795e29915a1781fb3";
-const publicDiscoveryBodyExpectedBytes = 4_720;
+const publicDiscoveryBodyExpectedBytes = 5_056;
 const publicDiscoveryBodyExpectedSha256 =
-  "c29e8f3a93bff0d813f57d1d36072bcca00d78cd3a8ad1a93a0c41726ac9f802";
-const mutationGuardExpectedBytes = 15_985;
+  "18bee6cbab0da8ca15050e33bcd9d5e84f5ead65cc30c60dfef5207607043a5b";
+const mutationGuardExpectedBytes = 15_976;
 const mutationGuardExpectedSha256 =
-  "dd1560dd84d6cc728c2a3700aa7f5ea1fa82084fe911407d20146b1d199eae86";
+  "94430635b56b73bc2b383651be1f121160d9c9f4af4dfaf7e84fba28b8bc9b5f";
 const expectedPublicDiscoveryTestNames = [
   "required SEO and social metadata exist and are consistent",
-  "static project summaries preserve canonical primary, source, proof, and fragment access",
+  "baked project markup preserves every canonical destination in catalogue order",
   "JoJo deck entries stay distinct and aligned with live deck routes"
 ];
 const requiredOwnershipMutationTestNames = [

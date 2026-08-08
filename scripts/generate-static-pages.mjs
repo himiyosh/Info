@@ -176,27 +176,308 @@ function projectIsSourceHosted(project, index) {
   return new URL(projectUrl(project, index, "link")).hostname === "github.com";
 }
 
+const localizedProjectFields = ["title", "description", "kind", "action", "imageAlt"];
+
+function requireNonEmptyString(value, fieldName) {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new TypeError(`${fieldName} must be a non-empty string.`);
+  }
+  return value.trim();
+}
+
+function validateStableSlug(project, index, seenSlugs) {
+  const slug = requireNonEmptyString(project.slug, `Project ${index + 1} field "slug"`);
+  if (project.slug !== slug || !projectSlugPattern.test(slug)) {
+    throw new TypeError(
+      `Project ${index + 1} field "slug" must use lowercase kebab-case.`
+    );
+  }
+  if (reservedProjectSlugs.has(slug)) {
+    throw new TypeError(`Project ${index + 1} field "slug" is reserved: ${slug}`);
+  }
+  if (seenSlugs.has(slug)) {
+    throw new TypeError(`Duplicate project slug detected: ${slug}`);
+  }
+  seenSlugs.add(slug);
+  return slug;
+}
+
+function githubRepositoryKey(url) {
+  if (
+    !url ||
+    url.protocol !== "https:" ||
+    url.hostname.toLocaleLowerCase("en-US") !== "github.com" ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.search ||
+    url.hash
+  ) {
+    return null;
+  }
+
+  const pathSegments = url.pathname.split("/").filter(Boolean);
+  if (pathSegments.length !== 2) {
+    return null;
+  }
+  const repositoryName = pathSegments[1].replace(/\.git$/i, "");
+  if (!pathSegments[0] || !repositoryName) {
+    return null;
+  }
+  return `${pathSegments[0]}/${repositoryName}`.toLocaleLowerCase("en-US");
+}
+
+function validateLocalizedField(project, index, fieldName) {
+  const localized = project[fieldName];
+  if (!localized || typeof localized !== "object" || Array.isArray(localized)) {
+    throw new TypeError(`Project ${index + 1} field "${fieldName}" must be a localized object.`);
+  }
+  for (const language of ["ja", "en"]) {
+    requireNonEmptyString(
+      localized[language],
+      `Project ${index + 1} field "${fieldName}.${language}"`
+    );
+  }
+}
+
+function validateLocalProjectAsset(project, index, fieldName, expectedExtension, seenAssets) {
+  const assetPath = requireNonEmptyString(
+    project[fieldName],
+    `Project ${index + 1} field "${fieldName}"`
+  );
+  const buildOrigin = "https://build.invalid/";
+  const assetUrl = new URL(assetPath, buildOrigin);
+  const assetsUrl = new URL("assets/", buildOrigin);
+  if (
+    assetUrl.origin !== new URL(buildOrigin).origin ||
+    !assetUrl.pathname.startsWith(assetsUrl.pathname) ||
+    assetUrl.search ||
+    assetUrl.hash
+  ) {
+    throw new TypeError(`Project ${index + 1} field "${fieldName}" must be a local assets path.`);
+  }
+  if (!assetUrl.pathname.toLocaleLowerCase("en-US").endsWith(expectedExtension)) {
+    throw new TypeError(
+      `Project ${index + 1} field "${fieldName}" must use ${expectedExtension}.`
+    );
+  }
+
+  const normalizedAsset = assetUrl.pathname;
+  if (seenAssets.has(normalizedAsset)) {
+    throw new TypeError(`Duplicate project asset detected: ${assetPath}`);
+  }
+  seenAssets.add(normalizedAsset);
+}
+
+function validateProject(
+  project,
+  index,
+  seenSlugs,
+  seenLinks,
+  seenAssets,
+  seenProofTexts
+) {
+  if (!project || typeof project !== "object") {
+    throw new TypeError(`Project ${index + 1} must be an object.`);
+  }
+
+  validateStableSlug(project, index, seenSlugs);
+
+  for (const fieldName of localizedProjectFields) {
+    validateLocalizedField(project, index, fieldName);
+  }
+
+  const projectLink = requireNonEmptyString(project.link, `Project ${index + 1} field "link"`);
+  const url = new URL(projectLink, "https://build.invalid/");
+  if (!["http:", "https:"].includes(url.protocol)) {
+    throw new TypeError(`Project ${index + 1} has an unsupported link protocol.`);
+  }
+  const normalizedLink = url.toString();
+  if (seenLinks.has(normalizedLink)) {
+    throw new TypeError(`Duplicate project link detected: ${normalizedLink}`);
+  }
+  seenLinks.add(normalizedLink);
+
+  const hasSourceAction = Object.hasOwn(project, "sourceAction");
+  const hasSourceLink = Object.hasOwn(project, "sourceLink");
+  let sourceUrl = null;
+  if (hasSourceAction !== hasSourceLink) {
+    throw new TypeError(
+      `Project ${index + 1} fields "sourceAction" and "sourceLink" must be provided together.`
+    );
+  }
+  if (hasSourceAction) {
+    validateLocalizedField(project, index, "sourceAction");
+    for (const language of ["ja", "en"]) {
+      const primaryAction = project.action[language].trim().toLocaleLowerCase(language);
+      const sourceAction = project.sourceAction[language]
+        .trim()
+        .toLocaleLowerCase(language);
+      if (sourceAction === primaryAction) {
+        throw new TypeError(
+          `Project ${index + 1} field "sourceAction.${language}" must differ from "action.${language}".`
+        );
+      }
+    }
+
+    const sourceLink = requireNonEmptyString(
+      project.sourceLink,
+      `Project ${index + 1} field "sourceLink"`
+    );
+    try {
+      sourceUrl = new URL(sourceLink);
+    } catch {
+      throw new TypeError(
+        `Project ${index + 1} field "sourceLink" must be an absolute HTTPS URL.`
+      );
+    }
+    if (sourceUrl.protocol !== "https:") {
+      throw new TypeError(
+        `Project ${index + 1} field "sourceLink" must be an absolute HTTPS URL.`
+      );
+    }
+    const normalizedSourceLink = sourceUrl.toString();
+    if (normalizedSourceLink === normalizedLink) {
+      throw new TypeError(`Project ${index + 1} source link must differ from its primary link.`);
+    }
+    if (seenLinks.has(normalizedSourceLink)) {
+      throw new TypeError(`Duplicate project link detected: ${normalizedSourceLink}`);
+    }
+    seenLinks.add(normalizedSourceLink);
+  }
+
+  const hasProof = Object.hasOwn(project, "proof");
+  const hasProofLink = Object.hasOwn(project, "proofLink");
+  if (hasProof !== hasProofLink) {
+    throw new TypeError(
+      `Project ${index + 1} fields "proof" and "proofLink" must be provided together.`
+    );
+  }
+  if (hasProof) {
+    validateLocalizedField(project, index, "proof");
+    const comparisonFields = [
+      ...localizedProjectFields,
+      ...(hasSourceAction ? ["sourceAction"] : [])
+    ];
+    for (const language of ["ja", "en"]) {
+      const proofText = project.proof[language].trim();
+      const normalizedProofText = proofText.toLocaleLowerCase(language);
+      const duplicateField = comparisonFields.find(
+        (fieldName) =>
+          project[fieldName][language].trim().toLocaleLowerCase(language) ===
+          normalizedProofText
+      );
+      const duplicatesStack =
+        Array.isArray(project.stack) &&
+        project.stack.some(
+          (stackItem) =>
+            typeof stackItem === "string" &&
+            stackItem.trim().toLocaleLowerCase(language) === normalizedProofText
+        );
+      if (duplicateField || duplicatesStack) {
+        throw new TypeError(
+          `Project ${index + 1} field "proof.${language}" must add information beyond existing card copy.`
+        );
+      }
+
+      const proofTextKey = `${language}:${normalizedProofText}`;
+      if (seenProofTexts.has(proofTextKey)) {
+        throw new TypeError(`Duplicate project proof text detected for language "${language}".`);
+      }
+      seenProofTexts.add(proofTextKey);
+    }
+
+    const proofLink = requireNonEmptyString(
+      project.proofLink,
+      `Project ${index + 1} field "proofLink"`
+    );
+    let proofUrl;
+    try {
+      proofUrl = new URL(proofLink);
+    } catch {
+      throw new TypeError(
+        `Project ${index + 1} field "proofLink" must be an immutable GitHub blob HTTPS URL with a line anchor.`
+      );
+    }
+
+    const blobMatch = proofUrl.pathname.match(
+      /^\/([^/]+)\/([^/]+)\/blob\/([0-9a-f]{40})\/.+$/i
+    );
+    const lineMatch = proofUrl.hash.match(/^#L(\d+)(?:-L(\d+))?$/);
+    if (
+      proofUrl.protocol !== "https:" ||
+      proofUrl.hostname.toLocaleLowerCase("en-US") !== "github.com" ||
+      proofUrl.username ||
+      proofUrl.password ||
+      proofUrl.port ||
+      proofUrl.search ||
+      !blobMatch ||
+      !lineMatch
+    ) {
+      throw new TypeError(
+        `Project ${index + 1} field "proofLink" must be an immutable GitHub blob HTTPS URL with a line anchor.`
+      );
+    }
+    if (lineMatch[2] && Number(lineMatch[2]) < Number(lineMatch[1])) {
+      throw new TypeError(`Project ${index + 1} field "proofLink" has an invalid line range.`);
+    }
+
+    const proofRepositoryKey = `${blobMatch[1]}/${blobMatch[2].replace(/\.git$/i, "")}`
+      .toLocaleLowerCase("en-US");
+    const publicRepositoryKeys = new Set(
+      [githubRepositoryKey(url), githubRepositoryKey(sourceUrl)].filter(Boolean)
+    );
+    if (!publicRepositoryKeys.has(proofRepositoryKey)) {
+      throw new TypeError(
+        `Project ${index + 1} field "proofLink" must match an existing public GitHub repository action.`
+      );
+    }
+
+    const normalizedProofLink = proofUrl.toString();
+    if (seenLinks.has(normalizedProofLink)) {
+      throw new TypeError(`Duplicate project proof link detected: ${normalizedProofLink}`);
+    }
+    seenLinks.add(normalizedProofLink);
+  }
+
+  validateLocalProjectAsset(project, index, "image", ".jpg", seenAssets);
+  validateLocalProjectAsset(project, index, "desktopImageAvif", ".avif", seenAssets);
+  validateLocalProjectAsset(project, index, "mobileImageAvif", ".avif", seenAssets);
+
+  if (Object.hasOwn(project, "stack")) {
+    if (!Array.isArray(project.stack) || project.stack.length === 0) {
+      throw new TypeError(`Project ${index + 1} stack must be a non-empty array when present.`);
+    }
+    const normalizedStack = new Set();
+    project.stack.forEach((stackItem, stackIndex) => {
+      const stackValue = requireNonEmptyString(
+        stackItem,
+        `Project ${index + 1} stack item ${stackIndex + 1}`
+      );
+      const normalizedValue = stackValue.toLocaleLowerCase("en-US");
+      if (normalizedStack.has(normalizedValue)) {
+        throw new TypeError(`Project ${index + 1} has duplicate stack entry: ${stackValue}`);
+      }
+      normalizedStack.add(normalizedValue);
+    });
+  }
+}
+
 // Every entry is fully validated at build time regardless of which section
 // renders it, so malformed data cannot ship just because the field it broke
-// is not visible in that entry's layout.
+// is not visible in that entry's layout. This is the validator the retired
+// runtime carried, plus the AVIF naming pairing.
 export function validateProjects(projects) {
   if (!Array.isArray(projects) || projects.length === 0) {
     throw new TypeError("projects.json must contain a non-empty array.");
   }
 
   const seenSlugs = new Set();
+  const seenLinks = new Set();
+  const seenAssets = new Set();
+  const seenProofTexts = new Set();
   projects.forEach((project, index) => {
-    projectTargetId(project, index, seenSlugs);
-    for (const language of ["ja", "en"]) {
-      localizedProjectString(project, index, "title", language);
-      localizedProjectString(project, index, "kind", language);
-      localizedProjectString(project, index, "description", language);
-      localizedProjectString(project, index, "imageAlt", language);
-      localizedProjectString(project, index, "action", language);
-      optionalProjectPair(project, index, "sourceAction", "sourceLink", language);
-      optionalProjectPair(project, index, "proof", "proofLink", language);
-    }
-    projectUrl(project, index, "link");
+    validateProject(project, index, seenSlugs, seenLinks, seenAssets, seenProofTexts);
     projectStack(project, index);
     const image = projectImage(project, index);
     const expectedDesktop = image.replace(/\.jpg$/, "-960w.avif");

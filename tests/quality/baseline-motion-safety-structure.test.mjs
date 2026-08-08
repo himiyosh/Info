@@ -32,20 +32,20 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const baselineMotionSafetyExpectedBytes = 5_142;
+const baselineMotionSafetyExpectedBytes = 4_560;
 const baselineMotionSafetyBodyStartExpectedBytes = 273;
 const baselineMotionSafetyHeaderExpectedSha256 =
   "0e56555309f1cd482e5b0a071cf213f6859415387ac7983795e29915a1781fb3";
-const baselineMotionSafetyBodyExpectedBytes = 4_869;
+const baselineMotionSafetyBodyExpectedBytes = 4_287;
 const baselineMotionSafetyBodyExpectedSha256 =
-  "5c16a1a1b158abab2d2c0c7e17fbbd001e2daedeadab7dadc19a6f5f4b050360";
-const mutationGuardExpectedBytes = 16_821;
+  "e6531007976b2dc661924aa27594b0eb99285f7c61198267fcc2c74bcd0285f3";
+const mutationGuardExpectedBytes = 16_810;
 const mutationGuardExpectedSha256 =
-  "ba277f0851048fa94b59b2ccfeb501083d5ef54675c4584778486429fa609677";
+  "8621ec5ce1ca91e7283118ad1c9fabebbe7ea9d481bd85a363a2e2a8c965f86c";
 const expectedBaselineMotionSafetyTestNames = [
   "hero image has no entrance animation and decorative keyframes are removed",
   "contact link hover transitions do not animate layout properties",
-  "project rows stay visible by default and reveal machinery is bounded and safe"
+  "reveal targets stay visible by default and reveal machinery is bounded and safe"
 ];
 const baselineMotionSafetyNamePattern =
   `^(?:${expectedBaselineMotionSafetyTestNames

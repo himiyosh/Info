@@ -125,8 +125,8 @@ function assertLocalizedRender({ language, pageUrl, result, route }) {
   );
   assert.match(
     result.stdout,
-    /<div\b[^>]*\bid="projects-fallback"[^>]*>/,
-    `${context} lost its network-independent project fallback`
+    /<div class="row"[^>]*id="project-/,
+    `${context} lost its network-independent baked project rows`
   );
 }
 

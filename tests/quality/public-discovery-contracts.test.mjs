@@ -57,42 +57,49 @@ test("required SEO and social metadata exist and are consistent", async () => {
   );
 });
 
-test("static project summaries preserve canonical primary, source, proof, and fragment access", async () => {
+test("baked project markup preserves every canonical destination in catalogue order", async () => {
   const indexHtml = await readUtf8("index.html");
   const projects = JSON.parse(await readUtf8("projects.json"));
-  const fallbackContent = indexHtml.match(
-    /<div\b[^>]*\bid="projects-fallback"[^>]*>([\s\S]*?)<\/div>/i
-  )?.[1];
-  assert.ok(fallbackContent, "index.html must include one reusable project fallback");
 
-  const linksForClass = (className) =>
-    [...fallbackContent.matchAll(
-      new RegExp(
-        `<a\\b[^>]*\\bclass="[^"]*\\b${className}\\b[^"]*"[^>]*\\bhref="([^"]+)"`,
-        "gi"
-      )
-    )].map((match) => match[1]);
-  const primaryLinks = linksForClass("project-link--primary");
+  const cardBlocks = [...indexHtml.matchAll(
+    /<article\b[^>]*\bclass="card[^"]*"[^>]*>[\s\S]*?<\/article>/gi
+  )].map(([block]) => block);
+  const rowBlocks = [...indexHtml.matchAll(
+    /<div class="row"[^>]*>[\s\S]*?<\/div>/gi
+  )].map(([block]) => block);
+  assert.equal(cardBlocks.length, 3, "index.html must bake three featured cards");
+  assert.equal(rowBlocks.length, 6, "index.html must bake six panel rows");
+
+  const cardLinks = cardBlocks.map((block) =>
+    [...block.matchAll(/<a class="link" href="([^"]+)"/gi)].map(([, href]) => href)
+  );
+  const rowLinks = rowBlocks.map((block) =>
+    [...block.matchAll(/<a class="row-link" href="([^"]+)"/gi)].map(([, href]) => href)
+  );
+
+  // Primary destinations, in catalogue order, across both tiers.
+  const primaryLinks = [
+    ...cardLinks.map((links) => links[0]),
+    ...rowLinks.map((links) => links[0])
+  ];
   assert.deepEqual(
     primaryLinks,
     projects.map((project) => project.link),
-    "Static summary primary actions must exactly match the canonical project destinations"
-  );
-  assert.deepEqual(
-    linksForClass("projects-fallback-permalink"),
-    projects.map((project) => `#project-${project.slug}`)
-  );
-  assert.deepEqual(
-    linksForClass("project-link--secondary"),
-    projects.flatMap((project) => project.sourceLink ?? [])
-  );
-  assert.deepEqual(
-    linksForClass("project-link--evidence"),
-    projects.flatMap((project) => project.proofLink ?? [])
+    "Baked primary actions must exactly match the canonical project destinations"
   );
   assert.equal(new Set(primaryLinks).size, projects.length);
-});
 
+  // Featured cards expose their source repositories alongside the primary.
+  assert.deepEqual(
+    cardLinks.map((links) => links[1] ?? null),
+    projects.slice(0, 3).map((project) => project.sourceLink ?? null)
+  );
+
+  // Panel rows are single-action by design; each carries exactly one link.
+  for (const links of rowLinks) {
+    assert.equal(links.length, 1);
+  }
+});
 test("JoJo deck entries stay distinct and aligned with live deck routes", async () => {
   const projects = JSON.parse(await readUtf8("projects.json"));
   const jojoProjects = projects.filter((project) =>

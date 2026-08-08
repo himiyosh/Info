@@ -93,13 +93,13 @@ test("reduced motion preference is live: a runtime change arms/disarms motion wi
   );
   assert.match(
     changeHandler,
-    /disarmScrollMotion\(\);[\s\S]*disarmProjectReveal\(\);/,
-    "Switching to reduced motion must immediately disarm scene motion and any priming project rows"
+    /disarmReveal\(\);/,
+    "Switching to reduced motion must immediately disarm any priming reveal targets"
   );
   assert.match(
     changeHandler,
-    /armScrollMotion\(\);/,
-    "Switching back to no-preference must re-arm the shared scene lifecycle"
+    /armReveal\(\);/,
+    "Switching back to no-preference must re-arm the reveal lifecycle"
   );
 
   assert.match(
@@ -112,12 +112,12 @@ test("reduced motion preference is live: a runtime change arms/disarms motion wi
   // or create duplicate observers.
   assert.match(
     scriptSource,
-    /function armScrollMotion\(\)\s*\{\s*if\s*\(scrollMotionArmed\)\s*\{\s*return;/,
-    "armScrollMotion must guard against being armed twice"
+    /function armReveal\(\)\s*\{\s*if \(!shouldAnimateReveal\(\) \|\| revealObserver !== null\)\s*\{\s*return;/,
+    "armReveal must guard against being armed twice"
   );
   assert.match(
     scriptSource,
-    /function disarmScrollMotion\(\)[\s\S]*?cancelAnimationFrame\(scrollMotionFrame\)[\s\S]*?clearScrollMotionStyles\(\);/,
-    "disarmScrollMotion must cancel pending work and clear all derived scene styles"
+    /function disarmReveal\(\)[\s\S]*?window\.clearTimeout\(revealBackstopTimer\)/,
+    "disarmReveal must cancel the pending backstop alongside the observer"
   );
 });
