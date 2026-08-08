@@ -204,7 +204,7 @@ preview-site/index.html に置き換えた**。ユーザーが機能喪失を承
 - レビューセッション自身の最小修正 `5bb37cd`(8宣言除去+
   composition-layout-ownership.test.mjs による静的所有権契約)を取り込み、
   その上に本対応を積んだ。両者は互換で、所有権契約も通過する。
-- テスト: **46ファイル・280テスト全通過**(ピンは repin 収束で再導出、
+- テスト: **47ファイル・279テスト全通過**(ピンは repin 収束で再導出、
   site-quality 境界 28,655 バイト)。生成ページに差分なし(CSS のみの修正)。
 
 ### 320px の欠落を追加で塞いだ(2026-08-09)
@@ -232,13 +232,32 @@ clientWidth` を見る判定では原理的に検出できない(負のコント
 - 上書き自体が効いていることを computed 値で先に確認してから本判定に入る。
   効いていない状態で緑になるのを防ぐため。
 
+### 事前監査で判明した「落ちないテスト」(2026-08-09)
+
+再レビュー前の自己監査で、**`prototype-geometry-browser.test.mjs` に入れた
+WCAG 1.4.12 の 320/768px 契約が原理的に落ちない**ことが判明したため削除した。
+
+- 根拠: `styles.css` の `html { overflow-x: clip }` により
+  `documentElement.scrollWidth` は常に `clientWidth` と等しくなる。
+  負のコントロール(`.row .name` を 520px、`.card` を 480px に拡張して
+  320px ビューポートで描画)を当てても 5 件すべてが通過した。
+- 同じ負のコントロールを、並行セッションが追加した
+  `text-spacing-resilience.test.mjs`(テキスト Range を測る)に当てると
+  正しく fail する。1.4.12 契約はそちらが正本。
+- 併せて、デスクトップ実測側に残っていた同種の `scrollWidth <= clientWidth`
+  アサーションも削除した(通る/落ちるを区別できないため)。
+
+**教訓**: `overflow: clip` / `hidden` があるページで
+`scrollWidth <= clientWidth` を書くと、常に真になる。はみ出しは
+要素側の実測(Range / getBoundingClientRect)で測ること。
+
 ### テスト実行に関する注意
 
 `npm test` の**単発実行はこの環境で完走しない**。「live in one focused
 module」系のガードが `tests/quality` 全体を子プロセスで再実行する設計で、
 以前は本物の失敗により早期終了していたため速かった。それを修正した結果
 入れ子スポーンが本格化し、153件付近で事実上停止する。検証は
-ファイル単位のループで行うこと(全46ファイル・280件が通過することを確認済み):
+ファイル単位のループで行うこと(全47ファイル・279件が通過することを確認済み):
 
 ```bash
 for f in tests/quality/*.test.mjs; do
