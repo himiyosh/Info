@@ -96,26 +96,36 @@ himiyosh/Info のサイトを「夜藍×白妙」リデザインへ統合する�
 
 ### 残タスク(次セッション向け、優先度順)
 
-1. **フォントのセルフホスト**(最重要)。Zen Maru Gothic / M PLUS Rounded 1c /
-   IBM Plex Mono はトークンで指名しているだけで**一度も配信していない**。
-   現状すべてシステム代替。woff2 サブセットを `assets/fonts/` へ置き
-   `tokens.css` に `@font-face` を追加し、`templates/index.html` に
-   `rel=preload as=font crossorigin` を足す。制約2つ:
-   - 外部ホスト禁止(`site-quality.test.mjs:303-306` が
-     fonts.googleapis/gstatic を明示的に禁止)
-   - 未使用の Big Shoulders `@font-face` と woff2 は**消さない**
-     (`site-quality.test.mjs:308-312, 333-336` が実在を要求)
-2. **本文スケール**。本文が 1.25rem/400/1.7 に対しプロトタイプは
-   0.95–1.05rem/500/1.85。反映後は `print-portfolio.test.mjs:736`
+**完了済み(コミット `839c079`)**
+
+- ~~フォントのセルフホスト~~ → 3書体を woff2 サブセットで同梱済み
+  (`assets/fonts/`、計 320KB)。サブセットはデコード演出のスクランブル用
+  文字も含むサイト実使用グリフのみ。出所は github.com/google/fonts の
+  OFL 版で、fonttools でサブセット化した以外は無改変。`OFL.txt` に
+  4著作権者と出所を記載。本文・見出しは preload。**再生成する場合**は
+  scratchpad の手順(pyftsubset + `--text-file`)を踏襲し、外部ホストは
+  禁止(`site-quality.test.mjs:303-306`)、未使用の Big Shoulders は
+  消さないこと(同 `:308-312, 333-336` が実在を要求)。
+- ~~見出し文言~~ → 「好奇心を、実用へ。」「小さな不便を、道具に。」
+  「話しましょう。」+ 英訳に差し替え済み。ナビは Latin のまま。
+
+**残タスク(優先度順)**
+
+1. **本文スケール**。本文が 1.25rem/400/1.7 に対しプロトタイプは
+   0.95–1.05rem/500/1.85。`.hero-role` の太さも 700 のままで、
+   プロトタイプは 500。反映後は `print-portfolio.test.mjs:736`
    (`scrollHeight < 7500`)を再確認すること。
-3. **見出し文言**。本番は "About / Projects / Contact"、プロトタイプは
-   「好奇心を、実用へ。」「小さな不便を、道具に。」「話しましょう。」。
-   声色の差として最大。`i18n.js` の ja/en 両方を編集し再生成する
-   (静的フォールバックがバイト一致で固定されているため)。
-4. **未移植の部品**: STACK/道具箱セクション、About の facts チップ、
+2. **小ラベルのモノ化**。`.project-link` / `.footer-meta a` /
+   hero figcaption などが本文書体のまま。監査の B6 に一括の
+   テーマ層ブロックあり。`html:lang(ja)` 付きの形が必要な箇所に注意。
+3. **未移植の部品**: STACK/道具箱セクション、About の facts チップ、
    各節の eyebrow、hero 写真の傾き+コーナーティック、SCROLL キュー、
    JST 時計、ホバー追従プレビュー、スタックのモノチップ化。
    いずれも契約上は追加可能。個別の制約は監査ログを参照。
+4. **ハイライン**。装飾罫線が不透明な `--color-rule` のままで、
+   プロトタイプの約10%アルファ線より約16段階濃い。`--color-line` /
+   `--color-line-soft` をアルファ付き oklch で追加し、装飾罫線のみ
+   差し替える(コントラスト検査の正規表現はアルファ付きを読まないため安全)。
 5. 各プロジェクトのプレビュー画像を新配色 UI で撮り直し(任意)
 6. `preview-site/` と `integration/` は統合完了後に削除可
 7. main への反映は PR + 独立レビュー経由(リポジトリの掟どおり)
