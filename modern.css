@@ -830,26 +830,11 @@ html:lang(ja) .footer-meta a {
     grid-area: support;
   }
 
-  .about {
-    min-height: 165svh;
-    grid-template-columns: minmax(12rem, 0.55fr) minmax(0, 1.45fr);
-    align-items: start;
-  }
-
-  .about .section-heading {
-    position: sticky;
-    inset-block-start: 32svh;
-  }
-
-  .about-copy {
-    padding-block: 38svh;
-  }
-
-  .projects-intro {
-    min-height: 68svh;
-    padding-block: var(--space-4xl) var(--space-2xl);
-    align-content: end;
-  }
+  /* The scene-era About and Projects rules lived here: a 165svh section,
+   * a heading stuck at 32svh, 38svh of copy padding, and a 68svh intro
+   * band. The prototype composition owns this layout through .about-grid,
+   * .about-sticky, and .section-head, so these are gone. Keeping them
+   * cost About its second column and put an empty screen above Projects. */
 
   .project-row {
     min-height: 100svh;
@@ -875,15 +860,11 @@ html:not(.js-enabled) .hero {
 }
 
 html:not(.js-enabled) .hero-sticky,
-html:not(.js-enabled) .about .section-heading {
+html:not(.js-enabled) .about-sticky {
   position: relative;
   inset-block-start: auto;
   opacity: 1;
   transform: none;
-}
-
-html:not(.js-enabled) .about-copy {
-  padding-block: var(--space-2xl);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -903,13 +884,9 @@ html:not(.js-enabled) .about-copy {
   }
 
   .hero-sticky,
-  .about .section-heading {
+  .about-sticky {
     position: relative;
     inset-block-start: auto;
-  }
-
-  .about-copy {
-    padding-block: var(--space-2xl);
   }
 
   .hero-sticky,
