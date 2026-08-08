@@ -21,26 +21,24 @@ const globalInventoryEnvironment = "INFO_PROJECT_CATALOGUE_INVENTORY";
 const globalInventoryEnvironmentValue = "complete-runtime-v1";
 const globalInventoryChildMode =
   process.env[globalInventoryEnvironment] === globalInventoryEnvironmentValue;
-const catalogueExpectedBytes = 52_002;
+const catalogueExpectedBytes = 42_064;
 const catalogueBodyStartExpectedBytes = 8_196;
-const catalogueBodyExpectedBytes = 43_806;
+const catalogueBodyExpectedBytes = 33_868;
 const catalogueBodyExpectedSha256 =
-  "d9b94bf0f5f70fdb7fe289aa32f5da411539958825b1602c1e11561feb4a7821";
-const mutationGuardExpectedBytes = 13_081;
+  "52d4ae7d796e66237ccc1e32ea9970fc25b9837131547ca8fb4a49f685750172";
+const mutationGuardExpectedBytes = 13_435;
 const mutationGuardExpectedSha256 =
-  "f0d4f186433091d4b04420f8a290b3a804d7d8dc19dd652c4172822cbbede623";
+  "9673f8fecf1b075a74a4a3e22aee63f5472b744561623d02fa68251361688984";
 const expectedCatalogueTestNames = [
   "projects.json schema, localization, links, and preview assets are valid",
   "exactly six live projects expose verified public source actions",
   "exactly eight public projects expose reviewed immutable proof citations",
   "project runtime rejects incomplete, malformed, duplicate, and primary-equal source actions",
   "project action groups preserve primary-first safe localized links and responsive focus behavior",
-  "project proof renders as a compact cited surface after primary actions",
   "mobile project AVIF pairs meet dimension and bandwidth budgets",
   "desktop project AVIF pairs meet exact format, dimensions, and bandwidth budgets",
   "project runtime validation requires distinct local JPEG and AVIF assets",
   "project rendering emits mutually exclusive AVIF sources before lazy JPEG fallbacks",
-  "project catalogue status stays concise, atomic, and separate from rendered results"
 ];
 const catalogueBodyStartMarker = `test(${JSON.stringify(expectedCatalogueTestNames[0])}`;
 const junitSummaryKeys = [

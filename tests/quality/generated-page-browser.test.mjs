@@ -4,6 +4,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "node:test";
 
+import { chromeJourneyTimeoutMs } from "../helpers/chrome-journey-budget.mjs";
+
 const helperUrl = new URL("../helpers/chrome-journey.mjs", import.meta.url);
 const repoRoot = process.cwd();
 const blockedNetworkArgument = "--host-resolver-rules=MAP * ~NOTFOUND";
@@ -77,7 +79,7 @@ async function renderGeneratedRoute(language) {
       stdout.includes(route.titleLine2) &&
       stdout.includes("</html>"),
     name: `generated-${language}`,
-    timeoutMs: 20_000
+    timeoutMs: chromeJourneyTimeoutMs
   });
   return { language, pageUrl, result, route };
 }
@@ -125,8 +127,8 @@ function assertLocalizedRender({ language, pageUrl, result, route }) {
   );
   assert.match(
     result.stdout,
-    /<div\b[^>]*\bid="projects-fallback"[^>]*>/,
-    `${context} lost its network-independent project fallback`
+    /<div class="row"[^>]*id="project-/,
+    `${context} lost its network-independent baked project rows`
   );
 }
 

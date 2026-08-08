@@ -6,20 +6,21 @@ Locked design system for the rich redesign program. Future page changes read thi
 
 - Genre · modern-minimal portfolio register with quiet-luxury restraint, technical confidence, and editorial pacing
 - Marketing macrostructure · Feature Stack
-- Theme · Graphite Blue
-- Axes · deep graphite paper / condensed display / restrained cool blue
-- Navigation · quiet floating navigation with the existing accessible disclosure, focus-containment, and active-location behavior
+- Theme · 夜藍×白妙 "Alpine Ink · Decode" (evolved from the Graphite Blue baseline; the scene/token architecture and every motion, print, and accessibility contract carry over unchanged)
+- Axes · 夜藍 deep-navy paper / rounded-gothic display / 山吹 amber accent (dark, default) — 白妙 washi paper / 瑠璃 blue accent (light) — hidden 暁 plum-dawn palette behind a 3-second toggle hold
+- Navigation · quiet floating navigation with the existing accessible disclosure, focus-containment, and active-location behavior, plus a 44px theme toggle at the end of the menu
 - Footer · Ft5 statement composition; one truthful static closing line with the existing copyright, disclaimer, and back-to-top link
 
 ## Canonical tokens
 
 `tokens.css` is the source of truth. All colors use semantic OKLCH tokens, and all type stacks use named font tokens.
 
-- Display · local Big Shoulders Display variable font for Latin, then robust Japanese/system fallbacks
-- Body · robust system Japanese and UI sans-serif fallbacks
-- Accent use · a single low-saturation blue accent for text and colored-scene fills; a darker navy shade of the same hue (`--color-accent-2`) exists only as an on-dark fill role, never as a competing hue
+- Display · rounded gothic (`Zen Maru Gothic` first for future self-hosted subsets, then system Maru Gothic fallbacks) at weight 900 for display lines; the local Big Shoulders Display variable font stays bundled for the legacy Latin contract
+- Body · `M PLUS Rounded 1c` first, then robust system Japanese and UI sans-serif fallbacks; `--font-mono` (IBM Plex Mono first) carries kickers, wordmark, and directory metadata
+- Accent use · one warm 山吹 accent per dark palette (瑠璃 blue in 白妙) for text, fills, and the topo highlight; `--color-accent-2` remains a fill-only role — an on-dark deep shade in dark palettes and a light tinted fill in 白妙 where `--color-on-dark` resolves to ink
+- Theme modes · `tokens.css` holds only the canonical 夜藍 set; the modern.css theme layer overrides the same slots for `html[data-theme="shirotae"|"akatsuki"]` and mirrors 白妙 through `prefers-color-scheme: light` when no choice is stored; selection persists as `info-theme` beside the language preference, updates `aria-pressed`/labels through the i18n catalogue, announces 暁 through a polite status toast, and crossfades through View Transitions only when motion is allowed
 - Spacing · named 4-point scale from `--space-3xs` through `--space-4xl`
-- Shape · restrained soft radii, hairline rules, and one cinematic shadow token; no glass layer or decorative glow
+- Shape · restrained soft radii, hairline rules, and one cinematic shadow token; soft accent glows are limited to status dots and the toggle charge affordance
 
 ## Content and accessibility
 

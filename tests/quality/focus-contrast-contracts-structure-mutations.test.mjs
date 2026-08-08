@@ -482,7 +482,6 @@ mutationTest(
   "focus contrast structure guard binds the final focus selector assertion",
   async () => {
     const reviewedFocusRule = [
-      ".projects-list .project-row :where(a, button):focus-visible,",
       ".contact-panel :where(a, button):focus-visible {",
       "  outline-color: var(--color-focus);",
       "}"
@@ -501,7 +500,7 @@ mutationTest(
           )
         }
       },
-      /modern\.css must override both project and contact focus rings with --color-focus/
+      /modern\.css must override the contact focus ring with --color-focus/
     );
   }
 );
@@ -510,9 +509,9 @@ mutationTest(
   "focus contrast structure guard binds the on-dark focus exclusion assertion",
   async () => {
     const reviewedOnDarkSelector =
-      ".js-enabled .nav-menu :focus-visible:not(.language-toggle),";
+      ".js-enabled .nav-menu :focus-visible:not(.language-toggle) {";
     const brokenOnDarkSelector =
-      ".js-enabled .nav-menu :focus-visible,";
+      ".js-enabled .nav-menu :focus-visible {";
     await assertMutationRejected(
       {
         runtimeOverrides: {
@@ -533,8 +532,8 @@ mutationTest(
   async () => {
     const weakenedTokens = replaceOnce(
       tokensSource,
-      "    --color-focus: oklch(98% 0.02 230);",
-      "    --color-focus: oklch(20% 0.02 248);"
+      "    --color-focus: oklch(97% 0.03 90);",
+      "    --color-focus: oklch(20% 0.03 253);"
     );
     await assertMutationRejected(
       { runtimeOverrides: { "tokens.css": weakenedTokens } },
@@ -548,8 +547,8 @@ mutationTest(
   async () => {
     const unchangedMutedRole = replaceOnce(
       tokensSource,
-      "    --color-muted: oklch(84% 0.016 245);",
-      "    --color-muted: oklch(70% 0.02 245);"
+      "    --color-muted: oklch(86% 0.02 250);",
+      "    --color-muted: oklch(72% 0.03 250);"
     );
     await assertMutationRejected(
       { runtimeOverrides: { "tokens.css": unchangedMutedRole } },
@@ -563,7 +562,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { focusContrast: `${focusContrastSource} ` },
-      /focus-contrast-contracts\.test\.mjs must be exactly 7773 bytes/
+      /focus-contrast-contracts\.test\.mjs must be exactly 7888 bytes/
     );
   }
 );
@@ -573,7 +572,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
-      /site-quality\.test\.mjs must be exactly 31213 bytes/
+      /site-quality\.test\.mjs must be exactly 28655 bytes/
     );
   }
 );

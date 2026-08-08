@@ -33,19 +33,19 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const reducedMotionExpectedBytes = 5_080;
+const reducedMotionExpectedBytes = 5_433;
 const reducedMotionBodyStartExpectedBytes = 273;
 const reducedMotionHeaderExpectedSha256 =
   "0e56555309f1cd482e5b0a071cf213f6859415387ac7983795e29915a1781fb3";
-const reducedMotionBodyExpectedBytes = 4_807;
+const reducedMotionBodyExpectedBytes = 5_160;
 const reducedMotionBodyExpectedSha256 =
-  "7085243afd368abb5e2e4449284c8cc85ee7435b8301e546523bbc10e2bbeeef";
-const reviewedSourceSliceExpectedBytes = 4_808;
+  "d570cc335ae1c3e9d977ad0170e1274eb0cec993a73efef59da7498cc4af8573";
+const reviewedSourceSliceExpectedBytes = 5_161;
 const reviewedSourceSliceExpectedSha256 =
-  "337f1f315eb90c87704d76dd85d0df8f2371ebb1809b3201d6efaa8ede22303b";
+  "fc44e65037e2fee5df1b9e8be7b52ade61d653ceb9ee402045683097cb4b582b";
 const mutationGuardExpectedBytes = 17_282;
 const mutationGuardExpectedSha256 =
-  "b6fd6fe00cac69deaf4e3a651d6553ab89da66b7525e737363e5e1f554449959";
+  "c259788e98908ad8d71a813fa9f762f24fcfad3de62b759f5bdcca8aaeeb0573";
 const expectedReducedMotionTestNames = [
   "reduced motion nulls every new spatial transform, disables non-essential motion, and keeps the wordmark-mark rotation invariant",
   "reduced motion preference is live: a runtime change arms/disarms motion without duplicate observers"

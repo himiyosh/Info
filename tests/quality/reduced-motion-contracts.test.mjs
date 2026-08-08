@@ -18,8 +18,8 @@ test("reduced motion nulls every new spatial transform, disables non-essential m
 
   assert.match(
     reducedBlock,
-    /\.hero h1 span,\s*\n\s*\.hero-support > \*,\s*\n\s*\.project-row,\s*\n\s*\.project-media\s*\{\s*transform:\s*none\s*!important;/,
-    "Reduced motion must null transform on every new PR 2 spatial motion surface"
+    /\.hero h1 span,\s*\n\s*\.hero-support > \*\s*\{\s*transform:\s*none\s*!important;/,
+    "Reduced motion must null transform on every remaining entrance motion surface"
   );
 
   // Regression: the wordmark-mark's static rotate(12deg) predates PR 2.
@@ -56,15 +56,25 @@ test("reduced motion nulls every new spatial transform, disables non-essential m
     /\.scroll-progress\s*\{\s*display:\s*none;\s*\}/,
     "The scroll progress bar must be hidden outright under reduced motion"
   );
-  assert.match(
+  assert.doesNotMatch(
     reducedBlock,
-    /\.footer-marquee-set\s*\{\s*animation:\s*none\s*!important;/,
-    "The marquee animation must be fully disabled under reduced motion"
+    /footer-marquee/,
+    "The retired footer marquee must stay out of the reduced-motion block"
   );
   assert.match(
     modernSource,
-    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.hero-sticky,\s*\.project-content,\s*\.project-media\s*\{\s*opacity:\s*1\s*!important;\s*transform:\s*none\s*!important;/,
-    "The modern layer must null every scene-derived spatial transform and restore full visibility"
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.hero-sticky\s*\{\s*opacity:\s*1\s*!important;\s*transform:\s*none\s*!important;/,
+    "The modern layer must pin the hero stage fully visible and untransformed"
+  );
+  assert.match(
+    modernSource,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.hero-marquee-track\s*\{[^}]*animation:\s*none/s,
+    "The hero marquee band must freeze under reduced motion"
+  );
+  assert.match(
+    modernSource,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.card,\s*\n\s*\.card \.thumb img,\s*\n\s*\.row,\s*\n\s*\.row \.go,\s*\n\s*\.row \.name,\s*\n\s*\.link::after,\s*\n\s*\.mail::before\s*\{\s*transition:\s*none\s*!important;/,
+    "Every card/row/link hover transition from the prototype composition must be removed under reduced motion"
   );
 });
 
@@ -93,13 +103,13 @@ test("reduced motion preference is live: a runtime change arms/disarms motion wi
   );
   assert.match(
     changeHandler,
-    /disarmScrollMotion\(\);[\s\S]*disarmProjectReveal\(\);/,
-    "Switching to reduced motion must immediately disarm scene motion and any priming project rows"
+    /disarmReveal\(\);/,
+    "Switching to reduced motion must immediately disarm any priming reveal targets"
   );
   assert.match(
     changeHandler,
-    /armScrollMotion\(\);/,
-    "Switching back to no-preference must re-arm the shared scene lifecycle"
+    /armReveal\(\);/,
+    "Switching back to no-preference must re-arm the reveal lifecycle"
   );
 
   assert.match(
@@ -112,12 +122,12 @@ test("reduced motion preference is live: a runtime change arms/disarms motion wi
   // or create duplicate observers.
   assert.match(
     scriptSource,
-    /function armScrollMotion\(\)\s*\{\s*if\s*\(scrollMotionArmed\)\s*\{\s*return;/,
-    "armScrollMotion must guard against being armed twice"
+    /function armReveal\(\)\s*\{\s*if \(!shouldAnimateReveal\(\) \|\| revealObserver !== null\)\s*\{\s*return;/,
+    "armReveal must guard against being armed twice"
   );
   assert.match(
     scriptSource,
-    /function disarmScrollMotion\(\)[\s\S]*?cancelAnimationFrame\(scrollMotionFrame\)[\s\S]*?clearScrollMotionStyles\(\);/,
-    "disarmScrollMotion must cancel pending work and clear all derived scene styles"
+    /function disarmReveal\(\)[\s\S]*?window\.clearTimeout\(revealBackstopTimer\)/,
+    "disarmReveal must cancel the pending backstop alongside the observer"
   );
 });

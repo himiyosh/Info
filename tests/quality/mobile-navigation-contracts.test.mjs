@@ -108,7 +108,7 @@ test("modern mobile navigation stays scroll-contained in short safe-area viewpor
   const modernSource = await readUtf8("modern.css");
   const mobileRule = modernSource.match(/\.js-enabled \.nav-menu\s*\{([^}]*)\}/s)?.[1];
   const desktopBlock = modernSource.match(
-    /@media \(min-width: 48rem\) \{([\s\S]*)\}\s*html:not\(\.js-enabled\) \.hero/
+    /@media \(min-width: 48rem\) \{([\s\S]*?)\}\s*@media \(prefers-reduced-motion: reduce\)/
   )?.[1];
 
   assert.ok(mobileRule, "modern.css must define the enhanced mobile navigation");

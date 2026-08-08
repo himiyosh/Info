@@ -83,11 +83,6 @@ const nonNestedSpawnerFiles = [
     path: "tests/quality/merge-gate.test.mjs",
     spawnCallCount: 1,
     reason: "runs scripts/check-merge-gate.mjs, the snapshot merge-gate CLI"
-  },
-  {
-    path: "tests/quality/print-portfolio.test.mjs",
-    spawnCallCount: 1,
-    reason: "launches a headless Chrome binary to exercise the print stylesheet"
   }
 ];
 const childProcessFiles = [
