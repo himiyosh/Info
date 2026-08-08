@@ -1510,19 +1510,13 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
     padding-inline-start: clamp(0rem, 5vw, 5rem);
   }
 
-  .about {
-    display: grid;
-    grid-template-columns: minmax(12rem, 0.55fr) minmax(0, 1.45fr);
-    gap: clamp(3rem, 8vw, 8rem);
-  }
+  /* About and Projects lay themselves out through .about-grid and
+   * .section-head now. The old two-column tracks used to sit on .about /
+   * .projects-intro themselves, which squeezed the prototype's grid into
+   * a single 263px track. */
 
   .about-copy {
     margin-block-start: 0;
-  }
-
-  .projects-intro {
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr);
-    column-gap: clamp(3rem, 8vw, 8rem);
   }
 
   .projects-intro h2 {
@@ -1561,10 +1555,8 @@ html:lang(ja) :where(.project-heading h3, .section-heading h2, .projects-intro h
     gap: clamp(2rem, 5vw, 5rem);
   }
 
-  .contact-panel {
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr);
-    align-items: start;
-  }
+  /* Contact is a centred single column in the prototype; the old
+   * two-column split belonged to the previous panel design. */
 
   .footer-meta {
     grid-template-columns: auto minmax(0, 1fr) auto;
