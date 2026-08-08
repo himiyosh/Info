@@ -5,6 +5,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "node:test";
 
+import { chromeJourneyTimeoutMs } from "../helpers/chrome-journey-budget.mjs";
+
 // WCAG 2.1 SC 1.4.12 Text Spacing: a reader may override line height to 1.5,
 // paragraph spacing to 2em, letter spacing to 0.12em, and word spacing to
 // 0.16em, and no content or functionality may be lost.
@@ -213,7 +215,7 @@ test("reader text-spacing overrides lose no content at 320px or 768px", async ()
       completeWhen: (stdout) =>
         stdout.indexOf(sentinel) !== stdout.lastIndexOf(sentinel) && stdout.includes("</html>"),
       name: "text-spacing",
-      timeoutMs: 45_000
+      timeoutMs: chromeJourneyTimeoutMs
     });
     measurement = parseMeasurement(journey.stdout);
   } finally {

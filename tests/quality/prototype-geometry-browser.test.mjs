@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { test } from "node:test";
 
 import { runChromeJourney } from "../helpers/chrome-journey.mjs";
+import { chromeJourneyTimeoutMs } from "../helpers/chrome-journey-budget.mjs";
 
 // Rendered-geometry contracts for the prototype composition.
 // WCAG 1.4.12 text-spacing resilience is NOT measured here: with
@@ -115,7 +116,7 @@ async function renderFixture({ height, language, width }) {
       partial.includes("</html>"),
     maxStdoutBytes: maxBrowserOutputBytes,
     name: `prototype-geometry-${language}-${width}`,
-    timeoutMs: 20_000
+    timeoutMs: chromeJourneyTimeoutMs
   });
   const encodedGeometry = stdout.match(
     /<meta name="geometry" content="([^"]+)">/
