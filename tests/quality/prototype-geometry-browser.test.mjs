@@ -162,6 +162,7 @@ async function renderFixture({ height, language, spacing, width }) {
       }
       return [
         "--force-device-scale-factor=1",
+        "--hide-scrollbars",
         "--run-all-compositor-stages-before-draw",
         "--virtual-time-budget=5000",
         `--window-size=${Math.max(width, 500)},${height}`,
@@ -266,10 +267,12 @@ for (const language of ["ja", "en"]) {
     // Panel rows keep the five-column desktop grid.
     assert.equal(geometry.rowColumns.length, 5, describe());
 
-    // Contact: one centred column.
+    // Contact: one centred column. Centre against the layout viewport
+    // (clientWidth) — innerWidth includes the classic scrollbar on Linux
+    // runners, which skews the right-hand gap by the scrollbar width.
     assert.equal(geometry.contactColumns.length, 1, describe());
     const leftGap = geometry.contactPanelBox.l;
-    const rightGap = geometry.viewportWidth - geometry.contactPanelBox.r;
+    const rightGap = geometry.document.clientWidth - geometry.contactPanelBox.r;
     assert.ok(
       Math.abs(leftGap - rightGap) <= 2,
       `The contact panel must stay centred: ${describe()}`
