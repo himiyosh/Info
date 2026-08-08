@@ -1,71 +1,152 @@
-# 独立レビュー依頼 — PR #88
+# 独立レビューの手順
 
-このファイルは、実装セッションとは**別の** Claude Code セッションでレビューを
-行うための依頼文です。新しいセッションを開き、次をそのまま貼り付けてください。
+PR に独立レビューが要るときの手順書。**新しいセッションを開く必要はない。**
+作業中のセッションから read-only のサブエージェントを 1 体起動して、この文書を渡す。
 
-## 再レビュー(2回目)の補足
+## なぜサブエージェントで足りるのか
 
-初回レビューは verdict=fail(旧レイアウト CSS が新構造を破壊 / 死んだ CSS を
-要求する契約 / text-spacing 契約の黙殺)。その後の対応が head に積まれている。
+- `scripts/check-independent-review.mjs` が `by=` に求めるのは **UUID の書式だけ**で、
+  レビュアーが実装者と別人であることは検査していない。別セッションで回しても、
+  機械的に保証されるものは何も増えない。
+- `.claude/rules/agentic-core.md` が既にこう定めている:
+  *"Use isolated read-only reviewers for independent critique. The primary agent owns edits and final decisions."*
+- 過去に fail を出せた理由はセッション境界ではなく、下の**検証手法**だった。
+  手法はサブエージェントにそのまま持ち込める。
 
-- 対応差分の全量: `git diff 1a22e28..HEAD`(初回レビュー時点との差)
-- 重点: (1) 旧構造 CSS の削除が完全か(`grep -c 'project-row\|project-directory\|projects-fallback\|viewport-stage\|footer-marquee' styles.css modern.css` は 0 になるはず)、
-  (2) 契約の書き換えが「移植」であって「削除」でないか、
-  (3) `tests/quality/prototype-geometry-browser.test.mjs` の実測が自分の環境でも通るか、
-  (4) `tests/quality/composition-layout-ownership.test.mjs` と
-  `tests/quality/text-spacing-resilience.test.mjs`(初回レビュアー由来)が通るか
-- **落ちないテストを疑うこと**。この PR では既に2件が実測で見つかっている:
-  `html { overflow-x: clip }` の下で `scrollWidth <= clientWidth` を見る契約は
-  常に真になり、負のコントロール(はみ出す箱を注入)でも通過した。
-  新規・改変されたテストには**負のコントロールを当てて、落ちることを確かめる**こと。
-- **UUID の失格リスト**: 次の2セッションは実装に関与したため、
-  マーカーの by= に使ってはならない。
-  - `49c95d85-6d6d-4cdc-acc1-7b5945d5c997`(実装セッション)
-  - `4189122c-c05a-4f94-a6fb-d76cfe4b6c56`(初回レビュー。修正 `5bb37cd`・`71a6804` を
-    自ら実装したため、以後は判定者になれない)
-- テストはファイル単位ループで 47 ファイル・279 件(単発 `npm test` は完走しない)
-- **作業ディレクトリの注意**: 共有チェックアウト
-  `/Users/himiyosh/GH_himiyosh/ghcp-worktrees/Info` は他セッションが使用中。
-  レビューは必ず自分専用の worktree を作って行うこと:
-  `git worktree add /tmp/review-88 origin/prototype-structure`
+## 呼ぶ側が守ること
+
+サブエージェントは依頼文を書く側の影響を受ける。バイアスを持ち込まないために:
+
+1. **この文書をそのまま渡す。** 依頼文を都度書き起こさない。
+   「ここを見てほしい」という誘導を足さない。何を見るかはレビュアーが決める。
+2. **サブエージェントには編集ツールを与えない。** read-only で起動する。
+3. **返ってきた verdict と根拠は逐語で PR に貼る。** 要約・取捨選択をしない。
+   都合の悪い指摘を落とすと、この仕組みは意味を失う。
+4. **実装者はレビュー結果に対して合否を出さない。** 修正は実装者が行い、
+   再判定はもう一度サブエージェントを起動して行う。
 
 ---
 
-REVIEW-REQUEST.md を読み、PR #88(himiyosh/Info、prototype-structure → main)の
-独立レビューを実施してください。あなたは実装者ではなく独立レビュアーです。
+# 以下をサブエージェントへの指示としてそのまま渡す
 
-手順:
+あなたはこの PR の独立レビュアーです。実装者ではありません。
+既存の実装や既に投稿されたレビューコメントを否定する結論になっても、
+実測で裏づけられるならそう出してください。
 
-1. `git fetch origin` の後、**自分専用の worktree** を作ってそこで作業する:
-   `git worktree add /tmp/review-88 origin/prototype-structure && cd /tmp/review-88`
-   (共有チェックアウトは他セッションが使用中。直接 switch しないこと)
-2. 差分の全体像: `git diff origin/main...HEAD --stat`
-3. 重点的に検証すること(コミットメッセージは著者の主張であり証拠ではない):
-   - **テスト改変の妥当性**。この変更は品質契約を大規模に書き換えている
-     (8ファイル削除、多数の本体書き換え、バイト/SHA ピン再導出)。
-     削除・緩和が「対象機能の削除に対応する正当なもの」か、
-     「不都合な検査を黙らせるもの」かを、削除された機能
-     (share/ ページ、固定リンク、根拠引用、no-JS 一覧、印刷)と
-     突き合わせて判定する。
-   - **ジェネレーターの検証強度**。旧 script.js のランタイム検証
-     (重複リンク、proof の不変 blob 文法、資産一意性)が
-     scripts/generate-static-pages.mjs に移植されたという主張を、
-     破壊フィクスチャを自分で流して確認する。
-   - **テスト実行**はファイル単位で:
-     `for f in tests/quality/*.test.mjs; do node --test "$f"; done`
-     (単発 `npm test` はこのマシンでは完走しない)
-   - **実機確認**: `python3 -m http.server 8010` で
-     / と /en/ と /preview-site/ を見比べ、構成一致・テーマ3種・
-     長押しの暁・JS無効時の全件表示を確認する。
-4. 判定できたら、PR #88 に次の形式のコメントを投稿する
-   (head SHA は `gh pr view 88 --json headRefOid` で取得、
-   by= には**このレビューセッション自身の UUID**(小文字フル)を入れる):
+## 絶対に守ること
 
-   合格の場合、コメント本文に次の1行(前後に説明文可、同一行への付加は不可):
+**通ることは証拠になりません。壊したときに落ちることを確かめてください。**
+このリポジトリでは「全通過しているのに表示が壊れている」「負のコントロールを入れても
+通過する assertion」が実際に何度も見つかっています。
 
-   independent-review head=<40桁のhead SHA> verdict=pass by=<セッションUUID>
+**文書は主張であって証拠ではありません。** PR コメント、コミットメッセージ、
+`HANDOFF.md`、コード中のコメント、README — すべて著者の主張として扱い、実測で裏を取ること。
+過去に、テストファイルの冒頭コメントとコミットメッセージと HANDOFF の 3 箇所が
+「このテストは Range で測っている」と書いていたのに、実装には `createRange` が
+存在しなかった事例があります。
 
-   問題を見つけた場合は verdict=fail で同形式。理由は別の行に書く。
+## 手順
 
-5. 投稿直前に headRefOid を再取得し、ピン留めした SHA と一致することを
-   確認してから投稿する(変わっていたら再レビュー)。
+1. **head をピン留めする。**
+   `gh pr view <N> --json headRefOid` で取得し、投稿直前に再取得して一致を確認する。
+   動いていたら差分を見る。ツリーハッシュが同一なら再検証は不要
+   (`git rev-parse <sha>^{tree}` を比較)。中身が変わっていれば再レビューする。
+
+2. **作業ディレクトリを分ける。**
+   稼働中の worktree は使わない。`/tmp` に clone して検証する。
+
+3. **ベースラインを取る。**
+   全ファイル緑であることを先に確認する。以降は「落ちている」話ではなく
+   「壊しても落ちない」話をするため。
+
+4. **新設・変更された契約に負のコントロールを注入する。**
+   契約ごとに、それが防ぐはずの欠陥を意図的に作り、**実際に落ちること**を確認する。
+   落ちなければその契約は検出力を持たない。素通りした注入は必ず報告する。
+   箱の幅だけでなく、`overflow: hidden` + `text-overflow: ellipsis` による
+   切り落としや、行間を上げたときの縦方向の切り落としも試すこと。
+
+5. **削除された契約を機能の実態と突き合わせる。**
+   「対象機能の削除に対応する正当な削除」か「不都合な検査を黙らせる削除」かを判定する。
+   機能が残っているのに契約だけ消えていないか、CSS や実装の実在を確認して判断する。
+
+6. **実機で確認する。**
+   `python3 -m http.server` で配信し、デスクトップと狭い幅、テーマ全種、
+   JS 無効時の表示を見る。**ソースの文字列検査だけで結論を出さない。**
+
+7. **ジェネレーターに破壊フィクスチャを流す。**
+   不正なデータをビルドが拒否することを、自分でデータを壊して確認する。
+
+8. **判定を投稿する。**
+
+## 判定の書式
+
+コメント本文に次の 1 行を、**前後の行から独立して**置く
+(前後に説明文は可、同一行への付加は不可、コードフェンスの中は無効)。
+
+```
+independent-review head=<40桁のhead SHA> verdict=pass|fail by=<あなたのセッションUUID(小文字フル)>
+```
+
+理由はマーカーとは別の行に書く。
+
+**既知の罠**: マーカー直後の行を `pass` / `fail` で始めてはいけない。
+`check-independent-review.mjs` の多重 verdict ガード
+(`VERDICT_SEPARATOR_PATTERN` + `SECOND_VERDICT_PATTERN`)が
+それを 2 つ目の verdict と解釈し、**マーカーごと無効化する**。
+日本語なら「不合格の理由は…」のように書き出す。
+
+投稿後は必ず読めているか確認する:
+
+```
+gh pr view <N> --json reviews,comments | node scripts/check-independent-review.mjs --head <head>
+```
+
+exit 3 = fail 検出、exit 0 = pass 検出、exit 1 = **検出できていない**(書式を疑う)。
+
+## この環境の注意点
+
+- **`npm test` の単発実行は macOS で完走しない。** 全体を子プロセスで再実行する
+  ガードが深く入れ子になるため。ファイル単位で回す:
+  ```
+  for f in tests/quality/*.test.mjs; do node --test "$f"; done
+  ```
+  macOS には `timeout` が無いので、ラッパーで使わないこと。
+- **ブラウザーパネルが固まったら** headless Chrome を直接使う。
+  `--headless --screenshot --virtual-time-budget=...`。
+  ページを跨いでスクロールさせたい場合、`file://` の親から `http://` の iframe は
+  同一オリジンでないため `contentWindow.document` に触れない。
+  プローブは配信対象のディレクトリに置いて同一オリジンで読み込む。
+- **`html { overflow-x: clip }` があるため `documentElement.scrollWidth` は
+  常に `clientWidth` と等しくなる。** これに基づく溢れ判定は原理的に落ちない。
+  はみ出しは要素側の実測(Range / `scrollWidth - clientWidth`)で測ること。
+- **`styles.css` は旧デザインと共有の基盤レイヤー。** 構造を差し替えた PR では、
+  同名クラスに効く旧レイアウト宣言が生き残って勝つことがある。
+  文字列検査では見えないので、計算後スタイルで「どの規則が実際に勝っているか」を見る。
+
+---
+
+# PR #88 固有の申し送り
+
+汎用手順は上まで。ここから下は PR #88 が閉じたら削除してよい。
+
+## by= に使ってはいけない UUID
+
+実装に関与したセッションは、その PR の判定者になれない。
+
+| UUID | 理由 |
+| --- | --- |
+| `49c95d85-6d6d-4cdc-acc1-7b5945d5c997` | 実装セッション |
+| `4189122c-c05a-4f94-a6fb-d76cfe4b6c56` | 初回レビュー後に修正 `5bb37cd`・`71a6804` を自ら実装 |
+| `d3a2dd8a-0883-4a25-b7b5-ed2c307f4206` | 2回目レビュー。**この手順書の書き換え(PR #91)を自ら実装したため**、以後 `prototype-structure` の判定者になれない |
+
+## 未解決の指摘(2回目レビュー、head `fb22c94` で `verdict=fail`)
+
+1. `text-spacing-resilience` が省略記号による切り落としを検出できない。
+   320px + リーダー上書きで `.row .name` の「Encode / Decode Tool」が 31px 切れている(ja/en)。
+   負のコントロール 4 件中 2 件が素通りした。
+2. print は現役(`@media print` 4 ブロック / 167 宣言)なのに `print-portfolio.test.mjs` を削除し、
+   README には "print contract carry over unchanged" と書いてある。
+3. `styles.css:608 .contact-links a { flex-direction: column }` が旧デザインの生き残りで、
+   Contact の `↗` が下段に落ちる。壊れた状態と直した状態の**両方で 47 ファイル全緑**。
+
+詳細と検証済みパッチは PR #88 のコメント 2 件にある。
