@@ -194,13 +194,13 @@ preview-site/index.html に置き換えた**。ユーザーが機能喪失を承
   site-quality の行契約 → パネル行5カラム+nth-child 並べ替え禁止+
   旧セレクター復活禁止へ。reduced-motion → hero-sticky/CTA/hero-marquee/
   カード・行トランジションの無効化へ。
-- **ブラウザ実測契約を新設** `prototype-geometry-browser.test.mjs`(5件):
+- **ブラウザ実測契約を新設** `prototype-geometry-browser.test.mjs`(3件):
   実生成ページ+実 CSS を headless Chrome で描画し、ja/en の
   About 2等分カラム・sticky・見出しと本文の非重複・シェル幅≥1100px・
-  Projects 見出し帯 ≤400px・行5カラム・コンタクト中央1カラム・
-  横オーバーフロー 0 を実測で固定。**WCAG 1.4.12 text-spacing 耐性
-  (320/768px、C-2 指摘の黙殺分)を iframe 実測で復活**。
-  (headless の最小窓幅 500px のため、320px は同一オリジン iframe で実測)
+  Projects 見出し帯 ≤400px・行5カラム・コンタクト中央1カラムを実測で固定。
+  当初は WCAG 1.4.12(C-2 指摘)もここへ入れたが、後述のとおり
+  原理的に落ちないことが判明したため削除し、契約は
+  `text-spacing-resilience.test.mjs` が単独で持つ。
 - レビューセッション自身の最小修正 `5bb37cd`(8宣言除去+
   composition-layout-ownership.test.mjs による静的所有権契約)を取り込み、
   その上に本対応を積んだ。両者は互換で、所有権契約も通過する。
