@@ -6,7 +6,7 @@ Locked design system for the rich redesign program. Future page changes read thi
 
 - Genre · modern-minimal portfolio register with quiet-luxury restraint, technical confidence, and editorial pacing
 - Marketing macrostructure · Feature Stack
-- Theme · 夜藍×白妙 "Alpine Ink · Decode" (evolved from the Graphite Blue baseline; the scene/token architecture and every motion, print, and accessibility contract carry over unchanged)
+- Theme · 夜藍×白妙 "Alpine Ink · Decode" (evolved from the Graphite Blue baseline; the token architecture carries over, and the motion, print, and accessibility guarantees are kept — though the contracts that pin them were rewritten against the new composition, not carried over unchanged)
 - Axes · 夜藍 deep-navy paper / rounded-gothic display / 山吹 amber accent (dark, default) — 白妙 washi paper / 瑠璃 blue accent (light) — hidden 暁 plum-dawn palette behind a 3-second toggle hold
 - Navigation · quiet floating navigation with the existing accessible disclosure, focus-containment, and active-location behavior, plus a 44px theme toggle at the end of the menu
 - Footer · Ft5 statement composition; one truthful static closing line with the existing copyright, disclaimer, and back-to-top link
