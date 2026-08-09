@@ -325,8 +325,8 @@ test("reader text-spacing overrides lose no content at 320px or 768px", async ()
       snapshot.clipped.length === 0,
       `text cut off by a clipping ancestor: ${JSON.stringify(snapshot.clipped)}`
     );
-    expect(snapshot.cards === 3, `featured card count ${snapshot.cards}`);
-    expect(snapshot.rows === 6, `panel row count ${snapshot.rows}`);
+    expect(snapshot.cards === 5, `featured card count ${snapshot.cards}`);
+    expect(snapshot.rows === 4, `panel row count ${snapshot.rows}`);
     expect(snapshot.namedVisible, "a project lost its visible name");
     expect(snapshot.navReachable, "navigation became unreachable at this width");
     expect(snapshot.controlsVisible, "an important control became unreachable");

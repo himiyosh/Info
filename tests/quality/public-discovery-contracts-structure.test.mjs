@@ -31,16 +31,16 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const publicDiscoveryExpectedBytes = 5_329;
+const publicDiscoveryExpectedBytes = 5_482;
 const publicDiscoveryBodyStartExpectedBytes = 273;
 const publicDiscoveryHeaderExpectedSha256 =
   "0e56555309f1cd482e5b0a071cf213f6859415387ac7983795e29915a1781fb3";
-const publicDiscoveryBodyExpectedBytes = 5_056;
+const publicDiscoveryBodyExpectedBytes = 5_209;
 const publicDiscoveryBodyExpectedSha256 =
-  "18bee6cbab0da8ca15050e33bcd9d5e84f5ead65cc30c60dfef5207607043a5b";
+  "9ce22567c735e84e0d366f9d00264af90bbba63382ac7e690ae07a3843dd5313";
 const mutationGuardExpectedBytes = 15_976;
 const mutationGuardExpectedSha256 =
-  "f61c7d75800bdb890d63d616096250a1101bfbed2aa08128936a5c022d1c88ae";
+  "af22ee15878728ca4c58280f707584c2cd669450e31a605b58805f1711fd8a44";
 const expectedPublicDiscoveryTestNames = [
   "required SEO and social metadata exist and are consistent",
   "baked project markup preserves every canonical destination in catalogue order",

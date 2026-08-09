@@ -25,7 +25,7 @@ const catalogueExpectedBytes = 42_064;
 const catalogueBodyStartExpectedBytes = 8_196;
 const catalogueBodyExpectedBytes = 33_868;
 const catalogueBodyExpectedSha256 =
-  "52d4ae7d796e66237ccc1e32ea9970fc25b9837131547ca8fb4a49f685750172";
+  "922186ad086425d9c31e1e132055661d617135ba1e7291195d6e53b06b13e958";
 const mutationGuardExpectedBytes = 13_435;
 const mutationGuardExpectedSha256 =
   "9673f8fecf1b075a74a4a3e22aee63f5472b744561623d02fa68251361688984";

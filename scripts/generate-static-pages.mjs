@@ -22,7 +22,7 @@ const reservedProjectSlugs = new Set(["top", "about", "works", "stack", "contact
 // cards (the first of them wide); the rest render as panel rows. Layout is
 // a consequence of file order, so reordering projects.json is the whole
 // editorial interface.
-const FEATURED_COUNT = 3;
+const FEATURED_COUNT = 5;
 
 export const pages = [
   {

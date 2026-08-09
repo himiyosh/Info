@@ -160,6 +160,44 @@
     "link": "https://ucfitness.studio344.net/"
   },
   {
+    "slug": "network-plus",
+    "title": {
+      "ja": "Network+",
+      "en": "Network+"
+    },
+    "kind": {
+      "ja": "Edge DevTools拡張",
+      "en": "Edge DevTools extension"
+    },
+    "description": {
+      "ja": "Microsoft Edge DevToolsに、複数キーワード検索、カラム別フィルター、リクエスト詳細、HAR出力を追加するネットワーク分析拡張です。",
+      "en": "A network analysis extension for Microsoft Edge DevTools with multi-keyword search, column filters, request details, and HAR export."
+    },
+    "image": "assets/network-plus-preview.jpg",
+    "desktopImageAvif": "assets/network-plus-preview-960w.avif",
+    "mobileImageAvif": "assets/network-plus-preview-720w.avif",
+    "imageAlt": {
+      "ja": "リクエスト一覧と詳細ペインを備えたNetwork+のDevToolsパネル",
+      "en": "Network+ DevTools panel with a request list and detail panes"
+    },
+    "stack": [
+      "Manifest V3",
+      "JavaScript",
+      "Edge DevTools",
+      "Jest"
+    ],
+    "proof": {
+      "ja": "コピーとHAR出力は既定で認証情報・Cookie・クエリ値・本文をサニタイズし、完全出力は警告確認後の1回だけ有効です。",
+      "en": "Clipboard and HAR exports sanitize credentials, cookies, query values, and bodies by default; full output requires one-time confirmation."
+    },
+    "proofLink": "https://github.com/himiyosh/network-plus-extension/blob/f1d53ce821c6b7ca8cf11b7101f800087ab19ac4/README.md#L128-L140",
+    "action": {
+      "ja": "GitHubでコードを見る",
+      "en": "View code on GitHub"
+    },
+    "link": "https://github.com/himiyosh/network-plus-extension"
+  },
+  {
     "slug": "encode-decode-tool",
     "title": {
       "ja": "Encode / Decode Tool",
@@ -200,44 +238,6 @@
       "en": "View source on GitHub"
     },
     "sourceLink": "https://github.com/himiyosh/encode-decode-tool"
-  },
-  {
-    "slug": "network-plus",
-    "title": {
-      "ja": "Network+",
-      "en": "Network+"
-    },
-    "kind": {
-      "ja": "Edge DevTools拡張",
-      "en": "Edge DevTools extension"
-    },
-    "description": {
-      "ja": "Microsoft Edge DevToolsに、複数キーワード検索、カラム別フィルター、リクエスト詳細、HAR出力を追加するネットワーク分析拡張です。",
-      "en": "A network analysis extension for Microsoft Edge DevTools with multi-keyword search, column filters, request details, and HAR export."
-    },
-    "image": "assets/network-plus-preview.jpg",
-    "desktopImageAvif": "assets/network-plus-preview-960w.avif",
-    "mobileImageAvif": "assets/network-plus-preview-720w.avif",
-    "imageAlt": {
-      "ja": "リクエスト一覧と詳細ペインを備えたNetwork+のDevToolsパネル",
-      "en": "Network+ DevTools panel with a request list and detail panes"
-    },
-    "stack": [
-      "Manifest V3",
-      "JavaScript",
-      "Edge DevTools",
-      "Jest"
-    ],
-    "proof": {
-      "ja": "コピーとHAR出力は既定で認証情報・Cookie・クエリ値・本文をサニタイズし、完全出力は警告確認後の1回だけ有効です。",
-      "en": "Clipboard and HAR exports sanitize credentials, cookies, query values, and bodies by default; full output requires one-time confirmation."
-    },
-    "proofLink": "https://github.com/himiyosh/network-plus-extension/blob/f1d53ce821c6b7ca8cf11b7101f800087ab19ac4/README.md#L128-L140",
-    "action": {
-      "ja": "GitHubでコードを見る",
-      "en": "View code on GitHub"
-    },
-    "link": "https://github.com/himiyosh/network-plus-extension"
   },
   {
     "slug": "url-decoder",
