@@ -277,6 +277,28 @@ WCAG 1.4.12 の 320/768px 契約が原理的に落ちない**ことが判明し�
   トップレベルの print 実測は 25.6s / 10.5s で変更前(26.3s / 10.7s)と同等、
   本変更に起因しない。判定はファイル単位ループで行うこと。
 
+### 独立レビューを CI ゲートから外した(2026-08-09)
+
+`quality-baseline.yml` の `Enforce independent review` ステップを削除した。
+オーナー判断。仕組みそのものは残す — 外したのは「毎 PR の通行料」だけ。
+
+- **理由**: `by=` は UUID の書式しか検査していない(REVIEW-PROCESS.md も明記)。
+  実装者が `uuidgen` を1回叩けば通る。つまり CI は独立性を何も保証していない。
+  保証しないゲートが赤で止まると、育つ習慣は「レビューする」ではなく
+  「マーカーを貼る」になる。**強制できている部分の価値がいちばん低く、
+  価値のある部分(負のコントロール注入・実ブラウザ実測)は強制できていない**、
+  という構造だった。
+- **残したもの**: `check-independent-review.mjs` / `check-merge-gate.mjs` /
+  `REVIEW-PROCESS.md` / マーカー書式。手動ツールとして有効で、
+  重い変更のときに引っ張り出す。README と InfoAgent の記述を手動運用へ書き換えた。
+- **削除**: `independent-review-ci-wiring.test.mjs`(PR CI がガードを実行することを
+  主張する契約。対象機能が無くなったので削除が正当。48 → 47 ファイル)。
+- **反転させた契約**: `merge-gate.test.mjs` のワークフロー assertion 5本は
+  削除ではなく **`assert.doesNotMatch(workflow, /check:independent-review/)`
+  へ反転**した。ゲートが黙って復活しないよう、戻すならこの行を編集させる。
+  `npm test` 経由でも届かないことを `check:quality` の内容で固定した。
+- テスト: **47ファイル・280テスト全通過**(ファイル単位ループ、フレーク0)。
+
 ### テスト実行に関する注意
 
 `npm test` の**単発実行はこの環境で完走しない**。「live in one focused

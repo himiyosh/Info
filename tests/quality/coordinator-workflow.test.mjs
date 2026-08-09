@@ -186,8 +186,13 @@ test("InfoAgent preserves the coordinator session topology and cleanup contract"
   );
   assert.match(
     source,
-    /Quality baseline must execute `npm run check:independent-review -- --repo <owner\/name> --pr <number> --head <40-character current head SHA>` only for the current OPEN pull request/,
-    "Pull-request CI must execute the live independent-review guard"
+    /Quality baseline no longer runs the review guard\./,
+    "The policy must state that the review guard is no longer a CI gate"
+  );
+  assert.match(
+    source,
+    /Run `npm run check:independent-review -- --repo <owner\/name> --pr <number> --head <40-character current head SHA>` by hand against the current OPEN pull request/,
+    "The live independent-review guard must remain available as a manual check"
   );
   assert.match(
     source,
