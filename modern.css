@@ -2243,7 +2243,17 @@ html:lang(ja) .top-link {
     grid-column: 1 / -1;
   }
 
-  .card.wide .thumb {
+  /* The lead card spans the row, so every card after it pairs off from an
+     even position. An even-positioned last card therefore has no partner
+     and would sit in a half-empty row; letting it span closes the grid
+     instead. Parity does the work, so the rule stays correct whatever
+     FEATURED_COUNT is set to. */
+  .featured .card:last-child:nth-child(even) {
+    grid-column: 1 / -1;
+  }
+
+  .card.wide .thumb,
+  .featured .card:last-child:nth-child(even) .thumb {
     aspect-ratio: 21 / 9;
   }
 

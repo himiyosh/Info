@@ -21,17 +21,17 @@ const globalInventoryEnvironment = "INFO_PROJECT_CATALOGUE_INVENTORY";
 const globalInventoryEnvironmentValue = "complete-runtime-v1";
 const globalInventoryChildMode =
   process.env[globalInventoryEnvironment] === globalInventoryEnvironmentValue;
-const catalogueExpectedBytes = 42_064;
+const catalogueExpectedBytes = 41_538;
 const catalogueBodyStartExpectedBytes = 8_196;
-const catalogueBodyExpectedBytes = 33_868;
+const catalogueBodyExpectedBytes = 33_342;
 const catalogueBodyExpectedSha256 =
-  "922186ad086425d9c31e1e132055661d617135ba1e7291195d6e53b06b13e958";
+  "0fbb0c0eeb45b3e7ee7077362d8961a15616103448fc7976fbf8a15d02b38402";
 const mutationGuardExpectedBytes = 13_435;
 const mutationGuardExpectedSha256 =
-  "9673f8fecf1b075a74a4a3e22aee63f5472b744561623d02fa68251361688984";
+  "58a83d06d8e9ce4a621cf5648de0d4d1f0555c10c40962b842a402f7247cbd4d";
 const expectedCatalogueTestNames = [
   "projects.json schema, localization, links, and preview assets are valid",
-  "exactly six live projects expose verified public source actions",
+  "exactly five live projects expose verified public source actions",
   "exactly eight public projects expose reviewed immutable proof citations",
   "project runtime rejects incomplete, malformed, duplicate, and primary-equal source actions",
   "project action groups preserve primary-first safe localized links and responsive focus behavior",

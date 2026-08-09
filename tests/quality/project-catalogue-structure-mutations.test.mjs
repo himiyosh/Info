@@ -351,7 +351,7 @@ mutationTest("project catalogue structure guard binds mutation wrapper source", 
 mutationTest("project catalogue structure guard rejects focused-module padding", async () => {
   await assertMutationRejected(
     { catalogue: `${catalogueSource} ` },
-    /project-catalogue\.test\.mjs must be exactly 42064 bytes/
+    /project-catalogue\.test\.mjs must be exactly 41538 bytes/
   );
 });
 

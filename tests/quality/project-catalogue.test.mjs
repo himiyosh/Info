@@ -9,7 +9,7 @@ const pagesWhitelistPath = ".github/pages-artifact-whitelist.txt";
 const projectPreviewAvifBaselineBytes = 554_001;
 const projectPreviewAvifMaximumBytes = 200_000;
 const projectPreviewMinimumSavingsRatio = 0.6;
-const projectPreviewDesktopJpegBaselineBytes = 524_923;
+const projectPreviewDesktopJpegBaselineBytes = 486_968;
 const projectPreviewDesktopAvifMaximumRatio = 0.5;
 const projectPreviewDesktopMedia = "(min-width: 48rem)";
 const projectPreviewMobileMedia = "(max-width: 47.999rem)";
@@ -592,7 +592,7 @@ test("projects.json schema, localization, links, and preview assets are valid", 
   }
 });
 
-test("exactly six live projects expose verified public source actions", async () => {
+test("exactly five live projects expose verified public source actions", async () => {
   const projects = JSON.parse(await readUtf8("projects.json"));
   const indexHtml = await readUtf8("index.html");
   const scriptSource = await readUtf8("script.js");
@@ -601,7 +601,6 @@ test("exactly six live projects expose verified public source actions", async ()
     ["AI Agents: What Is Happening Right Now?", "https://github.com/himiyosh/JoJo-AIAgent"],
     ["Git, Not Scary", "https://github.com/himiyosh/JoJo-Git"],
     ["Encode / Decode Tool", "https://github.com/himiyosh/encode-decode-tool"],
-    ["URLDecoder", "https://github.com/himiyosh/URLDecoder"],
     ["ImageResizer", "https://github.com/himiyosh/ImageResizer"]
   ]);
   const projectsWithSources = projects.filter((project) => Object.hasOwn(project, "sourceLink"));
@@ -691,14 +690,6 @@ test("exactly eight public projects expose reviewed immutable proof citations", 
         ja: "コピーとHAR出力は既定で認証情報・Cookie・クエリ値・本文をサニタイズし、完全出力は警告確認後の1回だけ有効です。",
         en: "Clipboard and HAR exports sanitize credentials, cookies, query values, and bodies by default; full output requires one-time confirmation.",
         link: "https://github.com/himiyosh/network-plus-extension/blob/f1d53ce821c6b7ca8cf11b7101f800087ab19ac4/README.md#L128-L140"
-      }
-    ],
-    [
-      "URLDecoder",
-      {
-        ja: "入力を encodeURIComponent / decodeURIComponent で処理し、変換結果または失敗理由を出力欄に表示します。",
-        en: "Input is processed with encodeURIComponent or decodeURIComponent, and the output field shows either the result or the failure reason.",
-        link: "https://github.com/himiyosh/URLDecoder/blob/fa686afa5196dd7dc9432c7ab916d5376dc69954/index.html#L108-L126"
       }
     ],
     [
@@ -933,7 +924,7 @@ test("project action groups preserve primary-first safe localized links and resp
 });
 test("mobile project AVIF pairs meet dimension and bandwidth budgets", async () => {
   const projects = JSON.parse(await readUtf8("projects.json"));
-  assert.equal(projects.length, 9, "The current catalogue must provide all nine AVIF/JPEG pairs");
+  assert.equal(projects.length, 8, "The current catalogue must provide all eight AVIF/JPEG pairs");
 
   let totalJpegBytes = 0;
   let totalAvifBytes = 0;
@@ -971,7 +962,7 @@ test("mobile project AVIF pairs meet dimension and bandwidth budgets", async () 
 
 test("desktop project AVIF pairs meet exact format, dimensions, and bandwidth budgets", async () => {
   const projects = JSON.parse(await readUtf8("projects.json"));
-  assert.equal(projects.length, 9, "The current catalogue must provide all nine desktop AVIF pairs");
+  assert.equal(projects.length, 8, "The current catalogue must provide all eight desktop AVIF pairs");
 
   let totalJpegBytes = 0;
   let totalAvifBytes = 0;
@@ -1055,7 +1046,7 @@ test("project rendering emits mutually exclusive AVIF sources before lazy JPEG f
   const cardBlocks = [...indexHtml.matchAll(
     /<article\b[^>]*\bclass="card[^"]*"[^>]*>[\s\S]*?<\/article>/gi
   )].map(([block]) => block);
-  assert.equal(cardBlocks.length, 5);
+  assert.equal(cardBlocks.length, 6);
 
   for (const block of cardBlocks) {
     const sourceIndex = block.search(/<source type="image\/avif" srcset="[^"]+-960w\.avif"/);
