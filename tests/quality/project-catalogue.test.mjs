@@ -1055,7 +1055,7 @@ test("project rendering emits mutually exclusive AVIF sources before lazy JPEG f
   const cardBlocks = [...indexHtml.matchAll(
     /<article\b[^>]*\bclass="card[^"]*"[^>]*>[\s\S]*?<\/article>/gi
   )].map(([block]) => block);
-  assert.equal(cardBlocks.length, 3);
+  assert.equal(cardBlocks.length, 5);
 
   for (const block of cardBlocks) {
     const sourceIndex = block.search(/<source type="image\/avif" srcset="[^"]+-960w\.avif"/);

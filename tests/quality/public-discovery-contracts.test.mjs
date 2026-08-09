@@ -67,8 +67,8 @@ test("baked project markup preserves every canonical destination in catalogue or
   const rowBlocks = [...indexHtml.matchAll(
     /<div class="row"[^>]*>[\s\S]*?<\/div>/gi
   )].map(([block]) => block);
-  assert.equal(cardBlocks.length, 3, "index.html must bake three featured cards");
-  assert.equal(rowBlocks.length, 6, "index.html must bake six panel rows");
+  assert.equal(cardBlocks.length, 5, "index.html must bake five featured cards");
+  assert.equal(rowBlocks.length, 4, "index.html must bake four panel rows");
 
   const cardLinks = cardBlocks.map((block) =>
     [...block.matchAll(/<a class="link" href="([^"]+)"/gi)].map(([, href]) => href)
@@ -90,9 +90,11 @@ test("baked project markup preserves every canonical destination in catalogue or
   assert.equal(new Set(primaryLinks).size, projects.length);
 
   // Featured cards expose their source repositories alongside the primary.
+  // UCFitness (private repository) and Network+ (its primary action already
+  // points at GitHub) carry no secondary source action, so they stay null.
   assert.deepEqual(
     cardLinks.map((links) => links[1] ?? null),
-    projects.slice(0, 3).map((project) => project.sourceLink ?? null)
+    projects.slice(0, 5).map((project) => project.sourceLink ?? null)
   );
 
   // Panel rows are single-action by design; each carries exactly one link.

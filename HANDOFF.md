@@ -251,6 +251,32 @@ WCAG 1.4.12 の 320/768px 契約が原理的に落ちない**ことが判明し�
 `scrollWidth <= clientWidth` を書くと、常に真になる。はみ出しは
 要素側の実測(Range / getBoundingClientRect)で測ること。
 
+### UCFitness と Network+ をカード段へ昇格(2026-08-09)
+
+ユーザー依頼: WORKS のカード段に UCFitness と Network+ が無いので追加する。
+両者は行(パネル)側にいたが、960x540 のプレビュー資産は既に揃っていた。
+
+- `FEATURED_COUNT` を 3 → 5 にし、`projects.json` の `network-plus` を
+  `ucfitness` の直後(index 4)へ移動。**カード5枚 + 行4件**になった。
+  並び順が編集インターフェースである性質は変えていない。
+- 両者は `sourceAction`/`sourceLink` を持たない(UCFitness はリポジトリ非公開、
+  Network+ は primary が既に GitHub)。カードはアクション1本で描画される。
+  この分岐は元から `renderProjectFeaturedCards` にあり、実装追加は不要。
+- 実測(1280px, headless Chrome): wide 1160px / 2列 569px、UCFitness と
+  Network+ は同じ行で高さ 557px 揃い、`scrollWidth == clientWidth`。
+- 追随させた契約: bilingual-static(5/4 と slice 位置、および
+  `renderProjectPanelRows` の hostile fixture をカード5枚分に増やす)、
+  project-catalogue、public-discovery-contracts、text-spacing-resilience。
+  **バイト/SHA ピンの再導出が2段必要**:
+  public-discovery-contracts.test.mjs を変えると
+  `-structure` 側の bytes/SHA、さらに `-mutations` 側が持つ
+  「must be exactly N bytes」のリテラルまで連鎖する。そのリテラルを直すと
+  `-structure` 側の mutationGuard SHA も再計算になる。
+- 既知のノイズ: `npm run check:quality` を通しで回すと、入れ子スポーンの
+  Chrome 競合で print journey が稀に落ちる(`kill EPERM` / 60s timeout)。
+  トップレベルの print 実測は 25.6s / 10.5s で変更前(26.3s / 10.7s)と同等、
+  本変更に起因しない。判定はファイル単位ループで行うこと。
+
 ### テスト実行に関する注意
 
 `npm test` の**単発実行はこの環境で完走しない**。「live in one focused

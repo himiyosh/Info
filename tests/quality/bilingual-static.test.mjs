@@ -238,8 +238,17 @@ test("baked project markup escapes every inserted value and rejects bad slugs", 
   assert.match(card, /<span>Stack &lt;one&gt;<\/span><span>Stack &amp; &quot;two&quot;<\/span>/);
   assert.doesNotMatch(card, /<tag>|<title>|<kind>|<description>|<primary>|<source>|<one>/);
 
+  // The renderer takes its rows from behind the featured slice, so the fixture
+  // needs one placeholder per featured card before the row under test.
   const rows = renderProjectPanelRows(
-    [hostile("card-a"), hostile("card-b"), hostile("card-c"), hostile("unsafe-row")],
+    [
+      hostile("card-a"),
+      hostile("card-b"),
+      hostile("card-c"),
+      hostile("card-d"),
+      hostile("card-e"),
+      hostile("unsafe-row")
+    ],
     page
   );
   assert.match(rows, /<span class="name">A &lt;title&gt; &amp; &quot;label&quot;<\/span>/);
@@ -333,9 +342,9 @@ test("both routes provide complete localized initial HTML and no-JavaScript proj
     }
 
     const cards = featuredCards(source);
-    assert.equal(cards.length, 3, `${page.outputPath} must render three featured cards`);
+    assert.equal(cards.length, 5, `${page.outputPath} must render five featured cards`);
     assert.ok(cards[0].wide, "The first featured card must span the grid");
-    const featured = projects.slice(0, 3);
+    const featured = projects.slice(0, 5);
     assert.deepEqual(
       cards.map(({ targetId }) => targetId),
       featured.map((project) => `project-${project.slug}`)
@@ -377,8 +386,8 @@ test("both routes provide complete localized initial HTML and no-JavaScript proj
     );
 
     const rows = panelRows(source);
-    assert.equal(rows.length, 6, `${page.outputPath} must render six panel rows`);
-    const listed = projects.slice(3);
+    assert.equal(rows.length, 4, `${page.outputPath} must render four panel rows`);
+    const listed = projects.slice(5);
     assert.deepEqual(
       rows.map(({ targetId }) => targetId),
       listed.map((project) => `project-${project.slug}`)
