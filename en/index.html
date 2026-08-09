@@ -9,7 +9,7 @@
     content="Personal portfolio of engineer himiyosh, featuring technical interests, public projects, and contact links in Japanese and English."
     data-i18n-content="meta.description"
   />
-  <meta name="theme-color" content="#0c1014" />
+  <meta name="theme-color" content="#06101c" />
   <meta name="color-scheme" content="dark" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="himiyosh" />
@@ -36,7 +36,7 @@
   <meta property="og:image:height" content="540" />
   <meta
     property="og:image:alt"
-    content="Portfolio hero pairing the himiyosh headline with a mountain photograph"
+    content="Share card for himiyosh: the headline Technology, made useful. set beside a mountain logo mark on a deep indigo field"
     data-i18n-content="meta.shareImageAlt"
   />
   <meta name="twitter:card" content="summary_large_image" />
@@ -53,7 +53,7 @@
   <meta name="twitter:image" content="https://himiyosh.github.io/Info/assets/portfolio-preview.jpg" />
   <meta
     name="twitter:image:alt"
-    content="Portfolio hero pairing the himiyosh headline with a mountain photograph"
+    content="Share card for himiyosh: the headline Technology, made useful. set beside a mountain logo mark on a deep indigo field"
     data-i18n-content="meta.shareImageAlt"
   />
   <link rel="canonical" href="https://himiyosh.github.io/Info/en/" />
@@ -64,6 +64,18 @@
   <link rel="sitemap" type="application/xml" href="../sitemap.xml" />
   <script>
     document.documentElement.classList.add("js-enabled");
+  </script>
+  <script>
+    (() => {
+      try {
+        const theme = window.localStorage.getItem("info-theme");
+        if (theme === "yoruai" || theme === "shirotae" || theme === "akatsuki") {
+          document.documentElement.dataset.theme = theme;
+        }
+      } catch (error) {
+        /* Storage may be unavailable (file://, private mode); follow the OS scheme. */
+      }
+    })();
   </script>
   <link
     rel="preload"
@@ -77,7 +89,14 @@
   <link
     rel="preload"
     as="font"
-    href="../assets/fonts/BigShouldersDisplay-latin-variable.woff2"
+    href="../assets/fonts/mplus-rounded-1c-500-subset.woff2"
+    type="font/woff2"
+    crossorigin
+  />
+  <link
+    rel="preload"
+    as="font"
+    href="../assets/fonts/zen-maru-gothic-900-subset.woff2"
     type="font/woff2"
     crossorigin
   />
@@ -103,12 +122,17 @@
   <div class="scroll-progress" aria-hidden="true">
     <span class="scroll-progress-fill"></span>
   </div>
-  <div class="viewport-stage" aria-hidden="true">
-    <span class="viewport-stage-layer viewport-stage-layer-hero"></span>
-    <span class="viewport-stage-layer viewport-stage-layer-about"></span>
-    <span class="viewport-stage-layer viewport-stage-layer-projects"></span>
-    <span class="viewport-stage-layer viewport-stage-layer-contact"></span>
-    <span class="viewport-stage-frame"></span>
+  <div class="site-backdrop" aria-hidden="true">
+    <span class="site-backdrop-glow"></span>
+    <svg class="site-backdrop-topo" viewBox="0 0 1200 800" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <path d="M-50,620 C180,560 300,660 520,600 S900,520 1250,580" />
+      <path d="M-50,560 C200,500 340,610 560,545 S920,455 1250,520" />
+      <path d="M-50,500 C220,440 380,560 600,490 S940,395 1250,460" />
+      <path d="M-50,440 C240,385 420,505 640,435 S960,335 1250,400" />
+      <path class="topo-hl" d="M-50,380 C260,330 460,450 680,380 S980,280 1250,340" />
+      <path d="M-50,320 C280,275 500,395 720,325 S1000,225 1250,280" />
+      <path d="M-50,260 C300,220 540,340 760,270 S1020,175 1250,220" />
+    </svg>
   </div>
   <a class="skip-link" href="#main-content" data-i18n="accessibility.skip">
     Skip to main content
@@ -152,20 +176,32 @@
           data-language-label
           data-i18n="nav.toggleShort"
         >JP</span></a>
+      <button
+        id="theme-toggle"
+        class="theme-toggle"
+        type="button"
+        aria-pressed="false"
+        aria-label="Switch to Shirotae (light mode)"
+        data-i18n-aria-label="theme.toLight"
+        hidden
+      >
+        <svg class="theme-toggle-icon theme-toggle-icon--moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
+        <svg class="theme-toggle-icon theme-toggle-icon--sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" /></svg>
+      </button>
     </nav>
   </header>
 
   <main id="main-content" tabindex="-1">
-    <section class="hero" id="top" tabindex="-1" data-scene="hero">
+    <section class="hero" id="top" tabindex="-1">
       <div class="hero-sticky">
         <div class="hero-stage">
+          <p class="hero-role" data-i18n="hero.role">Engineer / Rookie Dad</p>
           <h1>
-            <span data-i18n="hero.titleLine1">Technology,</span>
-            <span class="hero-title-accent" data-i18n="hero.titleLine2">made useful.</span>
+            <span data-decode data-i18n="hero.titleLine1">Technology,</span>
+            <span class="hero-title-accent" data-decode data-i18n="hero.titleLine2">made useful.</span>
           </h1>
         </div>
         <div class="hero-support">
-          <p class="hero-role" data-i18n="hero.role">Engineer / Rookie Dad</p>
           <p class="hero-lede" data-i18n="hero.lede">
             Solving problems, sharing what I learn, and turning curiosity into practical work. This is himiyosh&#39;s personal portfolio.
           </p>
@@ -196,360 +232,270 @@
               data-i18n-alt="hero.imageAlt"
             />
           </picture>
+          <span class="hero-tick hero-tick-tl" aria-hidden="true"></span>
+          <span class="hero-tick hero-tick-tr" aria-hidden="true"></span>
+          <span class="hero-tick hero-tick-bl" aria-hidden="true"></span>
+          <span class="hero-tick hero-tick-br" aria-hidden="true"></span>
           <figcaption data-i18n="hero.caption">
             Staying curious, on and off the screen.
           </figcaption>
         </figure>
+        <p class="scroll-cue" aria-hidden="true" data-i18n="footer.scrollCue">SCROLL</p>
       </div>
     </section>
 
-    <section class="about section-shell" id="about" tabindex="-1" data-scene="about">
-      <div class="section-heading">
-        <h2 data-i18n="about.title">About</h2>
+    <div class="hero-marquee" aria-hidden="true">
+      <div class="hero-marquee-track">
+        <span class="hero-marquee-set">
+          <span data-i18n="about.statement">Curiosity, put to work.</span>
+          <i aria-hidden="true">◆</i>
+          <span>Curiosity into practice</span>
+          <i aria-hidden="true">◆</i>
+        </span>
+        <span class="hero-marquee-set">
+          <span data-i18n="about.statement">Curiosity, put to work.</span>
+          <i aria-hidden="true">◆</i>
+          <span>Curiosity into practice</span>
+          <i aria-hidden="true">◆</i>
+        </span>
       </div>
-      <div class="about-copy">
-        <p data-i18n="about.content">
-          I work on technology challenges at a global IT company. I enjoy finding useful knowledge and techniques, testing them, and making them easier to understand.
-        </p>
-        <p data-i18n="about.site">
-          This site introduces small tools and experiments I publish independently. All content reflects my personal views.
-        </p>
-        <p class="about-statement" data-i18n="about.statement">
-          Curiosity, put to work.
-        </p>
+    </div>
+
+    <section class="about section-shell" id="about" tabindex="-1">
+      <div class="about-grid">
+        <div class="section-heading about-sticky">
+          <p class="section-eyebrow" data-i18n="about.eyebrow">ABOUT</p>
+          <h2 data-decode data-i18n="about.title">Curiosity, put to work.</h2>
+        </div>
+        <div class="about-copy">
+          <p data-i18n="about.content">
+            I work on technology challenges at a global IT company. I enjoy finding useful knowledge and techniques, testing them, and making them easier to understand.
+          </p>
+          <p data-i18n="about.site">
+            This site introduces small tools and experiments I publish independently. All content reflects my personal views.
+          </p>
+          <div class="facts">
+            <span class="fact"><b>09</b> <span data-i18n="about.factProjects">public projects</span></span>
+            <span class="fact"><b>JA / EN</b> <span data-i18n="about.factBilingual">bilingual throughout</span></span>
+            <span class="fact"><b>OSS</b> <span data-i18n="about.factSource">source-first, open</span></span>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="projects" id="projects" tabindex="-1" data-scene="projects">
+    <section class="projects" id="projects" tabindex="-1">
       <a class="skip-link projects-skip-link" href="#contact" data-i18n="projects.skipToContact">
         Skip to Contact
       </a>
       <div class="section-shell">
-        <div class="projects-intro">
-          <h2 data-i18n="projects.title">Projects</h2>
-          <p data-i18n="projects.intro">
+        <div class="section-head">
+          <div class="projects-intro">
+            <p class="section-eyebrow" data-i18n="projects.eyebrow">WORKS — 09 PUBLIC PROJECTS</p>
+            <h2 data-decode data-i18n="projects.title">Small frictions, made into tools.</h2>
+          </div>
+          <p class="section-lede" data-i18n="projects.intro">
             Public sites, services, and tools built to make small, everyday tasks a little easier.
           </p>
-          <nav
-            class="project-directory"
-            id="projects-directory"
-            aria-label="Project directory"
-            data-i18n-aria-label="projects.directoryLabel"
-            hidden
-          ></nav>
         </div>
-        <p
-          class="projects-status"
-          id="projects-status"
-          role="status"
-          aria-atomic="true"
-          data-i18n="projects.loading"
-          data-i18n-dynamic=""
-          hidden
+        <div class="featured">
+          <article class="card wide" id="project-techdb">
+            <div class="thumb" data-initial="T" data-label="PREVIEW">
+              <span class="badge">AI news / Automation portal</span>
+              <picture>
+                <source type="image/avif" srcset="../assets/techdb-preview-960w.avif" />
+                <img src="../assets/techdb-preview.jpg" alt="TechDB dashboard showing AI news, categories, and trending topics" width="960" height="540" loading="lazy" decoding="async" />
+              </picture>
+            </div>
+            <div class="body">
+              <h3>TechDB</h3>
+              <p>An automatically updated portal that collects and summarizes AI ecosystem news across 14 categories, with reading priority, search, and service status in one place.</p>
+              <div class="tags"><span>Astro</span><span>TypeScript</span><span>Cloudflare</span><span>AI agents</span></div>
+              <div class="links">
+                <a class="link" href="https://techdb.studio344.net/" target="_blank" rel="noopener noreferrer">
+                  Open TechDB
+                  <span class="sr-only">(opens in a new tab)</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+                <a class="link" href="https://github.com/himiyosh/tech-dashboard" target="_blank" rel="noopener noreferrer">
+                  View source on GitHub
+                  <span class="sr-only">(opens in a new tab)</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+          </article>
+          <article class="card" id="project-jojo-aiagent">
+            <div class="thumb" data-initial="A" data-label="PREVIEW">
+              <span class="badge">Public slide deck</span>
+              <picture>
+                <source type="image/avif" srcset="../assets/jojo-aiagent-preview-960w.avif" />
+                <img src="../assets/jojo-aiagent-preview.jpg" alt="JoJo-AIAgent cover slide showing the Prompt, Context, Harness, and Loop structure" width="960" height="540" loading="lazy" decoding="async" />
+              </picture>
+            </div>
+            <div class="body">
+              <h3>AI Agents: What Is Happening Right Now?</h3>
+              <p>A beginner-friendly public slide deck that explains AI agents through Prompt → Context → Harness → Loop, with a mobile reader mode.</p>
+              <div class="tags"><span>Slidev</span><span>Vue</span><span>Playwright</span><span>GitHub Pages</span></div>
+              <div class="links">
+                <a class="link" href="https://himiyosh.github.io/JoJo-AIAgent/" target="_blank" rel="noopener noreferrer">
+                  Open the deck
+                  <span class="sr-only">(opens in a new tab)</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+                <a class="link" href="https://github.com/himiyosh/JoJo-AIAgent" target="_blank" rel="noopener noreferrer">
+                  View source on GitHub
+                  <span class="sr-only">(opens in a new tab)</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+          </article>
+          <article class="card" id="project-jojo-git">
+            <div class="thumb" data-initial="G" data-label="PREVIEW">
+              <span class="badge">Public slide deck</span>
+              <picture>
+                <source type="image/avif" srcset="../assets/jojo-git-preview-960w.avif" />
+                <img src="../assets/jojo-git-preview.jpg" alt="JoJo-Git cover slide presenting the four-area model for Git operations" width="960" height="540" loading="lazy" decoding="async" />
+              </picture>
+            </div>
+            <div class="body">
+              <h3>Git, Not Scary</h3>
+              <p>A Slidev deck for Git beginners that explains clone, fetch, pull, fork, and merge vs rebase decisions through a visual four-area model, with Reader search, mobile, and print support.</p>
+              <div class="tags"><span>Slidev</span><span>Vue</span><span>Playwright</span><span>GitHub Pages</span></div>
+              <div class="links">
+                <a class="link" href="https://himiyosh.github.io/JoJo-Git/" target="_blank" rel="noopener noreferrer">
+                  Open the deck
+                  <span class="sr-only">(opens in a new tab)</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+                <a class="link" href="https://github.com/himiyosh/JoJo-Git" target="_blank" rel="noopener noreferrer">
+                  View source on GitHub
+                  <span class="sr-only">(opens in a new tab)</span>
+                  <span class="ext" aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+          </article>
+        </div>
+        <div
+          class="panel"
+          role="list"
+          aria-label="More public projects"
+          data-i18n-aria-label="projects.panelLabel"
         >
-          Loading projects.
-        </p>
-        <div id="projects-container" aria-busy="false"></div>
-        <div class="projects-fallback" id="projects-fallback" role="note">
-          <p data-i18n="projects.fallback">
-            Direct links to public projects:
-          </p>
-          <ul class="projects-fallback-list">
-            <li>
-              <article class="projects-fallback-card" id="project-portfolio" tabindex="-1" aria-labelledby="project-portfolio-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-portfolio-fallback-title">Portfolio</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-portfolio" aria-label="Permalink to the Portfolio project">Permalink</a>
-                  <p class="project-kind projects-fallback-kind">Personal site / Open source</p>
-                </header>
-                <p class="project-description projects-fallback-description">The source for this portfolio: a static bilingual site with responsive behavior and accessible interactions.</p>
-                <p class="project-stack projects-fallback-stack">HTML · CSS · JavaScript</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-portfolio-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://github.com/himiyosh/Info" target="_blank" rel="noopener noreferrer">
-                    <span>View code on GitHub</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">Public evidence</span>
-                    <span>The deployed artifact is allowlisted so tests, workflows, and internal docs are excluded from publication.</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/Info/blob/a1e0e2bb1e2acefce7e9795b08a4486776ddb3bb/README.md#L25-L33" target="_blank" rel="noopener noreferrer">
-                    <span>View evidence</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-techdb" tabindex="-1" aria-labelledby="project-techdb-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-techdb-fallback-title">TechDB</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-techdb" aria-label="Permalink to the TechDB project">Permalink</a>
-                  <p class="project-kind projects-fallback-kind">AI news / Automation portal</p>
-                </header>
-                <p class="project-description projects-fallback-description">An automatically updated portal that collects and summarizes AI ecosystem news across 14 categories, with reading priority, search, and service status in one place.</p>
-                <p class="project-stack projects-fallback-stack">Astro · TypeScript · Cloudflare · AI agents</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-techdb-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://techdb.studio344.net/" target="_blank" rel="noopener noreferrer">
-                    <span>Open TechDB</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/tech-dashboard" target="_blank" rel="noopener noreferrer">
-                    <span>View source on GitHub</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">Public evidence</span>
-                    <span>Collected data advances to a publication commit only after secret scanning, type checks, unit tests, the web build, and browser E2E pass.</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/tech-dashboard/blob/6fde819e689fb8f19a238b1877484d8db596c59b/.github/workflows/publisher.yml#L71-L89" target="_blank" rel="noopener noreferrer">
-                    <span>View evidence</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-jojo-aiagent" tabindex="-1" aria-labelledby="project-jojo-aiagent-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-jojo-aiagent-fallback-title">AI Agents: What Is Happening Right Now?</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-jojo-aiagent" aria-label="Permalink to the AI Agents: What Is Happening Right Now? project">Permalink</a>
-                  <p class="project-kind projects-fallback-kind">Public slide deck</p>
-                </header>
-                <p class="project-description projects-fallback-description">A beginner-friendly public slide deck that explains AI agents through Prompt → Context → Harness → Loop, with a mobile reader mode.</p>
-                <p class="project-stack projects-fallback-stack">Slidev · Vue · Playwright · GitHub Pages</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-jojo-aiagent-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://himiyosh.github.io/JoJo-AIAgent/" target="_blank" rel="noopener noreferrer">
-                    <span>Open the deck</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/JoJo-AIAgent" target="_blank" rel="noopener noreferrer">
-                    <span>View source on GitHub</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">Public evidence</span>
-                    <span>Reader searches headings, body text, every tab state, speaker notes, and citations, with direct navigation from its slide index.</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/JoJo-AIAgent/blob/95e404c45bc9cd8a4c0ccbf637acc29021c8e437/README.md#L34-L40" target="_blank" rel="noopener noreferrer">
-                    <span>View evidence</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-jojo-git" tabindex="-1" aria-labelledby="project-jojo-git-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-jojo-git-fallback-title">Git, Not Scary</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-jojo-git" aria-label="Permalink to the Git, Not Scary project">Permalink</a>
-                  <p class="project-kind projects-fallback-kind">Public slide deck</p>
-                </header>
-                <p class="project-description projects-fallback-description">A Slidev deck for Git beginners that explains clone, fetch, pull, fork, and merge vs rebase decisions through a visual four-area model, with Reader search, mobile, and print support.</p>
-                <p class="project-stack projects-fallback-stack">Slidev · Vue · Playwright · GitHub Pages</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-jojo-git-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://himiyosh.github.io/JoJo-Git/" target="_blank" rel="noopener noreferrer">
-                    <span>Open the deck</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/JoJo-Git" target="_blank" rel="noopener noreferrer">
-                    <span>View source on GitHub</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">Public evidence</span>
-                    <span>Reader is generated at build time from the slide source, rendered presentation, and public speaker notes without duplicate body copy.</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/JoJo-Git/blob/c62e726c212551ac91a3c245167e0a0fc9877bb4/README.md#L31-L40" target="_blank" rel="noopener noreferrer">
-                    <span>View evidence</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-ucfitness" tabindex="-1" aria-labelledby="project-ucfitness-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-ucfitness-fallback-title">UCFitness</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-ucfitness" aria-label="Permalink to the UCFitness project">Permalink</a>
-                  <p class="project-kind projects-fallback-kind">Fitness service</p>
-                </header>
-                <p class="project-description projects-fallback-description">A Fitbit-connected fitness service for tracking steps, progress, group competition, UC rewards, and badges in one place.</p>
-                <p class="project-stack projects-fallback-stack">Fitbit · PWA</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-ucfitness-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://ucfitness.studio344.net/" target="_blank" rel="noopener noreferrer">
-                    <span>Open UCFitness</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-encode-decode-tool" tabindex="-1" aria-labelledby="project-encode-decode-tool-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-encode-decode-tool-fallback-title">Encode / Decode Tool</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-encode-decode-tool" aria-label="Permalink to the Encode / Decode Tool project">Permalink</a>
-                  <p class="project-kind projects-fallback-kind">Encode / decode tool</p>
-                </header>
-                <p class="project-description projects-fallback-description">A multi-format browser utility for encoding and decoding URL, Base64, JWT, Unicode, and QR code data.</p>
-                <p class="project-stack projects-fallback-stack">React · Tailwind CSS · Vite</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-encode-decode-tool-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://himiyosh.github.io/encode-decode-tool/" target="_blank" rel="noopener noreferrer">
-                    <span>Open the tool</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/encode-decode-tool" target="_blank" rel="noopener noreferrer">
-                    <span>View source on GitHub</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">Public evidence</span>
-                    <span>Text transforms and QR image processing stay in the browser; entered text, generated QR codes, and selected images are not uploaded.</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/encode-decode-tool/blob/a1e40092f538f85f34a935188e67ef5aa657481f/README.md#L33-L35" target="_blank" rel="noopener noreferrer">
-                    <span>View evidence</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-network-plus" tabindex="-1" aria-labelledby="project-network-plus-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-network-plus-fallback-title">Network+</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-network-plus" aria-label="Permalink to the Network+ project">Permalink</a>
-                  <p class="project-kind projects-fallback-kind">Edge DevTools extension</p>
-                </header>
-                <p class="project-description projects-fallback-description">A network analysis extension for Microsoft Edge DevTools with multi-keyword search, column filters, request details, and HAR export.</p>
-                <p class="project-stack projects-fallback-stack">Manifest V3 · JavaScript · Edge DevTools · Jest</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-network-plus-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://github.com/himiyosh/network-plus-extension" target="_blank" rel="noopener noreferrer">
-                    <span>View code on GitHub</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">Public evidence</span>
-                    <span>Clipboard and HAR exports sanitize credentials, cookies, query values, and bodies by default; full output requires one-time confirmation.</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/network-plus-extension/blob/f1d53ce821c6b7ca8cf11b7101f800087ab19ac4/README.md#L128-L140" target="_blank" rel="noopener noreferrer">
-                    <span>View evidence</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-url-decoder" tabindex="-1" aria-labelledby="project-url-decoder-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-url-decoder-fallback-title">URLDecoder</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-url-decoder" aria-label="Permalink to the URLDecoder project">Permalink</a>
-                  <p class="project-kind projects-fallback-kind">Web tool</p>
-                </header>
-                <p class="project-description projects-fallback-description">A simple browser utility for encoding and decoding URLs.</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-url-decoder-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://himiyosh.github.io/URLDecoder/" target="_blank" rel="noopener noreferrer">
-                    <span>Open the tool</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/URLDecoder" target="_blank" rel="noopener noreferrer">
-                    <span>View source on GitHub</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">Public evidence</span>
-                    <span>Input is processed with encodeURIComponent or decodeURIComponent, and the output field shows either the result or the failure reason.</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/URLDecoder/blob/fa686afa5196dd7dc9432c7ab916d5376dc69954/index.html#L108-L126" target="_blank" rel="noopener noreferrer">
-                    <span>View evidence</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-            <li>
-              <article class="projects-fallback-card" id="project-image-resizer" tabindex="-1" aria-labelledby="project-image-resizer-fallback-title">
-                <header class="projects-fallback-heading">
-                  <h3 class="projects-fallback-title" id="project-image-resizer-fallback-title">ImageResizer</h3>
-                  <a class="project-permalink projects-fallback-permalink" href="#project-image-resizer" aria-label="Permalink to the ImageResizer project">Permalink</a>
-                  <p class="project-kind projects-fallback-kind">Web tool</p>
-                </header>
-                <p class="project-description projects-fallback-description">A browser tool that converts an image into a 192px or 32px square icon.</p>
-                <p class="project-actions projects-fallback-actions" role="group" aria-labelledby="project-image-resizer-fallback-title">
-                  <a class="project-link project-link--primary projects-fallback-action" href="https://himiyosh.github.io/ImageResizer/" target="_blank" rel="noopener noreferrer">
-                    <span>Open the tool</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                  <a class="project-link project-link--secondary projects-fallback-action" href="https://github.com/himiyosh/ImageResizer" target="_blank" rel="noopener noreferrer">
-                    <span>View source on GitHub</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </p>
-                <section class="project-proof projects-fallback-proof">
-                  <p class="project-proof-text">
-                    <span class="project-proof-label">Public evidence</span>
-                    <span>The selected image is read in-browser, drawn to 192px and 32px canvases, and exposed as PNG download links.</span>
-                  </p>
-                  <a class="project-link project-link--evidence projects-fallback-action" href="https://github.com/himiyosh/ImageResizer/blob/f79765b06964bc1918dad7222f1c657d5d0312ca/index.html#L48-L84" target="_blank" rel="noopener noreferrer">
-                    <span>View evidence</span>
-                    <span class="sr-only">(opens in a new tab)</span>
-                    <span class="project-link-arrow" aria-hidden="true">↗</span>
-                  </a>
-                </section>
-              </article>
-            </li>
-          </ul>
+          <div class="panel-head" aria-hidden="true">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span data-i18n="projects.panelHead">projects — live &amp; open source</span>
+          </div>
+          <div class="row" role="listitem" id="project-ucfitness">
+            <span class="status" aria-hidden="true">200 OK</span>
+            <a class="row-link" href="https://ucfitness.studio344.net/" target="_blank" rel="noopener noreferrer">
+              <span class="name">UCFitness</span>
+              <span class="sr-only">(opens in a new tab)</span>
+            </a>
+            <span class="type">Fitness service</span>
+            <span class="stack">Fitbit · PWA</span>
+            <span class="go" aria-hidden="true">OPEN ↗</span>
+          </div>
+          <div class="row" role="listitem" id="project-encode-decode-tool">
+            <span class="status" aria-hidden="true">200 OK</span>
+            <a class="row-link" href="https://himiyosh.github.io/encode-decode-tool/" target="_blank" rel="noopener noreferrer">
+              <span class="name">Encode / Decode Tool</span>
+              <span class="sr-only">(opens in a new tab)</span>
+            </a>
+            <span class="type">Encode / decode tool</span>
+            <span class="stack">React · Tailwind CSS · Vite</span>
+            <span class="go" aria-hidden="true">OPEN ↗</span>
+          </div>
+          <div class="row" role="listitem" id="project-network-plus">
+            <span class="status src" aria-hidden="true">SOURCE</span>
+            <a class="row-link" href="https://github.com/himiyosh/network-plus-extension" target="_blank" rel="noopener noreferrer">
+              <span class="name">Network+</span>
+              <span class="sr-only">(opens in a new tab)</span>
+            </a>
+            <span class="type">Edge DevTools extension</span>
+            <span class="stack">Manifest V3 · JavaScript · Edge DevTools · Jest</span>
+            <span class="go" aria-hidden="true">CODE ↗</span>
+          </div>
+          <div class="row" role="listitem" id="project-url-decoder">
+            <span class="status" aria-hidden="true">200 OK</span>
+            <a class="row-link" href="https://himiyosh.github.io/URLDecoder/" target="_blank" rel="noopener noreferrer">
+              <span class="name">URLDecoder</span>
+              <span class="sr-only">(opens in a new tab)</span>
+            </a>
+            <span class="type">Web tool</span>
+            <span class="stack">HTML · JavaScript</span>
+            <span class="go" aria-hidden="true">OPEN ↗</span>
+          </div>
+          <div class="row" role="listitem" id="project-image-resizer">
+            <span class="status" aria-hidden="true">200 OK</span>
+            <a class="row-link" href="https://himiyosh.github.io/ImageResizer/" target="_blank" rel="noopener noreferrer">
+              <span class="name">ImageResizer</span>
+              <span class="sr-only">(opens in a new tab)</span>
+            </a>
+            <span class="type">Web tool</span>
+            <span class="stack">HTML · Canvas</span>
+            <span class="go" aria-hidden="true">OPEN ↗</span>
+          </div>
+          <div class="row" role="listitem" id="project-portfolio">
+            <span class="status src" aria-hidden="true">SOURCE</span>
+            <a class="row-link" href="https://github.com/himiyosh/Info" target="_blank" rel="noopener noreferrer">
+              <span class="name">Portfolio</span>
+              <span class="sr-only">(opens in a new tab)</span>
+            </a>
+            <span class="type">Personal site / Open source</span>
+            <span class="stack">HTML · CSS · JavaScript</span>
+            <span class="go" aria-hidden="true">CODE ↗</span>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="contact section-shell" id="contact" tabindex="-1" aria-labelledby="contact-title" data-scene="contact">
+    <section class="stack section-shell" id="stack" tabindex="-1">
+      <div class="section-heading">
+        <p class="section-eyebrow" data-i18n="stack.eyebrow">STACK</p>
+        <h2 data-decode data-i18n="stack.title">The toolbox.</h2>
+      </div>
+      <div class="toolbox">
+        <div class="tool-group">
+          <h3 data-i18n="stack.build">BUILD</h3>
+          <div class="chips">
+            <span>HTML</span><span>CSS</span><span>JavaScript</span><span>TypeScript</span>
+            <span>React</span><span>Vue</span><span>Astro</span><span>Vite</span>
+            <span>Slidev</span><span>Tailwind CSS</span>
+          </div>
+        </div>
+        <div class="tool-group">
+          <h3 data-i18n="stack.platform">PLATFORM</h3>
+          <div class="chips">
+            <span>GitHub Pages</span><span>Cloudflare</span><span>PWA</span>
+            <span>Edge DevTools</span><span>Manifest V3</span><span>Fitbit API</span>
+          </div>
+        </div>
+        <div class="tool-group">
+          <h3 data-i18n="stack.quality">QUALITY</h3>
+          <div class="chips">
+            <span>Playwright</span><span>Jest</span><span>GitHub Actions</span>
+            <span data-i18n="stack.chipAccessibility">Accessibility</span>
+            <span data-i18n="stack.chipI18n">i18n (JA / EN)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="contact section-shell" id="contact" tabindex="-1" aria-labelledby="contact-title">
       <div class="contact-panel">
-        <div>
-          <h2 id="contact-title" data-i18n="contact.title">Contact</h2>
-          <p data-i18n="contact.intro">
+        <div class="contact-heading">
+          <p class="section-eyebrow section-eyebrow--center" data-i18n="contact.eyebrow">CONTACT</p>
+          <h2 id="contact-title" data-decode data-i18n="contact.title">Let&#39;s talk.</h2>
+          <p class="contact-lede" data-i18n="contact.intro">
             For questions about technology or these public projects, reach out by email or GitHub.
           </p>
         </div>
         <div class="contact-links">
-          <div class="contact-email-method">
-            <a id="contact-email-link" href="mailto:himiyosh@gmail.com">
-              <span data-i18n="contact.emailLabel">Email</span>
+          <div class="contact-email-method mail-row">
+            <a id="contact-email-link" class="mail" href="mailto:himiyosh@gmail.com">
+              <span class="sr-only" data-i18n="contact.emailLabel">Email</span>
               <strong id="contact-email-address">himiyosh@gmail.com</strong>
             </a>
             <button
@@ -571,45 +517,47 @@
               hidden
             ></p>
           </div>
-          <a href="https://github.com/himiyosh" target="_blank" rel="me noopener noreferrer">
-            <span>GitHub</span>
-            <strong>@himiyosh</strong>
-            <span class="sr-only" data-i18n="accessibility.opensInNewTab">(opens in a new tab)</span>
-          </a>
+          <div class="sub-links">
+            <a href="https://github.com/himiyosh" target="_blank" class="link" rel="me noopener noreferrer">
+              GITHUB — @himiyosh
+              <span class="sr-only" data-i18n="accessibility.opensInNewTab">(opens in a new tab)</span>
+              <span class="ext" aria-hidden="true">↗</span>
+            </a>
+          </div>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer" data-scene="footer">
-    <div class="footer-marquee">
-      <div class="footer-marquee-track" aria-hidden="true">
-        <span class="footer-marquee-set">
-          <span data-i18n="about.statement">Curiosity, put to work.</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">Curiosity, put to work.</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">Curiosity, put to work.</span>
-          <span aria-hidden="true">◆</span>
-        </span>
-        <span class="footer-marquee-set">
-          <span data-i18n="about.statement">Curiosity, put to work.</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">Curiosity, put to work.</span>
-          <span aria-hidden="true">◆</span>
-          <span data-i18n="about.statement">Curiosity, put to work.</span>
-          <span aria-hidden="true">◆</span>
-        </span>
+  <footer class="site-footer">
+    <div class="footer-meta foot">
+      <div class="foot-left">
+        <p
+          class="footer-clock"
+          id="footer-clock"
+          aria-label="Current time (Japan Standard Time)"
+          data-i18n-aria-label="footer.clockLabel"
+        >--:--:-- JST</p>
+        <p class="footer-copyright">&copy; <span id="current-year">2026</span> himiyosh</p>
+        <p class="footer-disclaimer" data-i18n="disclaimer">
+          This is a personal site and does not represent the official views of my employer.
+        </p>
       </div>
-      <p class="sr-only" data-i18n="about.statement">Curiosity, put to work.</p>
-    </div>
-    <div class="footer-meta">
-      <p>&copy; <span id="current-year">2026</span> himiyosh</p>
-      <p class="footer-disclaimer" data-i18n="disclaimer">
-        This is a personal site and does not represent the official views of my employer.
-      </p>
-      <a href="#top" data-i18n="footer.backToTop">Back to top</a>
+      <div class="foot-right">
+        <a class="top-link" href="#top" data-i18n="footer.backToTop">Back to top</a>
+        <p class="footer-statement" data-i18n="about.statement">Curiosity, put to work.</p>
+      </div>
     </div>
   </footer>
+
+  <p
+    id="theme-status"
+    class="theme-status"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+    data-i18n-dynamic
+    hidden
+  ></p>
 </body>
 </html>

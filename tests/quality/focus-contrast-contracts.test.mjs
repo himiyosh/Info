@@ -48,11 +48,11 @@ test("final modern focus-ring overrides match the actual project and contact sur
   const modernSource = await readUtf8("modern.css");
 
   const finalFocusRule = modernSource.match(
-    /\.projects-list \.project-row :where\(a, button\):focus-visible,\s*\.contact-panel :where\(a, button\):focus-visible\s*\{\s*outline-color:\s*var\(--color-focus\);\s*\}/
+    /\.contact-panel :where\(a, button\):focus-visible\s*\{\s*outline-color:\s*var\(--color-focus\);\s*\}/
   );
   assert.ok(
     finalFocusRule,
-    "modern.css must override both project and contact focus rings with --color-focus"
+    "modern.css must override the contact focus ring with --color-focus"
   );
 
   assert.match(
@@ -97,8 +97,8 @@ test("focus-ring / backdrop token pairings meet WCAG 1.4.11 non-text contrast (>
     { label: ".language-toggle ring vs compact desktop header", ring: "--color-focus", backdrop: "--color-surface" },
     { label: ".nav link ring vs mobile nav", ring: "--color-on-dark", backdrop: "--color-paper-2" },
     { label: ".nav link ring vs compact desktop header", ring: "--color-on-dark", backdrop: "--color-surface" },
-    { label: ".project-row odd ring vs final project-a", ring: "--color-focus", backdrop: "--color-project-a" },
-    { label: ".project-row even ring vs final project-b", ring: "--color-focus", backdrop: "--color-project-b" },
+    { label: ".card / .row link ring vs card surface", ring: "--color-focus", backdrop: "--color-paper-2" },
+    { label: ".row link ring vs page backdrop", ring: "--color-focus", backdrop: "--color-paper" },
     { label: ".contact-panel ring vs final surface", ring: "--color-focus", backdrop: "--color-surface" }
   ];
 
@@ -202,14 +202,17 @@ test("increased contrast strengthens muted roles and UI boundaries without chang
 
   assert.match(
     modernSource,
-    /\.project-directory-kind\s*\{[^}]*color:\s*var\(--color-muted\)/s
+    /\.row \.type,\s*\.row \.stack\s*\{[^}]*color:\s*var\(--color-muted\)/s,
+    "Panel-row meta columns must take their color from the strengthened muted token"
   );
   assert.match(
     modernSource,
-    /\.project-proof-label,\s*\.project-link--evidence\s*\{[^}]*color:\s*var\(--color-ink-2\)/s
+    /\.contact-copy-status\s*\{[^}]*color:\s*var\(--color-ink-2\)/s,
+    "The copy status line must take its color from the strengthened ink-2 token"
   );
   assert.match(
     modernSource,
-    /\.projects-list \.project-row :where\(a, button\):focus-visible,[^}]*outline-color:\s*var\(--color-focus\)/s
+    /\.contact-panel :where\(a, button\):focus-visible\s*\{[^}]*outline-color:\s*var\(--color-focus\)/s,
+    "The contact focus override must keep using the strengthened focus token"
   );
 });

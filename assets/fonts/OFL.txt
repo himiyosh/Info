@@ -1,4 +1,12 @@
 Copyright 2019 The Big Shoulders Project Authors (https://github.com/xotypeco/big_shoulders)
+Copyright 2021 The Zen Maru Gothic Authors (https://github.com/googlefonts/zen-marugothic)
+Copyright 2016 The Rounded M+ Project Authors.
+Copyright 2017 IBM Corp. All rights reserved.
+
+The Zen Maru Gothic, Rounded M+ (M PLUS Rounded 1c), and IBM Plex Mono files in
+this directory are subsets containing only the glyphs this site renders. They
+were produced with fonttools pyftsubset from the upstream releases in
+https://github.com/google/fonts and are unmodified apart from that subsetting.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

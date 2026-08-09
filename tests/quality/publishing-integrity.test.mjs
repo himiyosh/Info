@@ -54,7 +54,6 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
     "tokens.css",
     "styles.css",
     "modern.css",
-    "share.css",
     "script.js",
     "i18n.js",
     "projects.json",
@@ -62,11 +61,7 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
     "favicon.svg",
     "robots.txt",
     "sitemap.xml",
-    "ads.txt",
-    ...projects.flatMap(({ slug }) => [
-      `share/${slug}`,
-      `en/share/${slug}`
-    ])
+    "ads.txt"
   ]);
 
   assert.deepEqual(

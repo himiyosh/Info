@@ -51,10 +51,11 @@ test("new-tab links include bilingual accessibility announcement text", async ()
     /<a href="https:\/\/github\.com\/himiyosh" target="_blank"[\s\S]*data-i18n="accessibility\.opensInNewTab"/,
     "GitHub contact link must announce new-tab behavior via i18n text"
   );
+  const generatorSource = await readUtf8("scripts/generate-static-pages.mjs");
   assert.match(
-    scriptSource,
-    /window\.siteI18n\.t\("accessibility\.opensInNewTab"\)/,
-    "Generated project links must include localized new-tab announcement text"
+    generatorSource,
+    /accessibility\.opensInNewTab/,
+    "Baked project links must include localized new-tab announcement text"
   );
 });
 
@@ -129,100 +130,84 @@ test("scroll-progress is transform-based, progressive, non-essential, and stacks
   assert.match(
     indexHtml,
     /<div class="scroll-progress" aria-hidden="true">/,
-    "index.html must contain the aria-hidden scroll-progress markup"
+    "The progress indicator must stay decorative (aria-hidden)"
+  );
+  assert.match(
+    stylesSource,
+    /\.scroll-progress-fill\s*\{[^}]*transform:\s*scaleX\(var\(--scroll-progress,\s*0\)\)/s,
+    "The fill must be transform-driven from one custom property"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /\.scroll-progress-fill\s*\{[^}]*width:\s*var\(--scroll-progress/s,
+    "The fill must never animate layout via width"
+  );
+  assert.match(
+    stylesSource,
+    /@supports\s*\(animation-timeline:\s*scroll\(\)\)/,
+    "Scroll-timeline support must upgrade the indicator without script"
+  );
+  assert.match(
+    stylesSource,
+    /animation-timeline:\s*scroll\(root\)/,
+    "The upgraded indicator must bind to the root scroller"
   );
 
-  // Dedicated semantic z-index layer above --z-sticky (not borrowed
-  // modal/toast semantics), so the progress bar reliably paints above
-  // the sticky header regardless of DOM/source order — two elements
-  // with an EQUAL z-index stack by DOM order, and the header (later in
-  // the DOM than .scroll-progress) would otherwise always win and fully
-  // occlude the bar.
-  const zIndexOrder = ["--z-base", "--z-raised", "--z-dropdown", "--z-sticky", "--z-progress", "--z-modal"];
-  const zIndexValues = new Map();
-  for (const match of tokensSource.matchAll(/(--z-[a-z]+):\s*(\d+);/g)) {
-    zIndexValues.set(match[1], Number(match[2]));
-  }
-  for (const tokenName of zIndexOrder) {
+  // Where scroll-timelines are missing, exactly one passive listener feeds
+  // the same custom property through a batched animation frame.
+  assert.match(
+    scriptSource,
+    /if \(!CSS\.supports\("animation-timeline: scroll\(\)"\)\)/,
+    "The script fallback must yield entirely to native scroll-timelines"
+  );
+  const passiveScrollListeners = [
+    ...scriptSource.matchAll(/addEventListener\("scroll",/g)
+  ];
+  assert.equal(
+    passiveScrollListeners.length,
+    1,
+    "Exactly one scroll listener may exist: the progress fallback"
+  );
+  assert.match(
+    scriptSource,
+    /addEventListener\("scroll", requestScrollProgressUpdate, \{ passive: true \}\)/,
+    "The fallback listener must be passive"
+  );
+  assert.match(
+    scriptSource,
+    /if \(scrollProgressFrame === null\)\s*\{\s*scrollProgressFrame = window\.requestAnimationFrame\(updateScrollProgress\);/,
+    "The fallback must batch through one pending frame"
+  );
+
+  const zIndexValues = new Map(
+    [...tokensSource.matchAll(/(--z-[a-z]+):\s*(\d+);/g)].map(([, name, value]) => [
+      name,
+      Number(value)
+    ])
+  );
+  for (const tokenName of ["--z-base", "--z-raised", "--z-dropdown", "--z-sticky", "--z-progress", "--z-modal"]) {
     assert.ok(zIndexValues.has(tokenName), `tokens.css must define ${tokenName}`);
   }
   assert.ok(
     zIndexValues.get("--z-progress") > zIndexValues.get("--z-sticky"),
-    "--z-progress must be greater than --z-sticky so the progress bar paints above the sticky header"
+    "The progress bar must stack above the sticky header"
   );
   assert.notEqual(
     zIndexValues.get("--z-progress"),
     zIndexValues.get("--z-modal"),
-    "--z-progress must be its own dedicated token, not an alias for --z-modal semantics"
-  );
-
-  const scrollProgressRule = stylesSource.match(/\.scroll-progress\s*\{([^}]*)\}/)?.[1];
-  assert.ok(scrollProgressRule, "styles.css must define .scroll-progress");
-  assert.match(
-    scrollProgressRule,
-    /z-index:\s*var\(--z-progress\)/,
-    ".scroll-progress must use the dedicated --z-progress token, not --z-sticky"
-  );
-
-  const siteHeaderRule = stylesSource.match(/\.site-header\s*\{([^}]*)\}/)?.[1];
-  assert.ok(siteHeaderRule, "styles.css must define .site-header");
-  assert.match(
-    siteHeaderRule,
-    /z-index:\s*var\(--z-sticky\)/,
-    ".site-header must keep using --z-sticky (lower than --z-progress)"
-  );
-
-  const fillRule = stylesSource.match(/\.scroll-progress-fill\s*\{([^}]*)\}/s)?.[1];
-  assert.ok(fillRule, "styles.css must define .scroll-progress-fill");
-  assert.match(
-    fillRule,
-    /transform:\s*scaleX\(var\(--scroll-progress,\s*0\)\)/,
-    "Scroll progress must be communicated via transform: scaleX, never width"
-  );
-  assert.doesNotMatch(
-    fillRule,
-    /\bwidth\s*:\s*var\(--scroll-progress/,
-    "Scroll progress must never animate width (layout-triggering)"
-  );
-
-  assert.match(
-    stylesSource,
-    /@supports\s*\(animation-timeline:\s*scroll\(\)\)\s*\{[\s\S]*?animation-timeline:\s*scroll\(root\)/,
-    "A CSS scroll-timeline enhancement must be layered on top of the JS fallback"
+    "The progress bar must not collide with modal stacking"
   );
   assert.match(
     stylesSource,
-    /\.scroll-progress\s*\{\s*display:\s*none;\s*\}/,
-    "The progress bar must be treated as non-essential and hidden under reduced motion"
-  );
-
-  assert.match(
-    scriptSource,
-    /function armScrollMotion\(\)\s*\{\s*if\s*\(scrollMotionArmed\)\s*\{\s*return;/,
-    "The shared scroll-scene lifecycle must be idempotent"
-  );
-  assert.doesNotMatch(
-    scriptSource,
-    /supportsScrollDrivenAnimations/,
-    "Native scroll timelines must not suppress the shared lifecycle required for scene coordination"
+    /\.scroll-progress\s*\{[^}]*z-index:\s*var\(--z-progress\)/s,
+    "The progress bar must use the token, not a literal"
   );
   assert.match(
-    scriptSource,
-    /if\s*\(!prefersReducedMotion\)\s*\{\s*armScrollMotion\(\);/,
-    "Scroll motion must only be armed at load when the user has no reduced-motion preference"
-  );
-  assert.match(
-    scriptSource,
-    /requestAnimationFrame\(updateScrollMotion\)/,
-    "Progress updates must be batched through requestAnimationFrame, not run directly on the scroll event"
-  );
-  assert.match(
-    scriptSource,
-    /addEventListener\("scroll",\s*requestScrollMotionUpdate,\s*\{\s*passive:\s*true\s*\}\)/,
-    "The scroll listener must be passive"
+    stylesSource,
+    /\.site-header\s*\{[^}]*z-index:\s*var\(--z-sticky\)/s,
+    "The header must use the sticky token, not a literal"
   );
 });
-
 test("hero image preload in head matches the rendered AVIF picture source", async () => {
   const indexHtml = await readUtf8("index.html");
 
@@ -325,10 +310,15 @@ test("rich redesign foundation uses local tokens and layers the modern system la
     /Hallmark · genre: modern-minimal · macrostructure: Feature Stack[\s\S]*theme: Graphite Blue/,
     "The additive layer must record the restored Feature Stack and locked Graphite Blue system"
   );
-  assert.match(
+  assert.doesNotMatch(
     modernSource,
-    /\.footer-marquee-set\s*\{[^}]*animation:\s*none;/s,
-    "The modern Ft5 footer must explicitly disable the legacy marquee animation"
+    /footer-marquee/,
+    "The legacy footer marquee must stay fully retired from the modern layer"
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /footer-marquee/,
+    "The legacy footer marquee must stay fully retired from the foundation layer"
   );
   await Promise.all([
     stat(path.join(repoRoot, "assets/fonts/BigShouldersDisplay-latin-variable.woff2")),
@@ -336,81 +326,71 @@ test("rich redesign foundation uses local tokens and layers the modern system la
   ]);
 });
 
-test("footer keeps accessible compatibility markup while the modern layer renders one static statement", async () => {
+test("footer renders the clock, the statement, and the recovery link once each", async () => {
   const indexHtml = await readUtf8("index.html");
-  const modernSource = await readUtf8("modern.css");
   const scriptSource = await readUtf8("script.js");
 
-  const marqueeSets = [...indexHtml.matchAll(/<span class="footer-marquee-set"[^>]*>/g)];
+  const footer = indexHtml.match(/<footer class="site-footer">([\s\S]*?)<\/footer>/)?.[1];
+  assert.ok(footer, "index.html must keep one site footer");
+  assert.match(
+    footer,
+    /<p\b[^>]*id="footer-clock"[^>]*>--:--:-- JST<\/p>/,
+    "The clock must ship a static placeholder so no-JS and print footers still read as a clock"
+  );
+  assert.match(
+    footer,
+    /class="footer-statement" data-i18n="about\.statement"/,
+    "The footer must carry the single truthful statement"
+  );
   assert.equal(
-    marqueeSets.length,
-    2,
-    "The marquee track must contain exactly two duplicate sets for a seamless -100% loop"
+    [...footer.matchAll(/data-i18n="about\.statement"/g)].length,
+    1,
+    "The statement must appear exactly once in the footer"
   );
-  assert.match(
-    indexHtml,
-    /<p class="sr-only" data-i18n="about\.statement">/,
-    "A single static sr-only equivalent must remain outside the aria-hidden track"
-  );
-  assert.match(
-    indexHtml,
-    /<div class="footer-marquee-track" aria-hidden="true">/,
-    "The duplicated track must stay aria-hidden from assistive technology"
-  );
+  assert.match(footer, /<a[^>]*href="#top"[^>]*data-i18n="footer\.backToTop"/);
+  assert.match(footer, /class="footer-disclaimer"/);
 
   assert.match(
-    modernSource,
-    /\.footer-marquee-set\s*\{[^}]*animation:\s*none;[^}]*transform:\s*none;/s,
-    "The modern statement footer must stay static"
+    scriptSource,
+    /timeZone: "Asia\/Tokyo"/,
+    "The clock must render Japan Standard Time regardless of the visitor's zone"
   );
   assert.match(
-    modernSource,
-    /\.footer-marquee-set:not\(:first-child\),\s*\.footer-marquee-set:first-child > :not\(:first-child\)\s*\{\s*display:\s*none;/,
-    "Only the first truthful visual statement may render"
+    scriptSource,
+    /window\.addEventListener\("pagehide", \(\) => \{\s*window\.clearInterval\(footerClockTimer\);/,
+    "The clock interval must tear down on pagehide"
   );
   assert.doesNotMatch(
     scriptSource,
-    /footerMarquee|armFooterMarquee|disarmFooterMarquee|syncFooterMarqueeActive/,
-    "Dead marquee observation lifecycle must be removed once the footer is statically rendered"
+    /footerMarquee|armFooterMarquee|disarmFooterMarquee|syncFooterMarqueeActive|visibilitychange/,
+    "Retired footer marquee machinery must stay retired"
   );
 });
-
-test("every desktop project row keeps the image on the left, in DOM order", async () => {
+test("panel rows keep the prototype's fixed column order with no nth-child reordering", async () => {
   const stylesSource = await readUtf8("styles.css");
+  const modernSource = await readUtf8("modern.css");
   const projects = JSON.parse(await readUtf8("projects.json"));
 
-  const desktopBlock = stylesSource.match(
-    /@media\s*\(min-width:\s*48rem\)\s*\{([\s\S]*)\}\s*@media\s*\(prefers-reduced-motion:\s*reduce\)/
-  )?.[1];
-  assert.ok(desktopBlock, "Expected a min-width: 48rem media query block");
+  // The scene-era two-column rows are retired for good: their selectors
+  // must not creep back into either stylesheet and silently restyle the
+  // panel rows that reuse project ids.
+  for (const source of [stylesSource, modernSource]) {
+    assert.doesNotMatch(
+      source,
+      /\.project-row|\.project-media|\.project-content/,
+      "Retired scene-row selectors must not return to the shipped stylesheets"
+    );
+  }
 
+  assert.match(
+    modernSource,
+    /\.row\s*\{[^}]*grid-template-columns:\s*5\.2rem 1\.15fr 0\.8fr 1\.2fr auto;/s,
+    "Panel rows must keep the prototype's fixed five-column grid: status, name, type, stack, go"
+  );
   assert.doesNotMatch(
-    desktopBlock,
-    /\.project-row:nth-child\((?:even|odd)\)\s+\.project-media/,
-    "No nth-child rule may move .project-media to a different grid column/row on desktop"
-  );
-  assert.doesNotMatch(
-    desktopBlock,
-    /\.project-row:nth-child\((?:even|odd)\)\s+\.project-content/,
-    "No nth-child rule may move .project-content to a different grid column/row on desktop"
-  );
-  assert.match(
-    desktopBlock,
-    /\.project-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*0\.9fr\)\s*minmax\(0,\s*1\.1fr\);/s,
-    "Desktop rows must use a fixed two-column grid: media first (left), content second (right)"
-  );
-
-  // The odd/even accent-color scene variation must still be present and
-  // untouched — only the column swap is removed.
-  assert.match(
-    stylesSource,
-    /\.project-row:nth-child\(odd\)\s*\{\s*background:\s*var\(--color-accent\);/,
-    "Odd-row accent color variation must still exist"
-  );
-  assert.match(
-    stylesSource,
-    /\.project-row:nth-child\(even\)\s*\{\s*background:\s*var\(--color-accent-2\);/,
-    "Even-row accent-2 color variation must still exist"
+    modernSource,
+    /\.row:nth-child\([^)]*\)[^{]*\{[^}]*(?:grid-column|grid-row|order:)/s,
+    "No nth-child rule may reorder panel-row columns"
   );
 
   assert.ok(projects.length >= 2, "Expected at least two projects to validate row order against");
@@ -421,8 +401,7 @@ test("headings wrap intentionally: safety-net overflow-wrap, language-aware brea
 
   const headingSelectors = [
     /\.hero h1\s*\{([^}]*)\}/s,
-    /\.section-heading h2,\s*\n\.projects-intro h2,\s*\n\.contact h2\s*\{([^}]*)\}/s,
-    /\.project-heading h3\s*\{([^}]*)\}/s
+    /\.section-heading h2,\s*\n\.projects-intro h2,\s*\n\.contact h2\s*\{([^}]*)\}/s
   ];
 
   for (const selectorPattern of headingSelectors) {
@@ -447,12 +426,12 @@ test("headings wrap intentionally: safety-net overflow-wrap, language-aware brea
 
   assert.match(
     stylesSource,
-    /html:lang\(ja\)\s+:where\(\.project-heading h3,\s*\.section-heading h2,\s*\.projects-intro h2,\s*\.contact h2\)\s*\{\s*word-break:\s*keep-all;/,
+    /html:lang\(ja\)\s+:where\(\.section-heading h2,\s*\.projects-intro h2,\s*\.contact h2\)\s*\{\s*word-break:\s*keep-all;/,
     "Non-hero Japanese display headings must use word-break: keep-all so words don't split mid-character-group"
   );
   assert.match(
     stylesSource,
-    /:where\(\.project-heading h3,\s*\.section-heading h2,\s*\.projects-intro h2,\s*\.contact h2\)\s*\{\s*hyphens:\s*auto;/,
+    /:where\(\.section-heading h2,\s*\.projects-intro h2,\s*\.contact h2\)\s*\{\s*hyphens:\s*auto;/,
     "Non-hero headings must have a hyphens: auto safety net for long Latin words"
   );
 });
@@ -532,57 +511,29 @@ test("nav compact morph is paint-only and never shifts header layout or touch ta
 });
 
 test("micro-parallax is capped at +/-5px, applied to the frame not the img, and disabled under reduced motion", async () => {
-  const stylesSource = await readUtf8("styles.css");
-  const modernSource = await readUtf8("modern.css");
-  const scriptSource = await readUtf8("script.js");
+  // The scroll-driven parallax was retired with the scene lifecycle. The
+  // cap token remains the documented ceiling for any future revival, and
+  // no script may quietly reintroduce the machinery.
   const tokensSource = await readUtf8("tokens.css");
+  const scriptSource = await readUtf8("script.js");
+  const stylesSource = await readUtf8("styles.css");
 
   assert.match(
     tokensSource,
-    /--parallax-distance:\s*5px;/,
-    "tokens.css must cap parallax distance at 5px"
+    /--parallax-distance:\s*5px/,
+    "The parallax cap token must stay at the reviewed 5px ceiling"
   );
-
-  assert.match(
-    modernSource,
-    /\.project-media\s*\{[^}]*transform:\s*translateY\(var\(--media-translate-y,\s*0\)\)\s*scale\(var\(--media-depth,\s*1\)\)/s,
-    "The modern media frame must consume the shared depth and bounded translation properties"
+  assert.doesNotMatch(
+    scriptSource,
+    /--parallax-y|--media-depth|--hero-depth|updateScrollMotion|armScrollMotion/,
+    "script.js must not reintroduce scroll-driven depth machinery"
   );
-  assert.match(
-    modernSource,
-    /@media \(prefers-reduced-motion: no-preference\)\s*\{\s*\.js-enabled \.project-row\.is-priming\s*\{\s*opacity:\s*1;/,
-    "The bounded row entrance must never fade project text below accessible contrast"
-  );
-
   assert.doesNotMatch(
     stylesSource,
-    /\.project-media img\s*\{[^}]*--parallax-y/,
-    "Parallax must never apply to .project-media img (would collide with its own hover scale)"
-  );
-
-  assert.match(
-    stylesSource,
-    /@supports \(animation-timeline: view\(\)\)\s*\{[\s\S]*?animation-timeline:\s*view\(\);/,
-    "A compositor-driven view-timeline enhancement must be layered on top of the JS fallback"
-  );
-
-  assert.match(
-    scriptSource,
-    /--media-translate-y/,
-    "The shared rAF lifecycle must drive the modern media translation property"
-  );
-  assert.doesNotMatch(
-    scriptSource,
-    /--parallax-y/,
-    "The old standalone parallax property must not survive the shared scene lifecycle"
-  );
-  assert.doesNotMatch(
-    scriptSource,
-    /querySelectorAll\(["']\.project-media["']\)[\s\S]{0,80}addEventListener\(\s*["']scroll["']/,
-    "Parallax must not attach a per-element scroll listener"
+    /\.project-media img\s*\{[^}]*--parallax-y/s,
+    "Media images must never translate on scroll"
   );
 });
-
 test("color-scheme metadata matches the shipped dark-only theme", async () => {
   const indexHtml = await readUtf8("index.html");
 
@@ -598,121 +549,118 @@ test("color-scheme metadata matches the shipped dark-only theme", async () => {
   );
 });
 
-test("Feature Stack restoration is additive, scene-marked, and documented by the locked system", async () => {
+test("the prototype composition is complete, ordered, and documented by the locked system", async () => {
   const indexHtml = await readUtf8("index.html");
-  const modernSource = await readUtf8("modern.css");
-  const tokensSource = await readUtf8("tokens.css");
   const designSource = await readUtf8("design.md");
 
   assert.match(
     indexHtml,
     /tokens\.css" \/>\s*<link rel="stylesheet" href="styles\.css" \/>\s*<link rel="stylesheet" href="modern\.css"/,
-    "modern.css must remain an additive layer after tokens.css and styles.css"
+    "The stylesheet cascade must stay tokens -> styles -> modern"
   );
-  assert.match(
-    indexHtml,
-    /<div class="viewport-stage" aria-hidden="true">[\s\S]*viewport-stage-layer-hero[\s\S]*viewport-stage-layer-contact/,
-    "The decorative viewport stage must be aria-hidden and expose the layered scene planes"
-  );
-  assert.match(indexHtml, /<section class="hero"[^>]*data-scene="hero">[\s\S]*class="hero-sticky"/);
-  for (const scene of ["about", "projects", "contact"]) {
-    assert.match(indexHtml, new RegExp(`<section[^>]*data-scene="${scene}"`));
-  }
-  assert.match(modernSource, /macrostructure: Feature Stack[\s\S]*theme: Graphite Blue/);
-  assert.match(designSource, /Marketing macrostructure · Feature Stack/);
-  assert.match(designSource, /Footer · Ft5 statement composition/);
-  for (const token of [
-    "--color-scene-hero",
-    "--color-scene-about",
-    "--color-scene-projects",
-    "--color-scene-contact",
-    "--shadow-cinematic",
-    "--depth-project-max",
-    "--header-height"
-  ]) {
-    assert.match(tokensSource, new RegExp(`${token}:`), `tokens.css must define ${token}`);
-  }
-});
 
-test("one shared rAF lifecycle coordinates active scene, hero, project copy, and media depth", async () => {
-  const scriptSource = await readUtf8("script.js");
-
-  const passiveScrollListeners = [
-    ...scriptSource.matchAll(
-      /addEventListener\("scroll",\s*requestScrollMotionUpdate,\s*\{\s*passive:\s*true\s*\}\)/g
-    )
+  // Section order is the prototype's: hero, marquee band, about, projects
+  // (cards then panel), toolbox, contact.
+  const order = [
+    /<section class="hero" id="top"/,
+    /<div class="hero-marquee"/,
+    /<section class="about section-shell" id="about"/,
+    /<section class="projects" id="projects"/,
+    /<article\b[^>]*class="card wide"/,
+    /class="panel"/,
+    /<section class="stack section-shell" id="stack"/,
+    /<section class="contact section-shell" id="contact"/
   ];
-  assert.equal(passiveScrollListeners.length, 1, "Exactly one passive scroll listener may coordinate scenes");
-  assert.match(scriptSource, /requestAnimationFrame\(updateScrollMotion\)/);
-  assert.match(scriptSource, /document\.body\.dataset\.scene = activeSceneElement\.dataset\.scene/);
-  assert.match(scriptSource, /classList\.add\("is-active-scene"\)/);
-  assert.match(
-    scriptSource,
-    /"--project-opacity",\s*\(0\.92 \+ focus \* 0\.08\)\.toFixed\(4\)/,
-    "Off-scene project copy must stay within the accessible 92-100% opacity range"
-  );
-  assert.match(
-    scriptSource,
-    /if\s*\(documentBottom <= 2\)\s*\{\s*setActiveScene\(scrollSceneElements\.at\(-1\)\);/,
-    "The footer must become the final active scene at the document boundary"
-  );
-  for (const property of [
-    "--hero-opacity",
-    "--hero-depth",
-    "--hero-scale",
-    "--project-opacity",
-    "--project-depth",
-    "--media-depth",
-    "--media-translate-y"
-  ]) {
-    assert.match(
-      scriptSource,
-      new RegExp(`setProperty\\(\\s*"${property}"`),
-      `The shared lifecycle must set ${property}`
-    );
-    assert.match(
-      scriptSource,
-      new RegExp(`removeProperty\\("${property}"`),
-      `Reduced-motion cleanup must remove ${property}`
-    );
+  let cursor = 0;
+  for (const pattern of order) {
+    const match = indexHtml.slice(cursor).search(pattern);
+    assert.ok(match > -1, `Missing or out of order: ${pattern}`);
+    cursor += match;
   }
-  assert.match(scriptSource, /cancelAnimationFrame\(scrollMotionFrame\)/);
-  assert.match(scriptSource, /document\.body\.removeAttribute\("data-scene"\)/);
-});
 
-test("Feature Stack chapters preserve desktop image-left and mobile media-first ordering", async () => {
-  const modernSource = await readUtf8("modern.css");
+  assert.match(
+    designSource,
+    /Marketing macrostructure · Feature Stack/,
+    "design.md must keep the locked macrostructure record"
+  );
+  assert.match(
+    designSource,
+    /Footer · Ft5 statement composition/,
+    "design.md must keep the locked footer record"
+  );
+});
+test("scroll work is IntersectionObserver-driven with one batched fallback listener", async () => {
   const scriptSource = await readUtf8("script.js");
 
-  assert.match(
-    scriptSource,
-    /article\.append\(media,\s*content\)/,
-    "Rendered project DOM must keep media before copy for the mobile source order"
-  );
-  const desktopBlock = modernSource.match(/@media \(min-width: 48rem\) \{([\s\S]*?)\n\}/)?.[1];
-  assert.ok(desktopBlock, "modern.css must define the desktop Feature Stack breakpoint");
-  assert.match(
-    desktopBlock,
-    /\.project-row\s*\{[^}]*min-height:\s*100svh;[^}]*grid-template-columns:\s*minmax\(0,\s*1\.08fr\)\s*minmax\(0,\s*0\.72fr\);/s,
-    "Desktop project chapters must be viewport-height, media-left, and use overflow-safe tracks"
-  );
+  // The retired scene lifecycle must not creep back in.
   assert.doesNotMatch(
-    modernSource,
-    /\.project-row:nth-child\((?:odd|even)\)\s+\.project-(?:media|content)\s*\{[^}]*grid-/,
-    "Scene color alternation must never reverse project media/content order"
+    scriptSource,
+    /data-scene|is-active-scene|refreshScrollScenes|setActiveScene|clearScrollMotionStyles/,
+    "The viewport-scene lifecycle stays retired"
   );
-  assert.doesNotMatch(modernSource, /\bwidth:\s*100vw\b/, "The modern layer must not introduce 100vw overflow");
-  assert.match(
-    desktopBlock,
-    /\.js-enabled \.nav-menu,\s*\.nav-menu\s*\{[^}]*border:\s*0;[^}]*box-shadow:\s*none;/s,
-    "Desktop navigation must not inherit a nested mobile disclosure frame"
+
+  // Everything that reacts to position uses IntersectionObserver.
+  const observers = [...scriptSource.matchAll(/new IntersectionObserver\(/g)];
+  assert.ok(
+    observers.length >= 3,
+    "Scroll spy, reveal, and the compact header must each observe intersections"
+  );
+
+  // And the only scroll listener is the batched progress fallback.
+  assert.equal(
+    [...scriptSource.matchAll(/addEventListener\("scroll",/g)].length,
+    1,
+    "No per-element scroll listeners beyond the progress fallback"
   );
 });
+test("cards and panel keep the prototype grid at every breakpoint", async () => {
+  const modernSource = await readUtf8("modern.css");
+  const generatorSource = await readUtf8("scripts/generate-static-pages.mjs");
 
+  // Card media precedes copy in source order, so mobile reads media-first.
+  const cardsBody = generatorSource.slice(
+    generatorSource.indexOf("export function renderProjectFeaturedCards")
+  );
+  assert.ok(
+    cardsBody.indexOf('class="thumb"') < cardsBody.indexOf('class="body"'),
+    "Card thumbs must precede card copy in source order"
+  );
+
+  assert.match(
+    modernSource,
+    /\.featured\s*\{[^}]*grid-template-columns:\s*1fr;/s,
+    "Featured cards must stack in one column by default"
+  );
+  assert.match(
+    modernSource,
+    /@media \(min-width: 60rem\)\s*\{[\s\S]*?\.featured\s*\{\s*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/,
+    "Featured cards must advance to two columns on desktop"
+  );
+  assert.match(
+    modernSource,
+    /\.card\.wide\s*\{\s*grid-column:\s*1 \/ -1;/,
+    "The wide card must span the featured grid"
+  );
+  assert.match(
+    modernSource,
+    /\.row\s*\{[^}]*grid-template-columns:\s*5\.2rem 1\.15fr 0\.8fr 1\.2fr auto;/s,
+    "Panel rows must keep the prototype's five-column rhythm"
+  );
+  assert.match(
+    modernSource,
+    /@media \(max-width: 60rem\)\s*\{[\s\S]*?\.row\s*\{[^}]*grid-template-columns:\s*4\.6rem 1fr auto;/,
+    "Rows must collapse type and stack below 60rem"
+  );
+  assert.match(
+    modernSource,
+    /@media \(max-width: 35rem\)\s*\{[\s\S]*?\.row\s*\{[^}]*grid-template-columns:\s*1fr auto;/,
+    "Rows must drop the status column on narrow phones"
+  );
+});
 test("modern typography preserves natural language wrapping and stable no-JS/reduced-motion flow", async () => {
   const modernSource = await readUtf8("modern.css");
 
-  for (const selector of [".hero h1", ".project-heading h3"]) {
+  for (const selector of [".hero h1"]) {
     const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const rule = modernSource.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`, "s"))?.[1];
     assert.ok(rule, `Expected modern heading rule for ${selector}`);
@@ -720,15 +668,18 @@ test("modern typography preserves natural language wrapping and stable no-JS/red
     assert.match(rule, /text-wrap:\s*balance/);
     assert.doesNotMatch(rule, /overflow-wrap:\s*anywhere/);
   }
-  assert.match(
+  // The scene machinery is gone: the resting layout is normal flow in every
+  // mode, so no oversized chapter heights may exist to collapse. The hero is
+  // the single full-viewport section, exactly as in the prototype.
+  assert.doesNotMatch(
     modernSource,
-    /html:not\(\.js-enabled\) \.hero,\s*html:not\(\.js-enabled\) \.about,\s*html:not\(\.js-enabled\) \.project-row\s*\{\s*min-height:\s*auto;/,
-    "No-JS mode must collapse cinematic chapter heights to normal flow"
+    /min-height:\s*(?!100svh)[0-9]+svh/,
+    "No cinematic chapter heights may exist — the resting layout is normal flow"
   );
   assert.match(
     modernSource,
-    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.hero,\s*\.about,\s*\.project-row\s*\{\s*min-height:\s*auto;/,
-    "Reduced motion must collapse cinematic chapter heights to normal flow"
+    /\.hero\s*\{[^}]*min-height:\s*100svh;/s,
+    "The hero must stay the one full-viewport section, as in the prototype"
   );
   assert.match(modernSource, /html,\s*body\s*\{\s*overflow-x:\s*clip;/);
   assert.match(
@@ -753,27 +704,43 @@ test("modern typography preserves natural language wrapping and stable no-JS/red
   );
   assert.match(
     modernSource,
-    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.button-primary,\s*\.project-link\s*\{\s*transform:\s*none\s*!important;/,
-    "Decorative CTA and project-link transforms must be removed under reduced motion"
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.button-primary\s*\{\s*transform:\s*none\s*!important;/,
+    "Decorative CTA transforms must be removed under reduced motion"
   );
 });
 
 test("Ft5 footer is one truthful static statement with no active marquee lifecycle", async () => {
   const indexHtml = await readUtf8("index.html");
-  const modernSource = await readUtf8("modern.css");
   const scriptSource = await readUtf8("script.js");
 
   assert.equal(
-    [...indexHtml.matchAll(/<span class="footer-marquee-set">/g)].length,
-    2,
-    "Compatibility markup must retain the two existing aria-hidden sets"
+    [...indexHtml.matchAll(/<span class="footer-marquee-set"/g)].length,
+    0,
+    "The duplicated compatibility marquee markup is retired"
   );
-  assert.match(indexHtml, /<p class="sr-only" data-i18n="about\.statement">/);
+  const footer = indexHtml.match(/<footer class="site-footer">([\s\S]*?)<\/footer>/)?.[1] ?? "";
+  assert.equal(
+    [...footer.matchAll(/data-i18n="about\.statement"/g)].length,
+    1,
+    "The footer statement must be exactly one truthful line"
+  );
+  assert.doesNotMatch(
+    scriptSource,
+    /footerMarquee|armFooterMarquee|disarmFooterMarquee|syncFooterMarqueeActive|visibilitychange/,
+    "No footer marquee lifecycle may exist in script.js"
+  );
+
+  // The hero marquee band is the one allowed continuous ribbon, and it must
+  // freeze under reduced motion.
+  const modernSource = await readUtf8("modern.css");
   assert.match(
     modernSource,
-    /\.footer-marquee-set:not\(:first-child\),\s*\.footer-marquee-set:first-child > :not\(:first-child\)\s*\{\s*display:\s*none;/,
-    "Only the first visual statement may remain"
+    /\.hero-marquee-track\s*\{[^}]*animation:\s*hero-marquee-slide/s,
+    "The hero band carries the prototype's marquee"
   );
-  assert.match(modernSource, /\.footer-marquee-set\s*\{[^}]*animation:\s*none;/s);
-  assert.doesNotMatch(scriptSource, /footerMarquee|visibilitychange/);
+  assert.match(
+    modernSource,
+    /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.hero-marquee-track\s*\{\s*animation:\s*none !important;/,
+    "The hero marquee must freeze under reduced motion"
+  );
 });

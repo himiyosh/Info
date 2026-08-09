@@ -37,13 +37,13 @@ const globalInventoryChildMode =
 const mutationGuardExpectedBytes = 7_554;
 const mutationGuardExpectedSha256 =
   "ab8c2da40d857bdfc54ec8794bd35eb0187e77804658ace274dd58549c1d00a1";
-const mobileNavigationExpectedBytes = 6_211;
+const mobileNavigationExpectedBytes = 6_222;
 const mobileNavigationBodyStartExpectedBytes = 273;
 const mobileNavigationHeaderExpectedSha256 =
   "0e56555309f1cd482e5b0a071cf213f6859415387ac7983795e29915a1781fb3";
-const mobileNavigationBodyExpectedBytes = 5_938;
+const mobileNavigationBodyExpectedBytes = 5_949;
 const mobileNavigationBodyExpectedSha256 =
-  "228bade1b831e0c6d50a4a656b5ec3f73bf4744f8618b91e4fe540d91129491e";
+  "c2c75f7286d1303968a84d91febd72ff94a9ae09f9ba2cb1945033ad71e20a50";
 const expectedMobileNavigationTestNames = [
   "mobile navigation enhancement is progressive and keeps no-JS links usable",
   "open mobile navigation wraps keyboard focus at its disclosure boundaries",

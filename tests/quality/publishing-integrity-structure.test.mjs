@@ -29,11 +29,11 @@ const globalInventoryChildMode =
     globalInventoryEnvironmentValue ||
   process.env[publishingIntegrityInventoryEnvironment] ===
     globalInventoryEnvironmentValue;
-const publishingIntegrityExpectedBytes = 4_501;
+const publishingIntegrityExpectedBytes = 4_388;
 const publishingIntegrityBodyStartExpectedBytes = 1_113;
-const publishingIntegrityBodyExpectedBytes = 3_388;
+const publishingIntegrityBodyExpectedBytes = 3_275;
 const publishingIntegrityBodyExpectedSha256 =
-  "2ea9dcf388a3b7b730a30b3d5ddce7c55bd1734dc83b61a6324083a7dcdd346d";
+  "a8e5d5f9614132faab2db8eafc6b1024968f28da7a151a8847fb7fed1c256067";
 const expectedPublishingIntegrityTestNames = [
   "Pages artifact whitelist is strict and covers all locally referenced production files",
   "robots.txt and sitemap.xml are consistent"

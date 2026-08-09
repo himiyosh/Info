@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>himiyosh | エンジニアのポートフォリオ — Redesign Prototype</title>
+<meta name="description" content="エンジニア himiyosh の個人ポートフォリオ。技術への関心、公開プロジェクト、連絡先を日本語と英語で紹介します。">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#0a111c">
+<link rel="canonical" href="https://himiyosh.github.io/Info/">
+<meta name="robots" content="noindex">  <!-- プレビュー環境: 検索エンジンから除外し、canonical は本番を指す -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns%3D%22http://www.w3.org/2000/svg%22 viewBox%3D%220 0 64 64%22%3E%3Crect width%3D%2264%22 height%3D%2264%22 rx%3D%2214%22 fill%3D%22%230a111c%22/%3E%3Cpath d%3D%22M10 45 L24 26 L32 35 L43 19 L54 45%22 fill%3D%22none%22 stroke%3D%22%23e9a13b%22 stroke-width%3D%224.5%22 stroke-linecap%3D%22round%22 stroke-linejoin%3D%22round%22/%3E%3Ccircle cx%3D%2247%22 cy%3D%2213%22 r%3D%224%22 fill%3D%22%23f1ece1%22/%3E%3C/svg%3E">
+<!-- OGP: og:image は現行アセット参照。新配色版への再生成手順は production-notes.md を参照 -->
+<meta property="og:site_name" content="himiyosh">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://himiyosh.github.io/Info/">
+<meta property="og:title" content="himiyosh | エンジニアのポートフォリオ">
+<meta property="og:description" content="エンジニア himiyosh の個人ポートフォリオ。技術への関心、公開プロジェクト、連絡先を日本語と英語で紹介します。">
+<meta property="og:image" content="https://himiyosh.github.io/Info/assets/portfolio-preview.jpg">
+<meta property="og:image:width" content="960">
+<meta property="og:image:height" content="540">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="himiyosh | エンジニアのポートフォリオ">
+<meta name="twitter:description" content="エンジニア himiyosh の個人ポートフォリオ。技術への関心、公開プロジェクト、連絡先を日本語と英語で紹介します。">
+<meta name="twitter:image" content="https://himiyosh.github.io/Info/assets/portfolio-preview.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=M+PLUS+Rounded+1c:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS — 夜藍とデコード / Alpine Ink · Decode
+   ============================================================ */
+:root{
+  --ink-950:#0a111c;      /* 深夜藍 base */
+  --ink-900:#0e1826;      /* 夜藍 surface */
+  --ink-800:#14202f;      /* panel */
+  --ink-700:#1c2b3d;      /* panel raised */
+  --line:rgba(241,236,225,.10);
+  --line-soft:rgba(241,236,225,.06);
+  --washi:#f1ece1;        /* 和紙 text */
+  --mist:#8da2b8;         /* 灰青 muted */
+  --accent:#e9a13b;        /* 山吹 accent */
+  --accent-deep:#c9832a;
+  --ok:#6fbf8e;            /* status green */
+  --ok-glow:rgba(111,191,142,.7);
+  --nav-bg:rgba(10,17,28,.82);
+  --badge-bg:rgba(10,17,28,.78);
+  --hover-tint:rgba(233,161,59,.05);
+  --glow:rgba(233,161,59,.14);
+  --contact-glow:rgba(233,161,59,.08);
+  --accent-glow:rgba(233,161,59,.55);
+  --card-shadow:rgba(0,0,0,.8);
+  --topo:rgba(241,236,225,.055);
+  --topo-hl:rgba(233,161,59,.12);
+  --font-display:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+  --font-body:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+  --font-mono:"IBM Plex Mono", ui-monospace, monospace;
+  --w:min(1160px, 92vw);
+  --radius:14px;
+  --ease:cubic-bezier(.22,.8,.24,1);
+}
+
+/* ============================================================
+   COLOR MODES — 夜藍(ダーク/既定) ⇄ 白妙(ライト)
+   ヘッダー右端のトグルで切替。初期値は OS の配色設定に追従
+   ※ --ink-* は「面」のスロット名。白妙では明色が入ります
+   ============================================================ */
+/* ---- イースターエッグ: 暁 — 夜明けの梅紫 × 薄紅 ----
+   モードトグルを3秒長押しすると目を覚まします(UIには非表示) */
+html[data-theme="akatsuki"]{
+  --ink-950:#120c1a; --ink-900:#191129; --ink-800:#211836; --ink-700:#2c2147;
+  --line:rgba(243,236,238,.11); --line-soft:rgba(243,236,238,.065);
+  --washi:#f5eee8; --mist:#a99bbd;
+  --accent:#f0919f; --accent-deep:#cf6f83;
+  --ok:#7ec9a3; --ok-glow:rgba(126,201,163,.6);
+  --nav-bg:rgba(18,12,26,.82); --badge-bg:rgba(18,12,26,.78);
+  --hover-tint:rgba(240,145,159,.06); --glow:rgba(240,145,159,.15);
+  --contact-glow:rgba(240,145,159,.09); --accent-glow:rgba(240,145,159,.5);
+  --card-shadow:rgba(0,0,0,.8);
+  --topo:rgba(245,238,232,.05); --topo-hl:rgba(240,145,159,.14);
+}
+html[data-theme="shirotae"]{        /* 白妙 — 和紙の白 × 瑠璃(ライト) */
+  color-scheme:light;
+  --ink-950:#f4f1e9; --ink-900:#ece7da; --ink-800:#fbf9f4; --ink-700:#e2dbc9;
+  --line:rgba(31,41,55,.16); --line-soft:rgba(31,41,55,.09);
+  --washi:#1f2937; --mist:#5c6b84;
+  --accent:#2e5bd7; --accent-deep:#2348ad;
+  --ok:#178a52; --ok-glow:rgba(23,138,82,.4);
+  --nav-bg:rgba(245,242,234,.85); --badge-bg:rgba(251,249,244,.82);
+  --hover-tint:rgba(46,91,215,.06); --glow:rgba(46,91,215,.10);
+  --contact-glow:rgba(46,91,215,.08); --accent-glow:rgba(46,91,215,.35);
+  --card-shadow:rgba(31,41,55,.22);
+  --topo:rgba(31,41,55,.10); --topo-hl:rgba(46,91,215,.16);
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;color-scheme:dark}
+body{
+  background:var(--ink-950);
+  color:var(--washi);
+  font-family:var(--font-body);
+  font-size:16px;
+  font-weight:500;
+  line-height:1.85;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  transition:background-color .5s var(--ease), color .5s var(--ease);
+}
+::selection{background:var(--accent);color:var(--ink-950)}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+
+.skip{
+  position:fixed;top:-100px;left:16px;z-index:200;
+  background:var(--accent);color:var(--ink-950);
+  padding:.6rem 1rem;border-radius:8px;font-weight:700;
+  transition:top .2s var(--ease);
+}
+.skip:focus{top:14px}
+
+/* ---------- progress ---------- */
+.progress{
+  position:fixed;top:0;left:0;height:2px;width:0%;
+  background:linear-gradient(90deg,var(--accent),#f3c274);
+  z-index:120;
+}
+
+/* ---------- nav ---------- */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:1rem;flex-wrap:wrap;
+  padding:1rem calc((100vw - var(--w))/2);
+  transition:background .35s var(--ease), border-color .35s var(--ease), padding .35s var(--ease);
+  border-bottom:1px solid transparent;
+}
+.nav.scrolled{
+  background:var(--nav-bg);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border-bottom-color:var(--line-soft);
+  padding-top:.7rem;padding-bottom:.7rem;
+}
+.logo{
+  font-family:var(--font-mono);font-size:1rem;font-weight:500;
+  letter-spacing:.02em;display:inline-flex;align-items:center;gap:2px;
+}
+.logo .caret{color:var(--accent);animation:blink 1.15s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.nav nav{display:flex;flex-wrap:wrap;align-items:center;gap:clamp(.9rem,2.5vw,1.8rem)}
+.nav nav a{
+  font-family:var(--font-mono);font-size:.8rem;letter-spacing:.08em;
+  color:var(--mist);position:relative;padding:.25rem 0;
+  transition:color .25s var(--ease);
+}
+.nav nav a::after{
+  content:"";position:absolute;left:0;bottom:0;height:1px;width:0%;
+  background:var(--accent);transition:width .3s var(--ease);
+}
+.nav nav a:hover{color:var(--washi)}
+.nav nav a:hover::after{width:100%}
+.nav nav a.lang{
+  border:1px solid var(--line);border-radius:999px;
+  padding:.3rem .85rem;color:var(--washi);
+}
+.nav nav a.lang:hover{border-color:var(--accent);color:var(--accent)}
+.nav nav a.lang::after{display:none}
+
+/* ---------- hero ---------- */
+.hero{
+  position:relative;min-height:100svh;
+  display:flex;align-items:center;
+  padding:clamp(7rem,14vh,10rem) 0 clamp(3rem,8vh,5rem);
+  overflow:hidden;
+}
+.hero-bg{position:absolute;inset:0;z-index:0;pointer-events:none}
+.hero-bg svg{position:absolute;inset:-10%;width:120%;height:120%;opacity:.85}
+.hero-bg svg path{fill:none;stroke:var(--topo);stroke-width:1.1}
+.hero-bg svg path.hl{stroke:var(--topo-hl)}
+.hero-glow{
+  position:absolute;width:56vw;height:56vw;max-width:760px;max-height:760px;
+  right:-14vw;top:-10vw;border-radius:50%;
+  background:radial-gradient(circle,var(--glow),transparent 62%);
+  filter:blur(10px);
+  animation:drift 26s ease-in-out infinite alternate;
+}
+@keyframes drift{to{transform:translate(-5%,7%) scale(1.08)}}
+.hero-inner{
+  position:relative;z-index:1;width:var(--w);margin:0 auto;
+  display:grid;grid-template-columns:1.25fr .85fr;
+  gap:clamp(2rem,5vw,4.5rem);align-items:center;
+}
+.kicker{
+  font-family:var(--font-mono);font-size:.78rem;letter-spacing:.22em;
+  color:var(--accent);display:flex;align-items:center;gap:.8rem;
+  margin-bottom:1.6rem;
+}
+.kicker::before{content:"";width:34px;height:1px;background:var(--accent)}
+.hero h1{
+  font-family:var(--font-display);font-weight:900;
+  font-size:clamp(2.7rem,7.6vw,6.2rem);
+  line-height:1.2;letter-spacing:.04em;
+  margin-bottom:1.6rem;
+}
+.hero h1 .accent{color:var(--accent)}
+.hero .lede{
+  color:var(--mist);max-width:34em;font-size:clamp(.95rem,1.4vw,1.05rem);
+  margin-bottom:2.4rem;
+}
+.cta-row{display:flex;gap:1rem;flex-wrap:wrap}
+.btn{
+  display:inline-flex;align-items:center;gap:.6rem;
+  font-family:var(--font-mono);font-size:.85rem;letter-spacing:.06em;
+  padding:.95rem 1.7rem;border-radius:999px;
+  transition:transform .25s var(--ease), background .25s var(--ease),
+             color .25s var(--ease), border-color .25s var(--ease),
+             box-shadow .25s var(--ease);
+}
+.btn:hover{transform:translateY(-2px)}
+.btn-primary{
+  background:var(--accent);color:var(--ink-950);font-weight:500;
+  box-shadow:0 10px 30px -12px var(--accent-glow);
+}
+.btn-primary:hover{background:color-mix(in srgb, var(--accent) 80%, #fff)}
+.btn-ghost{border:1px solid var(--line);color:var(--washi)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.btn .arrow{transition:transform .25s var(--ease)}
+.btn:hover .arrow{transform:translateX(4px)}
+
+.hero-photo{position:relative}
+.hero-photo .frame{
+  position:relative;border:1px solid var(--line);border-radius:var(--radius);
+  overflow:hidden;background:var(--ink-800);
+  aspect-ratio:4/5;
+  transform:rotate(1.4deg);
+  transition:transform .6s var(--ease);
+}
+.hero-photo:hover .frame{transform:rotate(0deg)}
+.hero-photo img{
+  width:100%;height:100%;object-fit:cover;
+  filter:saturate(.92) contrast(1.04);
+}
+.hero-photo .tick{
+  position:absolute;width:16px;height:16px;border:1px solid var(--accent);z-index:2;
+}
+.tick.tl{top:-6px;left:-6px;border-right:0;border-bottom:0}
+.tick.tr{top:-6px;right:-6px;border-left:0;border-bottom:0}
+.tick.bl{bottom:-6px;left:-6px;border-right:0;border-top:0}
+.tick.br{bottom:-6px;right:-6px;border-left:0;border-top:0}
+.hero-photo figcaption{
+  font-family:var(--font-mono);font-size:.72rem;letter-spacing:.12em;
+  color:var(--mist);margin-top:1rem;text-align:right;
+}
+.scroll-cue{
+  position:absolute;left:50%;bottom:2rem;transform:translateX(-50%);
+  z-index:1;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.3em;
+  color:var(--mist);display:flex;flex-direction:column;align-items:center;gap:.7rem;
+}
+.scroll-cue::after{
+  content:"";width:1px;height:44px;
+  background:linear-gradient(var(--mist),transparent);
+  animation:cue 2s var(--ease) infinite;
+  transform-origin:top;
+}
+@keyframes cue{0%{transform:scaleY(0)}45%{transform:scaleY(1)}100%{transform:scaleY(1);opacity:0}}
+
+/* ---------- marquee ---------- */
+.marquee{
+  border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);
+  overflow:hidden;padding:1.05rem 0;background:var(--ink-900);
+}
+.marquee-track{display:flex;width:max-content;animation:slide 26s linear infinite}
+.marquee-track span{
+  font-family:var(--font-display);font-weight:700;
+  font-size:1rem;letter-spacing:.14em;white-space:nowrap;
+  color:var(--mist);padding-right:3rem;
+}
+.marquee-track span i{font-style:normal;color:var(--accent);padding-right:3rem}
+@keyframes slide{to{transform:translateX(-50%)}}
+
+/* ---------- sections ---------- */
+section{padding:clamp(5rem,12vh,8.5rem) 0}
+.container{width:var(--w);margin:0 auto}
+.eyebrow{
+  font-family:var(--font-mono);font-size:.74rem;letter-spacing:.24em;
+  color:var(--accent);display:flex;align-items:center;gap:.8rem;
+  margin-bottom:1.3rem;
+}
+.eyebrow::before{content:"";width:34px;height:1px;background:var(--accent)}
+h2.display{
+  font-family:var(--font-display);font-weight:900;
+  font-size:clamp(2rem,4.8vw,3.5rem);line-height:1.3;
+  letter-spacing:.03em;
+  margin-bottom:1.4rem;
+}
+
+/* about */
+.about-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:clamp(2rem,5vw,5rem);align-items:start;
+}
+.about-grid .sticky{position:sticky;top:7rem}
+.about-copy p{color:var(--mist);margin-bottom:1.3rem;max-width:36em}
+.about-copy p strong{color:var(--washi);font-weight:700}
+.facts{display:flex;flex-wrap:wrap;gap:.7rem;margin-top:2rem}
+.fact{
+  font-family:var(--font-mono);font-size:.76rem;letter-spacing:.06em;
+  border:1px solid var(--line);border-radius:999px;
+  padding:.5rem 1rem;color:var(--washi);
+  display:inline-flex;align-items:center;gap:.55rem;
+}
+.fact b{color:var(--accent);font-weight:500}
+
+/* works — featured */
+.section-head{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  gap:1.5rem;flex-wrap:wrap;margin-bottom:2.8rem;
+}
+.section-head .lede{color:var(--mist);max-width:30em;font-size:.95rem}
+.featured{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:1.4rem;margin-bottom:4rem;
+}
+.card{
+  position:relative;border:1px solid var(--line);border-radius:var(--radius);
+  overflow:hidden;background:var(--ink-800);
+  display:flex;flex-direction:column;
+  transition:transform .45s var(--ease), border-color .45s var(--ease),
+             box-shadow .45s var(--ease);
+}
+.card:hover{
+  transform:translateY(-6px);
+  border-color:color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow:0 26px 60px -30px var(--card-shadow);
+}
+.card.wide{grid-column:1 / -1}
+.card .thumb{
+  position:relative;aspect-ratio:16/9;overflow:hidden;background:var(--ink-700);
+}
+.card.wide .thumb{aspect-ratio:21/9}
+.card .thumb img{
+  width:100%;height:100%;object-fit:cover;
+  transition:transform .8s var(--ease), filter .8s var(--ease);
+  filter:saturate(.9);
+}
+.card:hover .thumb img{transform:scale(1.045);filter:saturate(1.05)}
+.card .thumb .badge{
+  position:absolute;top:1rem;left:1rem;z-index:2;
+  font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;
+  background:var(--badge-bg);backdrop-filter:blur(8px);
+  border:1px solid var(--line);border-radius:999px;
+  padding:.35rem .85rem;color:var(--washi);
+}
+.card .body{padding:1.6rem 1.6rem 1.7rem;display:flex;flex-direction:column;gap:.85rem;flex:1}
+.card h3{
+  font-size:1.35rem;font-weight:700;line-height:1.4;
+  display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;
+}
+.card h3 .jp{font-family:var(--font-display)}
+.card p{color:var(--mist);font-size:.92rem;flex:1}
+.tags{display:flex;flex-wrap:wrap;gap:.45rem}
+.tags span{
+  font-family:var(--font-mono);font-size:.68rem;letter-spacing:.05em;
+  color:var(--mist);border:1px solid var(--line-soft);border-radius:6px;
+  padding:.28rem .6rem;
+}
+.card .links{display:flex;gap:1.4rem;padding-top:.4rem}
+.link{
+  font-family:var(--font-mono);font-size:.8rem;letter-spacing:.05em;
+  color:var(--accent);display:inline-flex;align-items:center;gap:.45rem;
+  position:relative;
+}
+.link::after{
+  content:"";position:absolute;left:0;bottom:-3px;height:1px;width:0%;
+  background:var(--accent);transition:width .3s var(--ease);
+}
+.link:hover::after{width:100%}
+.link .ext{font-size:.72rem;transform:translateY(-1px)}
+
+/* works — panel list (Network+ へのオマージュ) */
+.panel{
+  border:1px solid var(--line);border-radius:var(--radius);
+  overflow:hidden;background:var(--ink-900);
+}
+.panel-head{
+  display:flex;align-items:center;gap:.9rem;
+  padding:.85rem 1.4rem;border-bottom:1px solid var(--line);
+  background:var(--ink-800);
+  font-family:var(--font-mono);font-size:.72rem;letter-spacing:.14em;
+  color:var(--mist);
+}
+.panel-head .dots{display:flex;gap:6px}
+.panel-head .dots i{width:9px;height:9px;border-radius:50%;background:var(--line);display:block}
+.panel-head .dots i:first-child{background:var(--accent)}
+.row{
+  display:grid;
+  grid-template-columns:5.2rem 1.15fr .8fr 1.2fr auto;
+  align-items:center;gap:1.2rem;
+  padding:1.15rem 1.4rem;
+  border-top:1px solid var(--line-soft);
+  transition:background .25s var(--ease);
+  cursor:pointer;
+}
+.row:first-of-type{border-top:0}
+.row:hover, .row:focus-within{background:var(--hover-tint)}
+.row .status{
+  font-family:var(--font-mono);font-size:.72rem;letter-spacing:.08em;
+  display:inline-flex;align-items:center;gap:.5rem;color:var(--ok);
+}
+.row .status::before{
+  content:"";width:7px;height:7px;border-radius:50%;
+  background:var(--ok);box-shadow:0 0 8px var(--ok-glow);
+}
+.row .status.src{color:var(--mist)}
+.row .status.src::before{background:var(--mist);box-shadow:none}
+.row .name{font-weight:700;font-size:1.02rem;transition:color .25s var(--ease)}
+.row:hover .name{color:var(--accent)}
+.row .type{font-family:var(--font-mono);font-size:.74rem;letter-spacing:.06em;color:var(--mist)}
+.row .stack{font-family:var(--font-mono);font-size:.72rem;color:var(--mist);opacity:.75}
+.row .go{
+  font-family:var(--font-mono);font-size:.8rem;color:var(--accent);
+  transition:transform .25s var(--ease);white-space:nowrap;
+}
+.row:hover .go{transform:translateX(4px)}
+
+/* floating preview */
+.peek{
+  position:fixed;z-index:90;width:300px;aspect-ratio:16/9;
+  border-radius:10px;overflow:hidden;border:1px solid var(--line);
+  pointer-events:none;opacity:0;transform:scale(.9) rotate(-2deg);
+  transition:opacity .3s var(--ease), transform .3s var(--ease);
+  box-shadow:0 30px 60px -20px var(--card-shadow);
+  display:none;
+}
+.peek.on{opacity:1;transform:scale(1) rotate(-2deg)}
+.peek img{width:100%;height:100%;object-fit:cover}
+@media (hover:hover) and (pointer:fine) and (min-width:960px){
+  .peek{display:block}
+}
+
+/* dark / light toggle */
+.mode-toggle{
+  width:34px;height:34px;border-radius:50%;
+  border:1px solid var(--line);background:transparent;color:var(--washi);
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:border-color .25s var(--ease), color .25s var(--ease), transform .35s var(--ease);
+}
+.mode-toggle:hover{border-color:var(--accent);color:var(--accent);transform:rotate(20deg)}
+.mode-toggle svg{width:16px;height:16px}
+.mode-toggle .i-sun{display:none}
+html[data-theme="shirotae"] .mode-toggle .i-sun{display:block}
+html[data-theme="shirotae"] .mode-toggle .i-moon{display:none}
+
+/* stack */
+.toolbox{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;margin-top:2.6rem}
+.tool-group{
+  border:1px solid var(--line);border-radius:var(--radius);
+  padding:1.6rem;background:var(--ink-900);
+}
+.tool-group h3{
+  font-family:var(--font-mono);font-size:.74rem;letter-spacing:.24em;
+  color:var(--accent);margin-bottom:1.2rem;font-weight:500;
+}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chips span{
+  font-family:var(--font-mono);font-size:.74rem;
+  border:1px solid var(--line-soft);border-radius:8px;
+  padding:.4rem .75rem;color:var(--washi);
+  transition:border-color .25s var(--ease), color .25s var(--ease);
+}
+.chips span:hover{border-color:var(--accent);color:var(--accent)}
+
+/* contact */
+.contact{
+  text-align:center;position:relative;overflow:hidden;
+  background:
+    radial-gradient(60% 60% at 50% 100%, var(--contact-glow), transparent 70%),
+    var(--ink-950);
+}
+.contact h2.display{font-size:clamp(2.6rem,7vw,5.4rem);margin-bottom:1.2rem}
+.contact .lede{color:var(--mist);margin-bottom:3rem}
+.mail{
+  font-family:var(--font-mono);
+  font-size:clamp(1.05rem,3.4vw,2rem);
+  letter-spacing:.03em;color:var(--washi);
+  position:relative;display:inline-block;padding-bottom:.4rem;
+}
+.mail::after{
+  content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;
+  background:var(--line);
+}
+.mail::before{
+  content:"";position:absolute;left:0;bottom:0;height:2px;width:0%;
+  background:var(--accent);z-index:1;transition:width .45s var(--ease);
+}
+.mail:hover::before{width:100%}
+.mail:hover{color:var(--accent)}
+.contact .sub-links{margin-top:2.6rem;display:flex;justify-content:center;gap:2rem;flex-wrap:wrap}
+
+/* footer */
+footer{
+  border-top:1px solid var(--line-soft);
+  padding:2.4rem 0 3rem;
+}
+.foot{
+  width:var(--w);margin:0 auto;
+  display:flex;justify-content:space-between;align-items:flex-start;
+  gap:1.5rem;flex-wrap:wrap;
+}
+.foot small{color:var(--mist);font-size:.78rem;display:block;max-width:34em}
+.foot .clock{
+  font-family:var(--font-mono);font-size:.8rem;letter-spacing:.1em;
+  color:var(--washi);display:flex;align-items:center;gap:.6rem;
+}
+.foot .clock::before{
+  content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);
+  box-shadow:0 0 8px var(--ok-glow);
+}
+.foot .right{display:flex;flex-direction:column;align-items:flex-end;gap:.9rem}
+.top-link{
+  font-family:var(--font-mono);font-size:.76rem;letter-spacing:.14em;
+  color:var(--mist);
+}
+.top-link:hover{color:var(--accent)}
+
+/* view transitions(モード切替クロスフェード) */
+::view-transition-old(root),
+::view-transition-new(root){animation-duration:.45s}
+
+/* scroll spy */
+.nav nav a.active{color:var(--washi)}
+.nav nav a.active::after{width:100%}
+
+/* image placeholders(読み込み前・失敗時) */
+.ph::before{
+  content:attr(data-initial);
+  position:absolute;inset:0;display:grid;place-items:center;
+  background:linear-gradient(140deg,var(--ink-700),var(--ink-800));
+  font-family:var(--font-display);font-weight:900;
+  font-size:clamp(3rem,8vw,5.5rem);letter-spacing:.05em;
+  color:var(--washi);opacity:.14;
+}
+.ph::after{
+  content:attr(data-label);
+  position:absolute;left:50%;bottom:12%;transform:translateX(-50%);
+  font-family:var(--font-mono);font-size:.6rem;letter-spacing:.32em;
+  color:var(--mist);opacity:.55;
+}
+.ph img{position:relative;z-index:1}
+
+/* peek fallback */
+.peek .peek-fallback{
+  position:absolute;inset:0;display:none;place-items:center;
+  background:linear-gradient(140deg,var(--ink-700),var(--ink-800));
+  font-family:var(--font-display);font-weight:900;font-size:2.8rem;
+  color:var(--washi);opacity:.9;
+}
+.peek .peek-fallback b{opacity:.18;font-weight:900}
+.peek.noimg img{display:none}
+.peek.noimg .peek-fallback{display:grid}
+
+/* copy email */
+.mail-row{display:flex;align-items:center;justify-content:center;gap:1.1rem;flex-wrap:wrap}
+.copy-btn{
+  font-family:var(--font-mono);font-size:.7rem;letter-spacing:.14em;
+  border:1px solid var(--line);background:transparent;color:var(--mist);
+  border-radius:999px;padding:.6rem 1.1rem;cursor:pointer;
+  transition:border-color .25s var(--ease), color .25s var(--ease), transform .25s var(--ease);
+}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.copy-btn.done{border-color:var(--ok);color:var(--ok)}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;bottom:2rem;z-index:130;
+  transform:translate(-50%,140%);opacity:0;
+  display:flex;align-items:center;gap:.6rem;
+  background:var(--ink-800);color:var(--washi);
+  border:1px solid var(--line);border-radius:999px;
+  padding:.8rem 1.4rem;
+  font-family:var(--font-mono);font-size:.78rem;letter-spacing:.06em;
+  box-shadow:0 18px 40px -18px var(--card-shadow);
+  transition:transform .4s var(--ease), opacity .4s var(--ease);
+}
+.toast.on{transform:translate(-50%,0);opacity:1}
+.toast::before{
+  content:"";width:7px;height:7px;border-radius:50%;
+  background:var(--ok);box-shadow:0 0 8px var(--ok-glow);
+}
+
+/* mode-toggle 長押しチャージ(暁イースターエッグ) */
+.mode-toggle.charging{animation:charge 3s linear forwards}
+@keyframes charge{
+  to{border-color:var(--accent);color:var(--accent);
+     box-shadow:0 0 0 5px color-mix(in srgb, var(--accent) 30%, transparent),
+                0 0 22px var(--accent-glow)}
+}
+
+/* reveal */
+.reveal{opacity:0;transform:translateY(26px);transition:opacity .8s var(--ease), transform .8s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+.reveal.d1{transition-delay:.08s}.reveal.d2{transition-delay:.16s}.reveal.d3{transition-delay:.24s}
+
+/* ---------- responsive ---------- */
+@media (max-width:960px){
+  .hero-inner{grid-template-columns:1fr;gap:3rem}
+  .hero-photo{max-width:420px}
+  .featured{grid-template-columns:1fr}
+  .about-grid{grid-template-columns:1fr}
+  .about-grid .sticky{position:static}
+  .toolbox{grid-template-columns:1fr}
+  .row{grid-template-columns:4.6rem 1fr auto;gap:.9rem}
+  .row .type,.row .stack{display:none}
+}
+@media (max-width:560px){
+  .nav{padding-left:4vw;padding-right:4vw}
+  .row{grid-template-columns:1fr auto;padding:1rem 1.1rem}
+  .row .status{display:none}
+  .scroll-cue{display:none}
+}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .reveal{opacity:1;transform:none}
+  .marquee-track{transform:none}
+}
+</style>
+<script>/* 初回描画前に OS の配色設定を反映(ライト環境でのチラつき防止) */
+if (matchMedia("(prefers-color-scheme: light)").matches) document.documentElement.dataset.theme = "shirotae";
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"WebSite","@id":"https://himiyosh.github.io/Info/#site","url":"https://himiyosh.github.io/Info/","name":"himiyosh","inLanguage":["ja","en"]},
+ {"@type":"Person","@id":"https://himiyosh.github.io/Info/#person","name":"himiyosh","jobTitle":"Engineer","url":"https://himiyosh.github.io/Info/","email":"mailto:himiyosh@gmail.com","sameAs":["https://github.com/himiyosh"]},
+ {"@type":"ItemList","name":"公開プロジェクト","itemListElement":[
+  {"@type":"ListItem","position":1,"name":"TechDB","url":"https://techdb.studio344.net/"},
+  {"@type":"ListItem","position":2,"name":"AIエージェント、いま何が起きている?","url":"https://himiyosh.github.io/JoJo-AIAgent/"},
+  {"@type":"ListItem","position":3,"name":"Git、こわくない","url":"https://himiyosh.github.io/JoJo-Git/"},
+  {"@type":"ListItem","position":4,"name":"UCFitness","url":"https://ucfitness.studio344.net/"},
+  {"@type":"ListItem","position":5,"name":"Encode / Decode Tool","url":"https://himiyosh.github.io/encode-decode-tool/"},
+  {"@type":"ListItem","position":6,"name":"Network+","url":"https://github.com/himiyosh/network-plus-extension"},
+  {"@type":"ListItem","position":7,"name":"URLDecoder","url":"https://himiyosh.github.io/URLDecoder/"},
+  {"@type":"ListItem","position":8,"name":"ImageResizer","url":"https://himiyosh.github.io/ImageResizer/"},
+  {"@type":"ListItem","position":9,"name":"Portfolio","url":"https://github.com/himiyosh/Info"}
+ ]}
+]}
+</script>
+</head>
+<body id="top">
+
+<a class="skip" href="#main">メインコンテンツへ移動</a>
+<div class="progress" aria-hidden="true"></div>
+
+<header class="nav" id="nav">
+  <a class="logo" href="#top">himiyosh<span class="caret" aria-hidden="true">▌</span></a>
+  <nav aria-label="サイト内ナビゲーション">
+    <a href="#about">ABOUT</a>
+    <a href="#works">WORKS</a>
+    <a href="#contact">CONTACT</a>
+    <a class="lang" href="https://himiyosh.github.io/Info/en/" hreflang="en" aria-label="English version（新しいタブで開きます）" target="_blank" rel="noopener">EN</a>
+    <button class="mode-toggle" type="button" aria-pressed="false" aria-label="白妙（ライトモード）に切り替え">
+      <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+    </button>
+  </nav>
+</header>
+
+<main id="main">
+
+  <!-- ============ HERO ============ -->
+  <section class="hero" aria-label="紹介">
+    <div class="hero-bg" aria-hidden="true">
+      <div class="hero-glow"></div>
+      <svg viewBox="0 0 1200 800" preserveAspectRatio="none">
+        <path d="M-50,620 C180,560 300,660 520,600 S900,520 1250,580"/>
+        <path d="M-50,560 C200,500 340,610 560,545 S920,455 1250,520"/>
+        <path d="M-50,500 C220,440 380,560 600,490 S940,395 1250,460"/>
+        <path d="M-50,440 C240,385 420,505 640,435 S960,335 1250,400"/>
+        <path class="hl" d="M-50,380 C260,330 460,450 680,380 S980,280 1250,340"/>
+        <path d="M-50,320 C280,275 500,395 720,325 S1000,225 1250,280"/>
+        <path d="M-50,260 C300,220 540,340 760,270 S1020,175 1250,220"/>
+      </svg>
+    </div>
+
+    <div class="hero-inner">
+      <div>
+        <p class="kicker">ENGINEER / ROOKIE DAD — PORTFOLIO</p>
+        <h1>
+          <span class="decode" data-text="技術を、">技術を、</span><br>
+          <span class="decode accent" data-text="役に立つ形へ。">役に立つ形へ。</span>
+        </h1>
+        <p class="lede">課題を解き、学びを分かち合う。好奇心を実用へつなぐ、himiyosh のポートフォリオです。</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#works">プロジェクトを見る <span class="arrow" aria-hidden="true">→</span></a>
+          <a class="btn btn-ghost" href="#contact">連絡する</a>
+        </div>
+      </div>
+
+      <figure class="hero-photo reveal d2">
+        <div class="frame ph" data-initial="h" data-label="PROFILE">
+          <span class="tick tl" aria-hidden="true"></span><span class="tick tr" aria-hidden="true"></span>
+          <span class="tick bl" aria-hidden="true"></span><span class="tick br" aria-hidden="true"></span>
+          <img src="https://himiyosh.github.io/Info/assets/profile.jpg"
+               alt="山岳風景の中で手を上げる himiyosh のシルエット"
+               loading="eager" onerror="this.style.display='none'">
+        </div>
+        <figcaption>画面の内外で、好奇心を持ち続ける。</figcaption>
+      </figure>
+    </div>
+
+    <p class="scroll-cue" aria-hidden="true">SCROLL</p>
+  </section>
+
+  <!-- ============ MARQUEE ============ -->
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <span>好奇心を、実用へ。<i>◆</i>Curiosity into practice<i>◆</i>好奇心を、実用へ。<i>◆</i>Curiosity into practice<i>◆</i></span>
+      <span>好奇心を、実用へ。<i>◆</i>Curiosity into practice<i>◆</i>好奇心を、実用へ。<i>◆</i>Curiosity into practice<i>◆</i></span>
+    </div>
+  </div>
+
+  <!-- ============ ABOUT ============ -->
+  <section id="about" aria-labelledby="about-title">
+    <div class="container about-grid">
+      <div class="sticky reveal">
+        <p class="eyebrow">ABOUT</p>
+        <h2 id="about-title" class="display decode" data-text="好奇心を、実用へ。">好奇心を、実用へ。</h2>
+      </div>
+      <div class="about-copy reveal d1">
+        <p>某グローバルIT企業で、<strong>テクノロジー領域の課題解決</strong>に取り組んでいます。役に立つ知識や技術を見つけ、試し、<strong>分かりやすい形にする</strong>ことが好きです。</p>
+        <p>このサイトでは、個人で公開している小さなツールと実験を紹介しています。内容はすべて個人の見解です。</p>
+        <div class="facts">
+          <span class="fact"><b>09</b> 公開プロジェクト</span>
+          <span class="fact"><b>JA / EN</b> バイリンガル対応</span>
+          <span class="fact"><b>OSS</b> ソース公開中心</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WORKS ============ -->
+  <section id="works" aria-labelledby="works-title">
+    <div class="container">
+      <div class="section-head reveal">
+        <div>
+          <p class="eyebrow">WORKS — 09 PUBLIC PROJECTS</p>
+          <h2 id="works-title" class="display decode" data-text="小さな不便を、道具に。">小さな不便を、道具に。</h2>
+        </div>
+        <p class="lede">日々の不便を小さくするために作った、公開中のサイト・サービス・ツールです。</p>
+      </div>
+
+      <!-- featured -->
+      <div class="featured">
+        <article class="card wide reveal">
+          <div class="thumb ph" data-initial="T" data-label="PREVIEW">
+            <span class="badge">AIニュース / 自動化ポータル</span>
+            <img src="https://himiyosh.github.io/Info/assets/techdb-preview.jpg" alt="TechDB のプレビュー" loading="lazy" onerror="this.style.display='none'">
+          </div>
+          <div class="body">
+            <h3>TechDB</h3>
+            <p>AIエコシステムの更新情報を14カテゴリで収集・要約し、読む順番や検索、運用状況を一か所にまとめる自動更新ポータルです。</p>
+            <div class="tags"><span>Astro</span><span>TypeScript</span><span>Cloudflare</span><span>AI agents</span></div>
+            <div class="links">
+              <a class="link" href="https://techdb.studio344.net/" target="_blank" rel="noopener" aria-label="TechDB を開く（新しいタブで開きます）">サイトを開く <span class="ext" aria-hidden="true">↗</span></a>
+              <a class="link" href="https://github.com/himiyosh/tech-dashboard" target="_blank" rel="noopener" aria-label="TechDB のソースを GitHub で見る（新しいタブで開きます）">SOURCE <span class="ext" aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card reveal d1">
+          <div class="thumb ph" data-initial="AI" data-label="PREVIEW">
+            <span class="badge">公開スライドデッキ</span>
+            <img src="https://himiyosh.github.io/Info/assets/jojo-aiagent-preview.jpg" alt="AIエージェント入門スライドのプレビュー" loading="lazy" onerror="this.style.display='none'">
+          </div>
+          <div class="body">
+            <h3><span class="jp">AIエージェント、いま何が起きている?</span></h3>
+            <p>AIエージェントの全体像を Prompt→Context→Harness→Loop の流れで整理した、入門向け公開スライドデッキです。</p>
+            <div class="tags"><span>Slidev</span><span>Vue</span><span>Playwright</span><span>GitHub Pages</span></div>
+            <div class="links">
+              <a class="link" href="https://himiyosh.github.io/JoJo-AIAgent/" target="_blank" rel="noopener" aria-label="デッキを開く（新しいタブで開きます）">デッキを開く <span class="ext" aria-hidden="true">↗</span></a>
+              <a class="link" href="https://github.com/himiyosh/JoJo-AIAgent" target="_blank" rel="noopener" aria-label="ソースを GitHub で見る（新しいタブで開きます）">SOURCE <span class="ext" aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card reveal d2">
+          <div class="thumb ph" data-initial="G" data-label="PREVIEW">
+            <span class="badge">公開スライドデッキ</span>
+            <img src="https://himiyosh.github.io/Info/assets/jojo-git-preview.jpg" alt="Git 入門スライドのプレビュー" loading="lazy" onerror="this.style.display='none'">
+          </div>
+          <div class="body">
+            <h3><span class="jp">Git、こわくない</span></h3>
+            <p>clone / fetch / pull / fork と merge / rebase の判断を、4領域モデルで視覚的に整理した Git 初心者向けデッキです。</p>
+            <div class="tags"><span>Slidev</span><span>Vue</span><span>Playwright</span><span>GitHub Pages</span></div>
+            <div class="links">
+              <a class="link" href="https://himiyosh.github.io/JoJo-Git/" target="_blank" rel="noopener" aria-label="デッキを開く（新しいタブで開きます）">デッキを開く <span class="ext" aria-hidden="true">↗</span></a>
+              <a class="link" href="https://github.com/himiyosh/JoJo-Git" target="_blank" rel="noopener" aria-label="ソースを GitHub で見る（新しいタブで開きます）">SOURCE <span class="ext" aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- panel list -->
+      <div class="panel reveal" role="list" aria-label="その他の公開プロジェクト">
+        <div class="panel-head">
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>projects — live &amp; open source</span>
+        </div>
+
+        <a class="row" role="listitem" href="https://ucfitness.studio344.net/" target="_blank" rel="noopener"
+           data-img="https://himiyosh.github.io/Info/assets/ucfitness-preview.jpg" data-initial="U"
+           aria-label="UCFitness を開く（新しいタブで開きます）">
+          <span class="status">200 OK</span>
+          <span class="name">UCFitness</span>
+          <span class="type">フィットネスサービス</span>
+          <span class="stack">Fitbit · PWA</span>
+          <span class="go" aria-hidden="true">OPEN ↗</span>
+        </a>
+
+        <a class="row" role="listitem" href="https://himiyosh.github.io/encode-decode-tool/" target="_blank" rel="noopener"
+           data-img="https://himiyosh.github.io/Info/assets/encode-decode-preview.jpg" data-initial="E"
+           aria-label="Encode / Decode Tool を開く（新しいタブで開きます）">
+          <span class="status">200 OK</span>
+          <span class="name">Encode / Decode Tool</span>
+          <span class="type">変換ユーティリティ</span>
+          <span class="stack">React · Tailwind · Vite</span>
+          <span class="go" aria-hidden="true">OPEN ↗</span>
+        </a>
+
+        <a class="row" role="listitem" href="https://github.com/himiyosh/network-plus-extension" target="_blank" rel="noopener"
+           data-img="https://himiyosh.github.io/Info/assets/network-plus-preview.jpg" data-initial="N+"
+           aria-label="Network+ のコードを GitHub で見る（新しいタブで開きます）">
+          <span class="status src">SOURCE</span>
+          <span class="name">Network+</span>
+          <span class="type">Edge DevTools 拡張</span>
+          <span class="stack">Manifest V3 · Jest</span>
+          <span class="go" aria-hidden="true">CODE ↗</span>
+        </a>
+
+        <a class="row" role="listitem" href="https://himiyosh.github.io/URLDecoder/" target="_blank" rel="noopener"
+           data-img="https://himiyosh.github.io/Info/assets/url-decoder-preview.jpg" data-initial="U"
+           aria-label="URLDecoder を開く（新しいタブで開きます）">
+          <span class="status">200 OK</span>
+          <span class="name">URLDecoder</span>
+          <span class="type">Web ツール</span>
+          <span class="stack">HTML · JS</span>
+          <span class="go" aria-hidden="true">OPEN ↗</span>
+        </a>
+
+        <a class="row" role="listitem" href="https://himiyosh.github.io/ImageResizer/" target="_blank" rel="noopener"
+           data-img="https://himiyosh.github.io/Info/assets/image-resizer-preview.jpg" data-initial="I"
+           aria-label="ImageResizer を開く（新しいタブで開きます）">
+          <span class="status">200 OK</span>
+          <span class="name">ImageResizer</span>
+          <span class="type">Web ツール</span>
+          <span class="stack">HTML · Canvas</span>
+          <span class="go" aria-hidden="true">OPEN ↗</span>
+        </a>
+
+        <a class="row" role="listitem" href="https://github.com/himiyosh/Info" target="_blank" rel="noopener"
+           data-img="https://himiyosh.github.io/Info/assets/portfolio-preview.jpg" data-initial="P"
+           aria-label="このポートフォリオのソースを GitHub で見る（新しいタブで開きます）">
+          <span class="status">200 OK</span>
+          <span class="name">Portfolio（このサイト）</span>
+          <span class="type">個人サイト / OSS</span>
+          <span class="stack">HTML · CSS · JS</span>
+          <span class="go" aria-hidden="true">CODE ↗</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TOOLBOX ============ -->
+  <section id="stack" aria-labelledby="stack-title">
+    <div class="container">
+      <div class="reveal">
+        <p class="eyebrow">STACK</p>
+        <h2 id="stack-title" class="display decode" data-text="道具箱。">道具箱。</h2>
+      </div>
+      <div class="toolbox">
+        <div class="tool-group reveal">
+          <h3>BUILD</h3>
+          <div class="chips">
+            <span>HTML</span><span>CSS</span><span>JavaScript</span><span>TypeScript</span>
+            <span>React</span><span>Vue</span><span>Astro</span><span>Vite</span>
+            <span>Slidev</span><span>Tailwind CSS</span>
+          </div>
+        </div>
+        <div class="tool-group reveal d1">
+          <h3>PLATFORM</h3>
+          <div class="chips">
+            <span>GitHub Pages</span><span>Cloudflare</span><span>PWA</span>
+            <span>Edge DevTools</span><span>Manifest V3</span><span>Fitbit API</span>
+          </div>
+        </div>
+        <div class="tool-group reveal d2">
+          <h3>QUALITY</h3>
+          <div class="chips">
+            <span>Playwright</span><span>Jest</span><span>GitHub Actions</span>
+            <span>アクセシビリティ</span><span>i18n（JA / EN）</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONTACT ============ -->
+  <section id="contact" class="contact" aria-labelledby="contact-title">
+    <div class="container">
+      <p class="eyebrow" style="justify-content:center">CONTACT</p>
+      <h2 id="contact-title" class="display decode reveal" data-text="話しましょう。">話しましょう。</h2>
+      <p class="lede reveal d1">技術や公開プロジェクトについてのご連絡は、メールまたは GitHub からどうぞ。</p>
+      <div class="mail-row reveal d2">
+        <a class="mail" href="mailto:himiyosh@gmail.com">himiyosh@gmail.com</a>
+        <button class="copy-btn" type="button" aria-label="メールアドレスをコピー">COPY</button>
+      </div>
+      <div class="sub-links reveal d3">
+        <a class="link" href="https://github.com/himiyosh" target="_blank" rel="noopener" aria-label="GitHub プロフィール @himiyosh（新しいタブで開きます)">GITHUB — @himiyosh <span class="ext" aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="foot">
+    <div>
+      <p class="clock" id="clock" aria-label="現在時刻（日本標準時）">--:--:-- JST</p>
+      <small style="margin-top:.8rem">© 2026 himiyosh — このサイトは個人で運営しており、所属組織の公式見解を代表するものではありません。</small>
+    </div>
+    <div class="right">
+      <a class="top-link" href="#top">↑ ページ上部へ</a>
+      <small>好奇心を、実用へ。</small>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- floating preview -->
+<div class="peek" id="peek" aria-hidden="true"><span class="peek-fallback"><b></b></span><img id="peekImg" src="" alt=""></div>
+
+<script>
+(function(){
+  "use strict";
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---- nav & progress ---- */
+  const nav = document.getElementById("nav");
+  const bar = document.querySelector(".progress");
+  addEventListener("scroll", () => {
+    nav.classList.toggle("scrolled", scrollY > 24);
+    const h = document.documentElement;
+    const p = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    bar.style.width = (p * 100).toFixed(2) + "%";
+  }, {passive:true});
+
+  /* ---- decode headings (signature) ---- */
+  const POOL = "アイウエオカキクケコサシスセソ〇一二三四五六七八九◆※+<>/";
+  function decode(el){
+    const target = el.dataset.text || el.textContent;
+    const chars = [...target];
+    let frame = 0;
+    const total = chars.length * 3 + 12;
+    function step(){
+      frame++;
+      el.textContent = chars.map((c, i) =>
+        (c === " " || frame > i * 3 + 10)
+          ? c
+          : POOL[Math.floor(Math.random() * POOL.length)]
+      ).join("");
+      if (frame < total) requestAnimationFrame(step);
+      else el.textContent = target;
+    }
+    requestAnimationFrame(step);
+  }
+  const decodeIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting){
+        decodeIO.unobserve(e.target);
+        if (!reduced) decode(e.target);
+      }
+    });
+  }, {threshold:.5});
+  document.querySelectorAll(".decode").forEach(el => decodeIO.observe(el));
+
+  /* ---- scroll reveal ---- */
+  const revealIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting){ e.target.classList.add("in"); revealIO.unobserve(e.target); }
+    });
+  }, {threshold:.14});
+  document.querySelectorAll(".reveal").forEach(el => revealIO.observe(el));
+
+  /* ---- floating project preview(失敗時はイニシャル表示) ---- */
+  const peek = document.getElementById("peek");
+  const peekImg = document.getElementById("peekImg");
+  const peekFb = peek.querySelector(".peek-fallback b");
+  const failedImgs = new Set();
+  let mx = 0, my = 0, px = 0, py = 0, active = false;
+  addEventListener("mousemove", (ev) => { mx = ev.clientX; my = ev.clientY; }, {passive:true});
+  function loop(){
+    px += (mx - px) * 0.12;
+    py += (my - py) * 0.12;
+    peek.style.transform =
+      `translate(${px + 26}px, ${py - 190}px) rotate(-2deg) scale(${active ? 1 : .9})`;
+    peek.style.opacity = active ? 1 : 0;
+    requestAnimationFrame(loop);
+  }
+  if (!reduced && matchMedia("(hover:hover) and (pointer:fine)").matches){
+    loop();
+    document.querySelectorAll(".row[data-img]").forEach(row => {
+      row.addEventListener("mouseenter", () => {
+        const url = row.dataset.img;
+        peekFb.textContent = row.dataset.initial || "?";
+        if (failedImgs.has(url)) peek.classList.add("noimg");
+        else { peek.classList.remove("noimg"); peekImg.src = url; }
+        active = true;
+      });
+      row.addEventListener("mouseleave", () => { active = false; });
+    });
+    peekImg.addEventListener("error", () => {
+      failedImgs.add(peekImg.src);
+      peek.classList.add("noimg");
+    });
+  }
+
+  /* ---- toast ---- */
+  const toastEl = document.getElementById("toast");
+  let toastT;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("on");
+    clearTimeout(toastT);
+    toastT = setTimeout(() => toastEl.classList.remove("on"), 2400);
+  }
+
+  /* ---- dark / light mode(夜藍 ⇄ 白妙、View Transitions 対応) ---- */
+  const rootEl = document.documentElement;
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  const modeBtn = document.querySelector(".mode-toggle");
+  const themeMeta = { yoruai:"#0a111c", shirotae:"#f4f1e9", akatsuki:"#120c1a" };
+  function applyTheme(fn){
+    if (document.startViewTransition && !reduced) document.startViewTransition(fn);
+    else fn();
+  }
+  function setMode(light){
+    applyTheme(() => {
+      if (light) rootEl.dataset.theme = "shirotae";
+      else delete rootEl.dataset.theme;
+    });
+    modeBtn.setAttribute("aria-pressed", String(light));
+    modeBtn.setAttribute("aria-label", light ? "夜藍（ダークモード）に切り替え" : "白妙（ライトモード）に切り替え");
+    if (metaTheme) metaTheme.setAttribute("content", light ? themeMeta.shirotae : themeMeta.yoruai);
+  }
+  setMode(rootEl.dataset.theme === "shirotae");  // head側の先行判定とボタン状態を同期
+  let eggFired = false;
+  modeBtn.addEventListener("click", () => {
+    if (eggFired){ eggFired = false; return; }   // 長押し直後のclickは無視
+    setMode(!rootEl.dataset.theme);
+  });
+
+  /* ---- イースターエッグ: 3秒長押しで「暁」 ---- */
+  function setDawn(){
+    applyTheme(() => { rootEl.dataset.theme = "akatsuki"; });
+    modeBtn.setAttribute("aria-pressed", "mixed");
+    modeBtn.setAttribute("aria-label", "夜藍（ダークモード）に切り替え");
+    if (metaTheme) metaTheme.setAttribute("content", themeMeta.akatsuki);
+    toast("夜が明けました — 隠しテーマ「暁」");
+  }
+  let holdT = null;
+  modeBtn.addEventListener("pointerdown", (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    modeBtn.classList.add("charging");
+    holdT = setTimeout(() => {
+      eggFired = true;
+      modeBtn.classList.remove("charging");
+      setDawn();
+    }, 3000);
+  });
+  ["pointerup","pointerleave","pointercancel"].forEach(ev =>
+    modeBtn.addEventListener(ev, () => {
+      clearTimeout(holdT);
+      modeBtn.classList.remove("charging");
+    })
+  );
+  modeBtn.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  /* ---- scroll spy ---- */
+  const spyMap = {
+    about:   document.querySelector('.nav nav a[href="#about"]'),
+    works:   document.querySelector('.nav nav a[href="#works"]'),
+    contact: document.querySelector('.nav nav a[href="#contact"]')
+  };
+  const spyIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      Object.values(spyMap).forEach(l => l.classList.remove("active"));
+      const link = spyMap[e.target.id];
+      if (link) link.classList.add("active");
+    });
+  }, {rootMargin:"-40% 0px -55% 0px"});
+  ["about","works","stack","contact"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) spyIO.observe(el);
+  });
+
+  /* ---- copy email ---- */
+  const copyBtn = document.querySelector(".copy-btn");
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText("himiyosh@gmail.com");
+      copyBtn.textContent = "COPIED ✓";
+      copyBtn.classList.add("done");
+      toast("メールアドレスをコピーしました");
+      setTimeout(() => { copyBtn.textContent = "COPY"; copyBtn.classList.remove("done"); }, 2000);
+    } catch (err) {
+      toast("コピーできませんでした — 長押しで選択してください");
+    }
+  });
+
+  /* ---- JST clock ---- */
+  const clock = document.getElementById("clock");
+  const fmt = new Intl.DateTimeFormat("ja-JP", {
+    timeZone:"Asia/Tokyo", hour12:false,
+    hour:"2-digit", minute:"2-digit", second:"2-digit"
+  });
+  function tick(){ clock.textContent = fmt.format(new Date()) + " JST"; }
+  tick(); setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>

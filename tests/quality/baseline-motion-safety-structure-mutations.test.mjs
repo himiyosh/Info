@@ -45,7 +45,7 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
 const mutationTest = globalInventoryChildMode ? test.skip : test;
 const childProcessEnv = { ...process.env, NO_COLOR: "1" };
 delete childProcessEnv.NODE_TEST_CONTEXT;
-const runtimeFixturePaths = ["script.js", "styles.css"];
+const runtimeFixturePaths = ["script.js", "styles.css", "modern.css"];
 const [
   boundaryAuthoritySource,
   spawnHelperSource,
@@ -272,7 +272,7 @@ mutationTest(
   "baseline motion safety structure guard rejects adjacent monolith contracts leaking into the focused module",
   async () => {
     const reviewedAssertionMessage = JSON.stringify(
-      "Reveal priming must be gated on both reduced-motion and IntersectionObserver support, re-evaluated per render"
+      "Reveal priming must be gated on both reduced-motion and IntersectionObserver support"
     );
     const adjacentContractLeak = replaceOncePreservingBytes(
       baselineMotionSafetySource,
@@ -432,7 +432,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { baselineMotionSafety: `${baselineMotionSafetySource} ` },
-      /baseline-motion-safety\.test\.mjs must be exactly 5142 bytes/
+      /baseline-motion-safety\.test\.mjs must be exactly 4560 bytes/
     );
   }
 );
@@ -442,7 +442,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
-      /site-quality\.test\.mjs must be exactly 31213 bytes/
+      /site-quality\.test\.mjs must be exactly 28655 bytes/
     );
   }
 );

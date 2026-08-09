@@ -51,75 +51,61 @@ test("contact link hover transitions do not animate layout properties", async ()
   );
 });
 
-test("project rows stay visible by default and reveal machinery is bounded and safe", async () => {
-  const stylesSource = await readUtf8("styles.css");
+test("reveal targets stay visible by default and reveal machinery is bounded and safe", async () => {
+  const modernSource = await readUtf8("modern.css");
   const scriptSource = await readUtf8("script.js");
 
-  // Base state: every row is visible with zero JS dependency. No rule
-  // outside a .js-enabled + no-preference guard may set opacity/transform
-  // on .project-row.
-  assert.match(
-    stylesSource,
-    /\.project-row\s*\{[^}]*opacity:\s*1;[^}]*transform:\s*none;/s,
-    ".project-row base rule must default to fully visible with no transform"
-  );
-
-  const primingRule = stylesSource.match(
-    /@media\s*\(prefers-reduced-motion:\s*no-preference\)\s*\{\s*\.js-enabled\s+\.project-row\s*\{([^}]*)\}\s*\.js-enabled\s+\.project-row\.is-priming\s*\{([^}]*)\}/s
+  // Priming (the hidden pre-reveal state) may exist ONLY behind the
+  // .js-enabled AND prefers-reduced-motion: no-preference double guard,
+  // so no-JS visitors and reduced-motion visitors always see content.
+  const primingRule = modernSource.match(
+    /@media\s*\(prefers-reduced-motion:\s*no-preference\)\s*\{\s*\.js-enabled\s+\.is-priming\s*\{([^}]*)\}/s
   );
   assert.ok(
     primingRule,
-    "The priming/reveal transition must be scoped to .js-enabled AND prefers-reduced-motion: no-preference"
+    "The priming state must be scoped to .js-enabled AND prefers-reduced-motion: no-preference"
   );
-  assert.match(
-    primingRule[1],
-    /--row-index/,
-    "The reveal transition delay must derive from a per-row --row-index custom property"
-  );
-  assert.match(
-    primingRule[1],
-    /min\(var\(--row-index,\s*0\),\s*9\)/,
-    "The stagger must be capped (min() clamp) rather than growing unbounded with row count"
-  );
-  assert.match(
-    primingRule[2],
-    /transition:\s*none/,
-    "Entering the primed (hidden) state must be instant, never itself an animated hide"
-  );
+  assert.match(primingRule[1], /opacity:\s*0/);
+  const primingSelectors = [...modernSource.matchAll(/[^{}]*\.is-priming[^{}]*\{/g)];
+  for (const [selector] of primingSelectors) {
+    assert.match(
+      selector,
+      /\.js-enabled/,
+      `Every .is-priming selector must require .js-enabled: ${selector.trim()}`
+    );
+  }
 
-  // script.js: only ever primes a row when JS + IntersectionObserver +
-  // no motion preference are all present (re-evaluated on every render
-  // via a function, not captured once, so a runtime preference change
-  // takes effect for the next render), always with a one-time observer
-  // (unobserve on reveal) and a hard timeout safety net.
+  // script.js: priming is armed only when JS + IntersectionObserver + no
+  // motion preference are all present, re-evaluated live; every reveal is
+  // one-time; and a hard timeout clears any stuck priming class.
   assert.match(
     scriptSource,
-    /function shouldAnimateProjectReveal\(\)\s*\{\s*return\s*!prefersReducedMotion\s*&&\s*supportsIntersectionObserver;/,
-    "Reveal priming must be gated on both reduced-motion and IntersectionObserver support, re-evaluated per render"
+    /function shouldAnimateReveal\(\)\s*\{\s*return !prefersReducedMotion && supportsIntersectionObserver;/,
+    "Reveal priming must be gated on both reduced-motion and IntersectionObserver support"
   );
   assert.match(
     scriptSource,
-    /const animateReveal = shouldAnimateProjectReveal\(\);/,
-    "renderProjects must re-read the live reveal gate on every call, not a value captured once at load"
+    /if \(!shouldAnimateReveal\(\) \|\| revealObserver !== null\)/,
+    "Arming must re-read the live gate and stay idempotent"
   );
   assert.match(
     scriptSource,
     /classList\.add\("is-priming"\)/,
-    "script.js must prime rows for the bounded reveal"
+    "script.js must prime targets for the bounded reveal"
   );
   assert.match(
     scriptSource,
     /observer\.unobserve\(entry\.target\)/,
-    "Each row's reveal must be one-time (unobserve after it fires)"
+    "Each target's reveal must be one-time (unobserve after it fires)"
   );
   assert.match(
     scriptSource,
-    /setTimeout\(\s*\(\)\s*=>\s*\{[\s\S]*?classList\.remove\("is-priming"\)/,
+    /revealBackstopTimer = window\.setTimeout\(disarmReveal, 2500\)/,
     "script.js must include a timeout safety net that clears any stuck priming class"
   );
   assert.match(
     scriptSource,
-    /function disarmProjectReveal\(\)\s*\{[\s\S]*?projectRevealObserver\?\.disconnect\(\);[\s\S]*?classList\.remove\("is-priming"\)/,
+    /function disarmReveal\(\)\s*\{[\s\S]*?revealObserver\?\.disconnect\(\);[\s\S]*?classList\.remove\("is-priming"\)/,
     "A runtime switch to reduced motion must disconnect the observer and clear any stale priming class"
   );
   assert.doesNotMatch(
@@ -128,4 +114,3 @@ test("project rows stay visible by default and reveal machinery is bounded and s
     "script.js must not restore the old rejected reveal symbol names"
   );
 });
-

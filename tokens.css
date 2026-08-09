@@ -7,36 +7,96 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/* 夜藍とデコード typefaces, self-hosted so no runtime font provider is
+ * contacted. Each file is a subset carrying only the glyphs this site
+ * renders — including the decode animation's scramble pool — which keeps
+ * the Japanese faces near 65KB instead of several megabytes. Licences and
+ * provenance are recorded in assets/fonts/OFL.txt. */
+@font-face {
+  font-family: "Zen Maru Gothic";
+  src: url("assets/fonts/zen-maru-gothic-700-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Zen Maru Gothic";
+  src: url("assets/fonts/zen-maru-gothic-900-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 800 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "M PLUS Rounded 1c";
+  src: url("assets/fonts/mplus-rounded-1c-500-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "M PLUS Rounded 1c";
+  src: url("assets/fonts/mplus-rounded-1c-700-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("assets/fonts/ibm-plex-mono-400-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("assets/fonts/ibm-plex-mono-500-subset.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+}
+
+/* 夜藍とデコード — Alpine Ink · Decode
+ * Canonical (dark / 夜藍) design tokens. The 白妙 (light) and 暁 (hidden)
+ * palettes override these slots from the theme layer at the end of
+ * modern.css; tokens.css intentionally carries a single palette so the
+ * contrast contracts in tests/quality read one unambiguous token set. */
 :root {
-  --color-paper: oklch(14% 0.012 250);
-  --color-paper-2: oklch(18% 0.016 250);
-  --color-paper-3: oklch(24% 0.022 250);
-  --color-surface: oklch(20% 0.02 248);
-  --color-surface-raised: oklch(28% 0.026 246);
-  --color-ink: oklch(94% 0.012 245);
-  --color-ink-2: oklch(82% 0.018 245);
-  --color-muted: oklch(70% 0.02 245);
-  --color-rule: oklch(48% 0.035 240);
-  --color-accent: oklch(68% 0.07 233);
-  --color-accent-2: oklch(42% 0.065 235);
-  --color-accent-ink: oklch(12% 0.012 250);
-  --color-on-dark: oklch(95% 0.01 245);
-  --color-focus: oklch(91% 0.05 230);
-  --color-scene-hero: oklch(16% 0.018 248);
-  --color-scene-about: oklch(19% 0.028 242);
-  --color-scene-projects: oklch(17% 0.035 236);
-  --color-scene-contact: oklch(21% 0.026 247);
-  --color-project-a: oklch(23% 0.038 236);
-  --color-project-b: oklch(19% 0.028 248);
+  --color-paper: oklch(17% 0.03 253);
+  --color-paper-2: oklch(21% 0.033 252);
+  --color-paper-3: oklch(27% 0.035 250);
+  --color-surface: oklch(24% 0.034 251);
+  --color-surface-raised: oklch(31% 0.038 250);
+  --color-ink: oklch(94% 0.015 95);
+  --color-ink-2: oklch(83% 0.02 250);
+  --color-muted: oklch(72% 0.03 250);
+  --color-rule: oklch(49% 0.04 250);
+  --color-accent: oklch(76% 0.13 75);
+  --color-accent-2: oklch(42% 0.08 70);
+  --color-accent-ink: oklch(15% 0.025 253);
+  --color-on-dark: oklch(95% 0.012 95);
+  --color-focus: oklch(88% 0.09 85);
+  --color-ok: oklch(74% 0.107 156);
+  --color-scene-hero: oklch(19% 0.032 253);
+  --color-scene-about: oklch(22% 0.036 248);
+  --color-scene-projects: oklch(20% 0.04 245);
+  --color-scene-contact: oklch(24% 0.036 252);
+  --color-project-a: oklch(26% 0.042 245);
+  --color-project-b: oklch(22% 0.034 251);
   --color-print-paper: oklch(100% 0 0);
   --color-print-ink: oklch(20% 0.012 250);
   --color-print-muted: oklch(42% 0.018 245);
   --color-print-rule: oklch(78% 0.012 245);
   --color-transparent: transparent;
-  --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
-  --font-display-ja: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
-  --font-body: "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --font-body-ja: "Hiragino Sans", "Yu Gothic Medium", "Yu Gothic", "Meiryo", sans-serif;
+  --font-display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --font-display-ja: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --font-body: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Yu Gothic", "Meiryo", sans-serif;
+  --font-body-ja: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic Medium", "Yu Gothic", "Meiryo", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
   --font-heading: var(--font-display);
   --font-heading-ja: var(--font-display-ja);
   --space-3xs: 0.25rem;
@@ -82,9 +142,9 @@
   --z-modal: 400;
   --z-toast: 500;
   --z-tooltip: 600;
-  --shadow-hard: 4px 4px 0 var(--color-ink);
-  --shadow-float: 0 0.75rem 2.5rem oklch(8% 0.012 250 / 0.32);
-  --shadow-cinematic: 0 1.5rem 5rem oklch(8% 0.012 250 / 0.42);
+  --shadow-hard: 0 14px 34px -16px oklch(6% 0.02 253 / 0.9);
+  --shadow-float: 0 0.75rem 2.5rem oklch(8% 0.02 253 / 0.4);
+  --shadow-cinematic: 0 1.5rem 5rem oklch(8% 0.02 253 / 0.5);
   --header-height: 4rem;
   --depth-project-max: 14px;
   --depth-hero-max: 5px;
@@ -97,9 +157,9 @@
 
 @media screen and (prefers-contrast: more) {
   :root {
-    --color-ink-2: oklch(90% 0.014 245);
-    --color-muted: oklch(84% 0.016 245);
-    --color-rule: oklch(70% 0.03 240);
-    --color-focus: oklch(98% 0.02 230);
+    --color-ink-2: oklch(91% 0.014 95);
+    --color-muted: oklch(86% 0.02 250);
+    --color-rule: oklch(70% 0.035 250);
+    --color-focus: oklch(97% 0.03 90);
   }
 }

@@ -62,7 +62,7 @@ test("the 48rem Feature Stack keeps title and support left with profile media ri
   const desktop = sourceBetween(
     modern,
     "@media (min-width: 48rem)",
-    "\nhtml:not(.js-enabled) .hero"
+    "\n@media (prefers-reduced-motion: reduce)"
   );
 
   assert.match(
