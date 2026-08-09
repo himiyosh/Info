@@ -411,15 +411,19 @@ test("quality wiring and documentation expose the executable review and offline 
     "node scripts/check-independent-review.mjs"
   );
   assert.match(workflow, /pull_request:/);
-  assert.match(workflow, /npm run check:independent-review --/);
   assert.match(workflow, /permissions:\n  contents: read/);
   assert.doesNotMatch(workflow, /^\s+(?:pull-requests|issues):/m);
-  assert.match(
-    workflow,
-    /if: github\.event_name == 'pull_request' && github\.event\.pull_request\.state == 'open'/
+  // The review guard is deliberately not a CI gate: `by=` is only checked for
+  // UUID shape, so CI cannot tell an independent verdict from a self-issued
+  // one. Inverted rather than deleted, so the gate cannot drift back in
+  // unnoticed — reinstating it is a decision that has to edit this line.
+  assert.doesNotMatch(workflow, /check:independent-review/);
+  assert.doesNotMatch(workflow, /GH_TOKEN/);
+  assert.equal(
+    packageJson.scripts["check:quality"],
+    "npm run check:generated && npm run check:js && npm run test:quality",
+    "npm test must not reach the review guard either"
   );
-  assert.match(workflow, /PR_NUMBER: \$\{\{ github\.event\.pull_request\.number \}\}/);
-  assert.match(workflow, /PR_HEAD_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
   for (const source of [readme, agent]) {
     assert.match(source, /check-merge-gate\.mjs --head/);
     assert.match(source, /state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments/);

@@ -52,8 +52,8 @@
 ## Copilot
 - Primary project agent: `InfoAgent`
 - Session workflow: [InfoAgent policy](.github/agents/InfoAgent.agent.md) defines coordinator, task-session, recovery, and cleanup practices.
-- `.github/workflows/quality-baseline.yml` runs `npm test` on pushes to `main` and pull requests, then runs `npm run check:independent-review` only when the current event is an OPEN pull request. The pull request number and head come from that event, the fetched REST snapshot must still report the same open head, and valid closed snapshots are skipped so reruns cannot retroactively fail merged pull requests. After an independent reviewer posts or edits the exact-head marker, rerun the failed Quality baseline job against the unchanged head.
-- Current-PR guard example (set `PR` to the open pull request number):
+- `.github/workflows/quality-baseline.yml` runs `npm test` on pushes to `main` and pull requests. It does not gate on independent-review evidence: `by=` is validated for UUID shape only, so CI could not distinguish an independent verdict from one the implementer minted, and a blocking check bought pressure to post a marker rather than assurance that a review happened. The guard and the merge gate remain as manual tools, and [REVIEW-PROCESS.md](REVIEW-PROCESS.md) still describes how to run a review when a change warrants one.
+- Current-PR guard example, run by hand (set `PR` to the open pull request number):
   ```sh
   PR=61
   head_sha=$(gh pr view "$PR" --json headRefOid --jq .headRefOid) &&
