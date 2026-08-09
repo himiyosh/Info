@@ -113,6 +113,79 @@ function measure(win, width) {
     )
     .slice(0, 8);
 
+  // A box that stays put can still lose its text. overflow:hidden with
+  // text-overflow:ellipsis truncates horizontally and a capped height
+  // truncates vertically, and in both cases the element's own rect is
+  // unchanged — so the offscreen check above is blind to them. Measure the
+  // text itself with a Range and compare it against whichever ancestor
+  // actually does the clipping.
+  const textBearing = [...doc.querySelectorAll("main *, footer *")].filter((element) => {
+    if (byDesign(element) || !visible(element)) return false;
+    return [...element.childNodes]
+      .filter((node) => node.nodeType === 3)
+      .map((node) => node.textContent.trim())
+      .join("") !== "";
+  });
+
+  const clipper = (element) => {
+    for (let node = element; node && node !== doc.documentElement; node = node.parentElement) {
+      const computed = win.getComputedStyle(node);
+      if (computed.overflowX !== "visible" || computed.overflowY !== "visible") {
+        return node;
+      }
+    }
+    return null;
+  };
+
+  // Only the element's *own* text counts. Selecting all contents would drag
+  // in visually-hidden descendants — the .sr-only spans carry a full
+  // "opens in a new tab" sentence that lays out far past its 1px box, and
+  // reading that as ink reports loss where a reader sees none.
+  const ownTextRect = (element) => {
+    let union = null;
+    for (const node of element.childNodes) {
+      if (node.nodeType !== 3 || node.textContent.trim() === "") continue;
+      const range = doc.createRange();
+      range.selectNode(node);
+      const rect = range.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) continue;
+      union = union
+        ? {
+            bottom: Math.max(union.bottom, rect.bottom),
+            left: Math.min(union.left, rect.left),
+            right: Math.max(union.right, rect.right),
+            top: Math.min(union.top, rect.top)
+          }
+        : { bottom: rect.bottom, left: rect.left, right: rect.right, top: rect.top };
+    }
+    return union;
+  };
+
+  const clipped = textBearing
+    .map((element) => {
+      const ink = ownTextRect(element);
+      if (!ink) return { element, lost: 0 };
+      const box = clipper(element);
+      // With no clipping ancestor the text simply paints outside its box and
+      // stays readable, unless it has left the viewport — which the root's
+      // overflow-x: clip does cut off.
+      const bounds = box
+        ? box.getBoundingClientRect()
+        : { bottom: Infinity, left: 0, right: width, top: -Infinity };
+      const lost = Math.round(
+        Math.max(
+          ink.right - bounds.right,
+          bounds.left - ink.left,
+          ink.bottom - bounds.bottom,
+          bounds.top - ink.top
+        )
+      );
+      return { element, lost };
+    })
+    .filter(({ lost }) => lost > 1)
+    .map(({ element, lost }) => (element.className || element.tagName) + " -" + lost + "px")
+    .slice(0, 8);
+
   // Below 48rem the navigation collapses behind the toggle, so the links
   // are legitimately hidden; what must survive is a way to reach them.
   const navLinks = [...doc.querySelectorAll('#nav-menu a[href^="#"]')];
@@ -131,6 +204,7 @@ function measure(win, width) {
       word: round(Number.parseFloat(body.wordSpacing) || 0)
     },
     cards: cards.length,
+    clipped,
     controls: alwaysVisible.length,
     controlsVisible: alwaysVisible.every(visible),
     namedVisible: named.every((element) => visible(element) && element.textContent.trim() !== ""),
@@ -246,6 +320,10 @@ test("reader text-spacing overrides lose no content at 320px or 768px", async ()
     expect(
       snapshot.offscreen.length === 0,
       `text pushed outside the viewport: ${JSON.stringify(snapshot.offscreen)}`
+    );
+    expect(
+      snapshot.clipped.length === 0,
+      `text cut off by a clipping ancestor: ${JSON.stringify(snapshot.clipped)}`
     );
     expect(snapshot.cards === 3, `featured card count ${snapshot.cards}`);
     expect(snapshot.rows === 6, `panel row count ${snapshot.rows}`);

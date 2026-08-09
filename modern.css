@@ -2211,6 +2211,16 @@ html:lang(ja) .top-link {
   .row .status {
     display: none;
   }
+
+  /* One track is not enough for the longest name once a reader applies the
+     WCAG 1.4.12 text-spacing override, and the ellipsis would then eat the
+     end of a project name — content the success criterion requires to
+     survive. Wrapping costs a line and keeps the whole name. */
+  .row .name {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
