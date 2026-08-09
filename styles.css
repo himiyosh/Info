@@ -605,11 +605,15 @@ html:lang(ja) .hero h1 span {
   border-block-end: 2px solid var(--color-ink);
 }
 
+/* The prototype lays a contact link out as one row: label then the ↗ tick.
+   The retired design stacked a label above its value in a fixed 5rem block,
+   and that column direction survived the structure replacement and kept
+   winning, dropping the tick onto its own line. Row direction is the
+   composition's, so the shell only keeps the padding and centring. */
 .contact-links a {
-  min-height: 5rem;
   padding-block: var(--space-sm);
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
   gap: var(--space-3xs);
   color: var(--color-accent-ink);
