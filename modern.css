@@ -1440,6 +1440,74 @@ html:lang(ja) .hero-visual figcaption {
   position: relative;
 }
 
+/* 稜線 — the WebGL ridgeline behind the hero.
+ *
+ * The canvas ships in the markup so it never causes a layout shift, but it
+ * stays display:none until hero-3d.js has a live GL context and has drawn.
+ * That single gate covers no-JS, no-WebGL, and driver failures at once: if
+ * the class is never added, the hero is exactly the composition that
+ * shipped before. It never takes pointer input and is never announced, so
+ * keyboard and screen-reader paths are untouched. */
+.hero-canvas {
+  display: none;
+}
+
+.hero-3d-ready .hero-canvas {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  /* Legibility mask. The headline column occupies the top of the hero, so
+     the scene is held back there and only reaches full strength below the
+     text, where it reads as a horizon rather than as noise behind copy.
+     This is what keeps the hero at AA without dimming the whole scene. */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.1) 42%,
+    rgba(0, 0, 0, 0.45) 68%,
+    rgba(0, 0, 0, 1) 80%,
+    rgba(0, 0, 0, 1) 96%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.1) 42%,
+    rgba(0, 0, 0, 0.45) 68%,
+    rgba(0, 0, 0, 1) 80%,
+    rgba(0, 0, 0, 1) 96%,
+    transparent 100%
+  );
+  /* The scene resolves its own entrance in the shader; this only covers
+     the first compiled frame so the canvas never flashes in. */
+  animation: hero-canvas-in var(--dur-long) var(--ease-out) both;
+}
+
+@keyframes hero-canvas-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Hero content keeps its own stacking context above the scene. */
+.hero-sticky {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-3d-ready .hero-canvas {
+    animation: none;
+  }
+}
+
 .scroll-cue {
   position: absolute;
   inset-block-end: 1rem;
@@ -2289,5 +2357,101 @@ html:lang(ja) .top-link {
     transition:
       opacity 0.8s var(--ease-out),
       transform 0.8s var(--ease-out);
+  }
+}
+
+/* ============================================================
+ * Premium motion layer — page loading, cursor presence
+ * Driven by motion.js. Both elements are injected at runtime, so nothing
+ * here has a resting state to degrade: no JavaScript means no rail and no
+ * ring, and the page is unchanged.
+ * ============================================================ */
+
+/* Page loading: a top rail, never a curtain. Content stays readable
+ * underneath from the first paint. */
+.page-load-rail {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: var(--z-progress);
+  block-size: 2px;
+  inline-size: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--color-accent) 40%, transparent),
+    var(--color-accent)
+  );
+  pointer-events: none;
+  /* Eases toward 88% and waits there: the rail must never claim to be
+     finished before `load` actually fires. */
+  animation: page-load-advance 2.4s var(--ease-out) forwards;
+}
+
+.page-load-rail.is-complete {
+  inline-size: 100%;
+  opacity: 0;
+  animation: none;
+  transition:
+    inline-size 220ms var(--ease-out),
+    opacity 240ms var(--ease-out) 180ms;
+}
+
+@keyframes page-load-advance {
+  from {
+    inline-size: 0;
+  }
+  to {
+    inline-size: 88%;
+  }
+}
+
+/* Cursor presence: a trailing ring that widens over interactive targets.
+ * The native cursor is never hidden — this rides alongside it. */
+.cursor-ring {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: var(--z-tooltip);
+  inline-size: 26px;
+  block-size: 26px;
+  margin: 0;
+  border: 1px solid color-mix(in oklab, var(--color-accent) 70%, transparent);
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  pointer-events: none;
+  /* The `translate` property is written by motion.js; `transform` centres
+     the ring on that point, since the two compose in that order. */
+  transform: translate(-50%, -50%);
+  transition:
+    opacity var(--dur-short) var(--ease-out),
+    inline-size var(--dur-short) var(--ease-out),
+    block-size var(--dur-short) var(--ease-out),
+    background-color var(--dur-short) var(--ease-out);
+}
+
+.cursor-ring.is-visible {
+  opacity: 0.55;
+}
+
+.cursor-ring.is-over-target {
+  inline-size: 44px;
+  block-size: 44px;
+  background: color-mix(in oklab, var(--color-accent) 12%, transparent);
+  opacity: 0.85;
+}
+
+/* Reduced motion removes both outright rather than shortening them: a rail
+ * and a trailing ring are pure decoration with no content to preserve. */
+@media (prefers-reduced-motion: reduce) {
+  .page-load-rail,
+  .cursor-ring {
+    display: none;
+  }
+}
+
+/* Forced colours: a decorative ring must not spend a system colour slot. */
+@media (forced-colors: active) {
+  .cursor-ring {
+    display: none;
   }
 }

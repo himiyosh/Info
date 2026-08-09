@@ -12,3 +12,5 @@ favicon.svg
 robots.txt
 sitemap.xml
 ads.txt
+hero-3d.js
+motion.js
