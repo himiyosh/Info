@@ -553,38 +553,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   requireElement("current-year").textContent = String(new Date().getFullYear());
 
-  // --- Footer: live Japan Standard Time -------------------------------
-  // The template ships a static placeholder so the printed and
-  // no-JavaScript footers still read as a clock rather than an empty line.
-  // Teardown rides pagehide: the shared scene lifecycle deliberately owns
-  // no page-visibility listener, and a contract keeps it that way.
-  const footerClock = requireElement("footer-clock");
-  const jstFormatter = new Intl.DateTimeFormat("ja-JP", {
-    timeZone: "Asia/Tokyo",
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  });
-  let footerClockTimer = null;
-
-  function renderFooterClock() {
-    footerClock.textContent = `${jstFormatter.format(new Date())} JST`;
-  }
-
-  renderFooterClock();
-  footerClockTimer = window.setInterval(renderFooterClock, 1000);
-  window.addEventListener("pagehide", () => {
-    window.clearInterval(footerClockTimer);
-    footerClockTimer = null;
-  });
-  window.addEventListener("pageshow", () => {
-    if (footerClockTimer === null) {
-      renderFooterClock();
-      footerClockTimer = window.setInterval(renderFooterClock, 1000);
-    }
-  });
-
   function loadAdSense() {
     const hasAdSlot = document.querySelector(
       'ins.adsbygoogle, [data-adsbygoogle-slot], [data-ad-client]'

@@ -28,7 +28,7 @@ const catalogueBodyExpectedSha256 =
   "28b7e169d6a604dda5cba10a4ad5c475caaab29dbb673927bcc6e1a9cfe3cee3";
 const mutationGuardExpectedBytes = 13_435;
 const mutationGuardExpectedSha256 =
-  "a68948acc53f799a1bc1d6b989a629e70d3796e3c317d30feb2ab329ac4c05e9";
+  "10ca007b65410ccafd434aacea9ba849391367ae755bbd7d0efb5119c5e12e9d";
 const expectedCatalogueTestNames = [
   "projects.json schema, localization, links, and preview assets are valid",
   "exactly five live projects expose verified public source actions",

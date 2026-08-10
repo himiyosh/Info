@@ -333,16 +333,18 @@ test("rich redesign foundation uses local tokens and layers the modern system la
   ]);
 });
 
-test("footer renders the clock, the statement, and the recovery link once each", async () => {
+test("footer renders the statement and the recovery link once each", async () => {
   const indexHtml = await readUtf8("index.html");
   const scriptSource = await readUtf8("script.js");
 
   const footer = indexHtml.match(/<footer class="site-footer">([\s\S]*?)<\/footer>/)?.[1];
   assert.ok(footer, "index.html must keep one site footer");
-  assert.match(
+  // The live JST clock is retired: it told visitors the time, which they
+  // already had, and cost a 1s interval plus its own teardown lifecycle.
+  assert.doesNotMatch(
     footer,
-    /<p\b[^>]*id="footer-clock"[^>]*>--:--:-- JST<\/p>/,
-    "The clock must ship a static placeholder so no-JS and print footers still read as a clock"
+    /footer-clock/,
+    "The retired footer clock must not return to the markup"
   );
   assert.match(
     footer,
@@ -357,15 +359,10 @@ test("footer renders the clock, the statement, and the recovery link once each",
   assert.match(footer, /<a[^>]*href="#top"[^>]*data-i18n="footer\.backToTop"/);
   assert.match(footer, /class="footer-disclaimer"/);
 
-  assert.match(
+  assert.doesNotMatch(
     scriptSource,
-    /timeZone: "Asia\/Tokyo"/,
-    "The clock must render Japan Standard Time regardless of the visitor's zone"
-  );
-  assert.match(
-    scriptSource,
-    /window\.addEventListener\("pagehide", \(\) => \{\s*window\.clearInterval\(footerClockTimer\);/,
-    "The clock interval must tear down on pagehide"
+    /footerClock|jstFormatter|Asia\/Tokyo/,
+    "The clock's timer and formatter must go with it, not linger unused"
   );
   assert.doesNotMatch(
     scriptSource,

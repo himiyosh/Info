@@ -1546,37 +1546,6 @@ html:lang(ja) .hero-visual figcaption {
   }
 }
 
-/* Footer clock with the live status dot. */
-.footer-clock,
-html:lang(ja) .footer-clock {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: var(--color-ink);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
-}
-
-.footer-clock::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: var(--radius-pill);
-  background: var(--color-ok);
-  box-shadow: 0 0 8px color-mix(in oklab, var(--color-ok) 70%, transparent);
-}
-
-/* Contact: the prototype's large mono address and pill copy control. */
-.contact-links strong,
-html:lang(ja) .contact-links strong {
-  font-family: var(--font-mono);
-  font-size: clamp(1.05rem, 3.4vw, 2rem);
-  font-weight: 500;
-  font-variation-settings: normal;
-  letter-spacing: 0.03em;
-}
-
 .footer-meta a,
 html:lang(ja) .footer-meta a {
   font-family: var(--font-mono);
@@ -1635,8 +1604,7 @@ html:lang(ja) .footer-meta a {
 @media print {
   .scroll-cue,
   .hero-marquee,
-  .hero-tick,
-  .footer-clock {
+  .hero-tick {
     display: none !important;
   }
 
@@ -2086,6 +2054,15 @@ html:lang(ja) .card h3 {
   margin: 0;
   color: var(--color-muted);
   font-size: 0.78rem;
+}
+
+/* The disclaimer is a single 40-character sentence and reads as one line.
+ * The shared 34em cap above broke it at 424px, two lines short of its own
+ * length, while the footer had 1160px to give. It still wraps below roughly
+ * 540px of footer width — a viewport that narrow cannot hold the sentence
+ * without shrinking it past legibility, and wrapping beats overflowing. */
+.footer-disclaimer {
+  max-width: 42em;
 }
 
 .footer-statement {

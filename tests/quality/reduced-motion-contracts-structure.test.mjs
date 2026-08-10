@@ -45,7 +45,7 @@ const reviewedSourceSliceExpectedSha256 =
   "2a5159a80026284e684e5c8c2f25f241ae08d1329fd542af333fde280e25c621";
 const mutationGuardExpectedBytes = 17_282;
 const mutationGuardExpectedSha256 =
-  "1b40febd57a179f2a4ce38078c662f9dcf5416985462af4b34f888390ec2a524";
+  "f01d20b6026ece7cdb5236c77713742f95721ce01c8c2a597fec8c078a84d3fb";
 const expectedReducedMotionTestNames = [
   "reduced motion nulls every new spatial transform, disables non-essential motion, and keeps the wordmark-mark rotation invariant",
   "reduced motion preference is live: a runtime change arms/disarms motion without duplicate observers"

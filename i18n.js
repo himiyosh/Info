@@ -100,7 +100,6 @@
       },
       footer: {
         backToTop: "ページ上部へ",
-        clockLabel: "現在時刻(日本標準時)",
         scrollCue: "SCROLL"
       },
       disclaimer:
@@ -199,7 +198,6 @@
       },
       footer: {
         backToTop: "Back to top",
-        clockLabel: "Current time (Japan Standard Time)",
         scrollCue: "SCROLL"
       },
       disclaimer:

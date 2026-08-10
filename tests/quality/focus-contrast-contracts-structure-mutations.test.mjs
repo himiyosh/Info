@@ -572,7 +572,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
-      /site-quality\.test\.mjs must be exactly 29061 bytes/
+      /site-quality\.test\.mjs must be exactly 28952 bytes/
     );
   }
 );
