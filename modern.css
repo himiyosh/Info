@@ -1991,9 +1991,13 @@ html:lang(ja) .card h3 {
   text-align: center;
 }
 
+/* The panel's row gap is the only separation between the lede and the tiles:
+ * the heading block and the list are its two grid children, and every margin
+ * the lede could carry is zeroed by `.contact-panel > div > p` in styles.css
+ * (0-1-2, so a `.contact-lede` margin never lands). Keep the space here. */
 .contact-panel {
   display: grid;
-  gap: 0;
+  gap: 2rem;
   background: none;
   border: 0;
   box-shadow: none;
@@ -2001,12 +2005,6 @@ html:lang(ja) .card h3 {
 
 .section-eyebrow--center {
   justify-content: center;
-}
-
-.contact-lede {
-  max-width: 40em;
-  margin: 0 auto 3rem;
-  color: var(--color-muted);
 }
 
 /* The contact list is a stack of equal rows, each closed by its own rule.
