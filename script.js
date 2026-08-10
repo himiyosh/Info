@@ -1,124 +1,5 @@
 "use strict";
 
-const CONTACT_EMAIL_ADDRESS = "himiyosh@gmail.com";
-const CONTACT_COPY_STATUS_KEYS = Object.freeze({
-  success: "contact.copySuccess",
-  manualSelected: "contact.copyManualSelected",
-  failure: "contact.copyFailure"
-});
-async function writeTextToClipboard(value) {
-  if (
-    window.isSecureContext !== true ||
-    typeof window.navigator?.clipboard?.writeText !== "function"
-  ) {
-    return false;
-  }
-
-  await window.navigator.clipboard.writeText(value);
-  return true;
-}
-
-async function writeContactEmailToClipboard(address) {
-  return writeTextToClipboard(address);
-}
-
-function selectContactEmailForManualCopy(element, address) {
-  if (
-    typeof document.createRange !== "function" ||
-    typeof window.getSelection !== "function"
-  ) {
-    return false;
-  }
-
-  const selection = window.getSelection();
-  if (!selection) {
-    return false;
-  }
-
-  const range = document.createRange();
-  range.selectNodeContents(element);
-  selection.removeAllRanges();
-  selection.addRange(range);
-  return selection.toString().trim() === address;
-}
-
-function createContactEmailCopyController({
-  address,
-  button,
-  status,
-  copyText,
-  selectAddress,
-  translate,
-  schedule
-}) {
-  let operation = 0;
-
-  function reset() {
-    operation += 1;
-    button.dataset.copyState = "idle";
-    button.removeAttribute("aria-busy");
-    status.dataset.state = "idle";
-    status.textContent = "";
-  }
-
-  function announce(key, state, activeOperation) {
-    button.dataset.copyState = state;
-    button.removeAttribute("aria-busy");
-    status.dataset.state = state;
-    status.textContent = "";
-    schedule(() => {
-      if (activeOperation === operation) {
-        status.textContent = translate(key);
-      }
-    });
-  }
-
-  async function copyEmail() {
-    const activeOperation = ++operation;
-    button.dataset.copyState = "loading";
-    button.setAttribute("aria-busy", "true");
-    status.dataset.state = "loading";
-    status.textContent = "";
-
-    let copied = false;
-    try {
-      copied = await copyText(address);
-    } catch {
-      copied = false;
-    }
-
-    if (activeOperation !== operation) {
-      return;
-    }
-
-    if (copied) {
-      announce(CONTACT_COPY_STATUS_KEYS.success, "success", activeOperation);
-      return;
-    }
-
-    let selected = false;
-    try {
-      selected = selectAddress();
-    } catch {
-      selected = false;
-    }
-    announce(
-      selected
-        ? CONTACT_COPY_STATUS_KEYS.manualSelected
-        : CONTACT_COPY_STATUS_KEYS.failure,
-      "error",
-      activeOperation
-    );
-  }
-
-  button.addEventListener("click", copyEmail);
-  button.hidden = false;
-  status.hidden = false;
-  reset();
-
-  return { copyEmail, reset };
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   if (window.siteI18n.redirecting) {
     return;
@@ -134,10 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const hamburgerMenu = requireElement("hamburger-menu");
   const navMenu = requireElement("nav-menu");
   const langToggle = requireElement("lang-toggle");
-  const contactEmailLink = requireElement("contact-email-link");
-  const contactEmailText = requireElement("contact-email-address");
-  const contactCopyButton = requireElement("copy-email-address");
-  const contactCopyStatus = requireElement("copy-email-status");
   const mobileNavigation = window.matchMedia("(max-width: 47.999rem)");
   const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   let prefersReducedMotion = motionQuery.matches;
@@ -150,24 +27,6 @@ document.addEventListener("DOMContentLoaded", () => {
     "textarea:not([disabled])",
     "[tabindex]:not([tabindex='-1'])"
   ].join(", ");
-
-  if (
-    contactEmailLink.getAttribute("href") !== `mailto:${CONTACT_EMAIL_ADDRESS}` ||
-    contactEmailText.textContent.trim() !== CONTACT_EMAIL_ADDRESS
-  ) {
-    throw new Error("The Contact email link and visible address must match.");
-  }
-
-  const contactEmailCopyController = createContactEmailCopyController({
-    address: CONTACT_EMAIL_ADDRESS,
-    button: contactCopyButton,
-    status: contactCopyStatus,
-    copyText: writeContactEmailToClipboard,
-    selectAddress: () =>
-      selectContactEmailForManualCopy(contactEmailText, CONTACT_EMAIL_ADDRESS),
-    translate: (key) => window.siteI18n.t(key),
-    schedule: (callback) => window.setTimeout(callback, 0)
-  });
 
   function updateNavigationLabel() {
     const labelKey =
@@ -688,45 +547,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   document.addEventListener("site-languagechange", () => {
-    contactEmailCopyController.reset();
     cancelActiveDecodes();
     updateNavigationLabel();
   });
-  window.addEventListener("pageshow", contactEmailCopyController.reset);
 
   requireElement("current-year").textContent = String(new Date().getFullYear());
-
-  // --- Footer: live Japan Standard Time -------------------------------
-  // The template ships a static placeholder so the printed and
-  // no-JavaScript footers still read as a clock rather than an empty line.
-  // Teardown rides pagehide: the shared scene lifecycle deliberately owns
-  // no page-visibility listener, and a contract keeps it that way.
-  const footerClock = requireElement("footer-clock");
-  const jstFormatter = new Intl.DateTimeFormat("ja-JP", {
-    timeZone: "Asia/Tokyo",
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  });
-  let footerClockTimer = null;
-
-  function renderFooterClock() {
-    footerClock.textContent = `${jstFormatter.format(new Date())} JST`;
-  }
-
-  renderFooterClock();
-  footerClockTimer = window.setInterval(renderFooterClock, 1000);
-  window.addEventListener("pagehide", () => {
-    window.clearInterval(footerClockTimer);
-    footerClockTimer = null;
-  });
-  window.addEventListener("pageshow", () => {
-    if (footerClockTimer === null) {
-      renderFooterClock();
-      footerClockTimer = window.setInterval(renderFooterClock, 1000);
-    }
-  });
 
   function loadAdSense() {
     const hasAdSlot = document.querySelector(

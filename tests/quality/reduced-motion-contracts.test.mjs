@@ -73,7 +73,7 @@ test("reduced motion nulls every new spatial transform, disables non-essential m
   );
   assert.match(
     modernSource,
-    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.card,\s*\n\s*\.card \.thumb img,\s*\n\s*\.row,\s*\n\s*\.row \.go,\s*\n\s*\.row \.name,\s*\n\s*\.link::after,\s*\n\s*\.mail::before\s*\{\s*transition:\s*none\s*!important;/,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.card,\s*\n\s*\.card \.thumb img,\s*\n\s*\.row,\s*\n\s*\.row \.go,\s*\n\s*\.row \.name,\s*\n\s*\.link::after\s*\{\s*transition:\s*none\s*!important;/,
     "Every card/row/link hover transition from the prototype composition must be removed under reduced motion"
   );
 });

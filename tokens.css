@@ -85,6 +85,11 @@
   --color-scene-about: oklch(22% 0.036 248);
   --color-scene-projects: oklch(20% 0.04 245);
   --color-scene-contact: oklch(24% 0.036 252);
+  /* Contact marks share one lightness and chroma and differ only by hue, so
+   * the four read as one family. Both move with the ground: a value tuned
+   * for 夜藍 washes out on 白妙's near-white paper. */
+  --service-lightness: 76%;
+  --service-chroma: 0.1;
   --color-project-a: oklch(26% 0.042 245);
   --color-project-b: oklch(22% 0.034 251);
   --color-print-paper: oklch(100% 0 0);

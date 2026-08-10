@@ -207,8 +207,8 @@ test("increased contrast strengthens muted roles and UI boundaries without chang
   );
   assert.match(
     modernSource,
-    /\.contact-copy-status\s*\{[^}]*color:\s*var\(--color-ink-2\)/s,
-    "The copy status line must take its color from the strengthened ink-2 token"
+    /\.contact-service\s*\{[^}]*color:\s*var\(--color-muted\)/s,
+    "The contact service column must take its color from the strengthened muted token"
   );
   assert.match(
     modernSource,

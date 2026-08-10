@@ -459,7 +459,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { reducedMotion: `${reducedMotionSource} ` },
-      /reduced-motion-contracts\.test\.mjs must be exactly 5433 bytes/
+      /reduced-motion-contracts\.test\.mjs must be exactly 5410 bytes/
     );
   }
 );
@@ -469,7 +469,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
-      /site-quality\.test\.mjs must be exactly 28727 bytes/
+      /site-quality\.test\.mjs must be exactly 28952 bytes/
     );
   }
 );

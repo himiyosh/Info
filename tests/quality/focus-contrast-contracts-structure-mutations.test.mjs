@@ -562,7 +562,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { focusContrast: `${focusContrastSource} ` },
-      /focus-contrast-contracts\.test\.mjs must be exactly 7888 bytes/
+      /focus-contrast-contracts\.test\.mjs must be exactly 7890 bytes/
     );
   }
 );
@@ -572,7 +572,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
-      /site-quality\.test\.mjs must be exactly 28727 bytes/
+      /site-quality\.test\.mjs must be exactly 28952 bytes/
     );
   }
 );

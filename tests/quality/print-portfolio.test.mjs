@@ -28,12 +28,12 @@ const stylesheets = ["tokens.css", "styles.css", "modern.css"];
 // must not reach paper; if one of these reappears the sheet regressed.
 //
 // Only selectors that are *visible without the print rules* belong here, and
-// each of these six was measured to be. `.menu-toggle` and `.theme-toggle`
+// each of these five was measured to be. `.menu-toggle` and `.theme-toggle`
 // are deliberately absent: the fixture strips scripts, so `.js-enabled` is
 // never set and both stay hidden whatever the print sheet says. Asserting
-// them would add a line that cannot fail.
+// them would add a line that cannot fail. `.footer-clock` left with the
+// clock itself — a selector that matches nothing cannot fail either.
 const mustNotPrint = [
-  ".footer-clock",
   ".hero-marquee",
   ".nav-menu",
   ".scroll-cue",
@@ -77,7 +77,7 @@ const measurementScript = `
         return null;
       };
       const named = [
-        ...all("article.card h3"),
+        ...all("article.card h4"),
         ...all(".panel .row .name")
       ];
       const clipped = named
@@ -104,7 +104,7 @@ const measurementScript = `
           return computed.animationName !== "none" && computed.animationDuration !== "0s";
         }).length,
         clipped,
-        contactHrefs: all('a[href^="mailto:"], a[href^="https://github.com/himiyosh"]')
+        contactHrefs: all('.contact-links a[href^="https://"]')
           .filter(visible).map((element) => element.getAttribute("href")),
         disclaimerVisible: visible(q(".footer-disclaimer")),
         leaked: ${JSON.stringify(mustNotPrint)}.filter((selector) =>

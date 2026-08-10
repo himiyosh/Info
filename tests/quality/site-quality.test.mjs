@@ -46,11 +46,18 @@ test("new-tab links include bilingual accessibility announcement text", async ()
   const indexHtml = await readUtf8("index.html");
   const scriptSource = await readUtf8("script.js");
 
-  assert.match(
-    indexHtml,
-    /<a href="https:\/\/github\.com\/himiyosh" target="_blank"[\s\S]*data-i18n="accessibility\.opensInNewTab"/,
-    "GitHub contact link must announce new-tab behavior via i18n text"
-  );
+  // Every contact profile, not just the first: they all open a new tab, so
+  // they all owe the announcement. Matching by host keeps the contract
+  // independent of attribute order on the anchor.
+  for (const host of ["github\\.com", "zenn\\.dev", "qiita\\.com", "note\\.com"]) {
+    assert.match(
+      indexHtml,
+      new RegExp(
+        `<a[^>]*href="https://${host}/[^"]*"[^>]*target="_blank"[^>]*>[\\s\\S]*?data-i18n="accessibility\\.opensInNewTab"[\\s\\S]*?</a>`
+      ),
+      `The ${host} contact link must announce new-tab behavior via i18n text`
+    );
+  }
   const generatorSource = await readUtf8("scripts/generate-static-pages.mjs");
   assert.match(
     generatorSource,
@@ -326,16 +333,18 @@ test("rich redesign foundation uses local tokens and layers the modern system la
   ]);
 });
 
-test("footer renders the clock, the statement, and the recovery link once each", async () => {
+test("footer renders the statement and the recovery link once each", async () => {
   const indexHtml = await readUtf8("index.html");
   const scriptSource = await readUtf8("script.js");
 
   const footer = indexHtml.match(/<footer class="site-footer">([\s\S]*?)<\/footer>/)?.[1];
   assert.ok(footer, "index.html must keep one site footer");
-  assert.match(
+  // The live JST clock is retired: it told visitors the time, which they
+  // already had, and cost a 1s interval plus its own teardown lifecycle.
+  assert.doesNotMatch(
     footer,
-    /<p\b[^>]*id="footer-clock"[^>]*>--:--:-- JST<\/p>/,
-    "The clock must ship a static placeholder so no-JS and print footers still read as a clock"
+    /footer-clock/,
+    "The retired footer clock must not return to the markup"
   );
   assert.match(
     footer,
@@ -350,15 +359,10 @@ test("footer renders the clock, the statement, and the recovery link once each",
   assert.match(footer, /<a[^>]*href="#top"[^>]*data-i18n="footer\.backToTop"/);
   assert.match(footer, /class="footer-disclaimer"/);
 
-  assert.match(
+  assert.doesNotMatch(
     scriptSource,
-    /timeZone: "Asia\/Tokyo"/,
-    "The clock must render Japan Standard Time regardless of the visitor's zone"
-  );
-  assert.match(
-    scriptSource,
-    /window\.addEventListener\("pagehide", \(\) => \{\s*window\.clearInterval\(footerClockTimer\);/,
-    "The clock interval must tear down on pagehide"
+    /footerClock|jstFormatter|Asia\/Tokyo/,
+    "The clock's timer and formatter must go with it, not linger unused"
   );
   assert.doesNotMatch(
     scriptSource,
@@ -638,7 +642,7 @@ test("cards and panel keep the prototype grid at every breakpoint", async () => 
   );
   assert.match(
     modernSource,
-    /\.featured \.card:last-child:nth-child\(odd\)\s*\{\s*grid-column:\s*1 \/ -1;/,
+    /\.featured \.card\.is-alone\s*\{\s*grid-column:\s*1 \/ -1;/,
     "A partnerless trailing card must span the featured grid rather than leave a half-empty row"
   );
   assert.match(

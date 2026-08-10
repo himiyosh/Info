@@ -587,22 +587,19 @@ html:lang(ja) .hero h1 span {
   color: var(--color-accent-ink);
 }
 
+/* The contact panel is a centred section, so a paragraph narrower than the
+ * panel has to centre its box too. `margin: 0` left it pinned to the start
+ * edge — the text inside was centred, but only within a box sitting 196px
+ * left of where it looked like it should be. This selector outranks
+ * .contact-lede (0-1-2 against 0-1-0), so the fix belongs here rather than
+ * in a more specific override downstream. */
 .contact-panel > div > p {
   max-width: 48rem;
-  margin: 0;
+  margin-block: 0;
+  margin-inline: auto;
   color: var(--color-accent-ink);
   font-size: var(--text-md);
   text-wrap: pretty;
-}
-
-.contact-links {
-  border-block-start: 2px solid var(--color-ink);
-}
-
-.contact-email-method {
-  min-width: 0;
-  display: grid;
-  border-block-end: 2px solid var(--color-ink);
 }
 
 /* The prototype lays a contact link out as one row: label then the ↗ tick.
@@ -612,76 +609,16 @@ html:lang(ja) .hero h1 span {
    composition's, so the shell only keeps the padding and centring. */
 .contact-links a {
   padding-block: var(--space-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3xs);
   color: var(--color-accent-ink);
-  border-block-end: 2px solid var(--color-ink);
   text-decoration: none;
   transition:
     background-color var(--dur-micro) var(--ease-out),
     transform var(--dur-micro) var(--ease-out);
 }
 
-.contact-email-method > a {
-  border-block-end: 0;
-}
-
-.contact-copy-button {
-  width: fit-content;
-  max-width: 100%;
-  min-height: 44px;
-  margin: 0 0 var(--space-sm);
-  padding: var(--space-2xs) var(--space-sm);
-  background: var(--color-paper);
-  color: var(--color-ink);
-  border: 2px solid var(--color-ink);
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  font-weight: 800;
-  font-variation-settings: "wght" 800;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  text-transform: uppercase;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background-color var(--dur-micro) var(--ease-out),
-    color var(--dur-micro) var(--ease-out),
-    transform var(--dur-micro) var(--ease-out);
-}
-
-.contact-copy-button[aria-busy="true"] {
-  cursor: progress;
-}
-
-.contact-copy-status {
-  min-height: 1.7em;
-  margin: 0 0 var(--space-sm);
-  color: var(--color-accent-ink);
-  font-size: var(--text-sm);
-  line-height: 1.7;
-}
-
-.contact-copy-button[hidden],
-.contact-copy-status[hidden] {
-  display: none;
-}
-
 .contact-links span {
   font-size: var(--text-sm);
   font-weight: 700;
-}
-
-.contact-links strong {
-  font-family: var(--font-display);
-  font-size: clamp(1.5rem, 5vw, 2.5rem);
-  font-weight: 800;
-  font-variation-settings: "wght" 800;
-  letter-spacing: 0.01em;
-  line-height: 1;
-  overflow-wrap: anywhere;
 }
 
 .site-footer {
@@ -806,10 +743,6 @@ html:lang(ja) :where(.section-heading h2, .projects-intro h2, .contact h2) {
     color: var(--color-ink);
   }
 
-  .contact-copy-button:hover {
-    background: var(--color-paper);
-    color: var(--color-ink);
-  }
 }
 
 @media (min-width: 48rem) {

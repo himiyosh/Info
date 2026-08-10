@@ -59,13 +59,14 @@ test.describe("アクセシビリティ挙動", () => {
 });
 
 test.describe("連絡導線", () => {
-  test("メールのワンクリックコピー(Chromium)", async ({ page, context, browserName }) => {
-    test.skip(browserName !== "chromium", "clipboard permission は Chromium のみ付与可能");
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  test("プロフィールリンクが4件そろい、いずれも新しいタブで開く", async ({ page }) => {
     await page.goto(BASE_URL);
-    await page.locator(".copy-btn").click();
-    await expect(page.locator("#toast")).toHaveClass(/on/);
-    const copied = await page.evaluate(() => navigator.clipboard.readText());
-    expect(copied).toBe("himiyosh@gmail.com");
+    const links = page.locator(".contact-links a");
+    await expect(links).toHaveCount(4);
+    for (const service of ["GITHUB", "ZENN", "QIITA", "NOTE"]) {
+      const row = page.locator(".contact-links a", { hasText: service });
+      await expect(row).toHaveAttribute("target", "_blank");
+      await expect(row).toHaveAttribute("rel", /noopener/);
+    }
   });
 });

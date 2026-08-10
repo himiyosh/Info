@@ -89,7 +89,7 @@ function measure(win, width) {
   const cards = [...doc.querySelectorAll("article.card")];
   const rows = [...doc.querySelectorAll(".panel .row")];
   const named = [
-    ...cards.map((card) => card.querySelector("h3")),
+    ...cards.map((card) => card.querySelector("h4")),
     ...rows.map((row) => row.querySelector(".name"))
   ];
 
@@ -192,7 +192,7 @@ function measure(win, width) {
   const navReachable = navLinks.every(visible) || visible(doc.querySelector("#hamburger-menu"));
   const alwaysVisible = [
     doc.querySelector(".button-primary"),
-    doc.querySelector("#contact-email-link"),
+    ...doc.querySelectorAll(".contact-links a"),
     ...cards.map((card) => card.querySelector("a.link")),
     ...rows.map((row) => row.querySelector("a.row-link"))
   ].filter(Boolean);
@@ -330,7 +330,7 @@ test("reader text-spacing overrides lose no content at 320px or 768px", async ()
     expect(snapshot.namedVisible, "a project lost its visible name");
     expect(snapshot.navReachable, "navigation became unreachable at this width");
     expect(snapshot.controlsVisible, "an important control became unreachable");
-    expect(snapshot.controls >= 10, `important control count ${snapshot.controls}`);
+    expect(snapshot.controls >= 13, `important control count ${snapshot.controls}`);
   }
 
   assert.deepEqual(failures, [], JSON.stringify(measurement, null, 2));

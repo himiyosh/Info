@@ -70,12 +70,7 @@
       contact: {
         eyebrow: "CONTACT",
         title: "話しましょう。",
-        intro: "技術や公開プロジェクトについてのご連絡は、メールまたは GitHub からどうぞ。",
-        emailLabel: "Email",
-        copyEmail: "メールアドレスをコピー",
-        copySuccess: "メールアドレスをコピーしました。",
-        copyManualSelected: "コピーできませんでした。選択中のアドレスを手動でコピーしてください。",
-        copyFailure: "コピーできませんでした。表示中のアドレスを手動でコピーしてください。"
+        intro: "技術や公開プロジェクトについてのご連絡は、以下のいずれかからどうぞ。"
       },
       stack: {
         eyebrow: "STACK",
@@ -105,7 +100,6 @@
       },
       footer: {
         backToTop: "ページ上部へ",
-        clockLabel: "現在時刻(日本標準時)",
         scrollCue: "SCROLL"
       },
       disclaimer:
@@ -174,12 +168,7 @@
       contact: {
         eyebrow: "CONTACT",
         title: "Let's talk.",
-        intro: "For questions about technology or these public projects, reach out by email or GitHub.",
-        emailLabel: "Email",
-        copyEmail: "Copy email address",
-        copySuccess: "Email address copied.",
-        copyManualSelected: "Copy failed. Copy the selected address manually.",
-        copyFailure: "Copy failed. Select the visible address and copy it manually."
+        intro: "For questions about technology or these public projects, reach out through any of these."
       },
       stack: {
         eyebrow: "STACK",
@@ -209,7 +198,6 @@
       },
       footer: {
         backToTop: "Back to top",
-        clockLabel: "Current time (Japan Standard Time)",
         scrollCue: "SCROLL"
       },
       disclaimer:
