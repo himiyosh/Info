@@ -587,9 +587,16 @@ html:lang(ja) .hero h1 span {
   color: var(--color-accent-ink);
 }
 
+/* The contact panel is a centred section, so a paragraph narrower than the
+ * panel has to centre its box too. `margin: 0` left it pinned to the start
+ * edge — the text inside was centred, but only within a box sitting 196px
+ * left of where it looked like it should be. This selector outranks
+ * .contact-lede (0-1-2 against 0-1-0), so the fix belongs here rather than
+ * in a more specific override downstream. */
 .contact-panel > div > p {
   max-width: 48rem;
-  margin: 0;
+  margin-block: 0;
+  margin-inline: auto;
   color: var(--color-accent-ink);
   font-size: var(--text-md);
   text-wrap: pretty;
