@@ -46,11 +46,18 @@ test("new-tab links include bilingual accessibility announcement text", async ()
   const indexHtml = await readUtf8("index.html");
   const scriptSource = await readUtf8("script.js");
 
-  assert.match(
-    indexHtml,
-    /<a href="https:\/\/github\.com\/himiyosh" target="_blank"[\s\S]*data-i18n="accessibility\.opensInNewTab"/,
-    "GitHub contact link must announce new-tab behavior via i18n text"
-  );
+  // Every contact profile, not just the first: they all open a new tab, so
+  // they all owe the announcement. Matching by host keeps the contract
+  // independent of attribute order on the anchor.
+  for (const host of ["github\\.com", "zenn\\.dev", "qiita\\.com", "note\\.com"]) {
+    assert.match(
+      indexHtml,
+      new RegExp(
+        `<a[^>]*href="https://${host}/[^"]*"[^>]*target="_blank"[^>]*>[\\s\\S]*?data-i18n="accessibility\\.opensInNewTab"[\\s\\S]*?</a>`
+      ),
+      `The ${host} contact link must announce new-tab behavior via i18n text`
+    );
+  }
   const generatorSource = await readUtf8("scripts/generate-static-pages.mjs");
   assert.match(
     generatorSource,

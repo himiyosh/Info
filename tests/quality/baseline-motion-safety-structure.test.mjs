@@ -41,7 +41,7 @@ const baselineMotionSafetyBodyExpectedSha256 =
   "e6531007976b2dc661924aa27594b0eb99285f7c61198267fcc2c74bcd0285f3";
 const mutationGuardExpectedBytes = 16_810;
 const mutationGuardExpectedSha256 =
-  "741fb1206485ae21836a13d8bf6201b0eccf9c0ac20fc473ddcf376c0dbfb89b";
+  "ba2763920b87af5249a85961c954f38a13cddc0c4594cd3733f3d85ff8cd79ae";
 const expectedBaselineMotionSafetyTestNames = [
   "hero image has no entrance animation and decorative keyframes are removed",
   "contact link hover transitions do not animate layout properties",
