@@ -182,16 +182,16 @@
       "en": "Network+"
     },
     "kind": {
-      "ja": "Edge DevTools拡張",
-      "en": "Edge DevTools extension"
+      "ja": "DevTools拡張",
+      "en": "DevTools extension"
     },
     "category": {
       "ja": "ツール",
       "en": "Tools"
     },
     "description": {
-      "ja": "Microsoft Edge DevToolsに、複数キーワード検索、カラム別フィルター、リクエスト詳細、HAR出力を追加するネットワーク分析拡張です。",
-      "en": "A network analysis extension for Microsoft Edge DevTools with multi-keyword search, column filters, request details, and HAR export."
+      "ja": "Microsoft EdgeとGoogle ChromeのDevToolsに、複数キーワード検索、カラム別フィルター、リクエスト詳細、HAR出力を追加するネットワーク分析拡張です。",
+      "en": "A network analysis extension for Microsoft Edge and Google Chrome DevTools with multi-keyword search, column filters, request details, and HAR export."
     },
     "image": "assets/network-plus-preview.jpg",
     "desktopImageAvif": "assets/network-plus-preview-960w.avif",
@@ -203,7 +203,7 @@
     "stack": [
       "Manifest V3",
       "JavaScript",
-      "Edge DevTools",
+      "Chromium DevTools",
       "Jest"
     ],
     "proof": {
