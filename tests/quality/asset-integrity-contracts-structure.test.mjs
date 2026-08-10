@@ -44,7 +44,7 @@ const sharedHelperExpectedSha256 =
   "6648599f751d88c67bbf4d481b5d1817260c13fcd030f521aa6ea1e71fcd6492";
 const mutationGuardExpectedBytes = 13_551;
 const mutationGuardExpectedSha256 =
-  "e30adcee70e63db6c6e7a679c3a6381f7bf061afe82de816ae06c37c9156bff8";
+  "6c9ac3e12bd5d19474c25bff424a79e99f8e0206fc3c08e2d340ab0937e9e796";
 const expectedAssetIntegrityTestNames = [
   "all referenced local files exist",
   "preview assets are not stale or orphaned",

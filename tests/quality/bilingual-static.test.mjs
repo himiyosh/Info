@@ -344,7 +344,10 @@ test("both routes provide complete localized initial HTML and no-JavaScript proj
 
     const cards = featuredCards(source);
     assert.equal(cards.length, 6, `${page.outputPath} must render six featured cards`);
-    assert.ok(cards[0].wide, "The first featured card must span the grid");
+    assert.ok(
+      cards.every((card) => !card.wide),
+      "Featured cards are uniform; no card may carry the retired wide modifier"
+    );
     const featured = projects.slice(0, 6);
     assert.deepEqual(
       cards.map(({ targetId }) => targetId),

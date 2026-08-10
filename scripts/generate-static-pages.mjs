@@ -19,9 +19,9 @@ const projectImagePattern = /^assets\/[a-z0-9]+(?:-[a-z0-9]+)*\.jpg$/;
 const reservedProjectSlugs = new Set(["top", "about", "works", "stack", "contact", "main-content"]);
 
 // The first FEATURED_COUNT entries of projects.json render as featured
-// cards (the first of them wide); the rest render as panel rows. Layout is
-// a consequence of file order, so reordering projects.json is the whole
-// editorial interface.
+// cards, the rest as panel rows. Cards are uniform, so adjacent pairs in
+// file order become grid rows on desktop. Layout is a consequence of file
+// order, so reordering projects.json is the whole editorial interface.
 const FEATURED_COUNT = 6;
 
 export const pages = [
@@ -521,7 +521,7 @@ export function renderProjectFeaturedCards(projects, page, indentation = "") {
       .toLocaleUpperCase("en-US");
 
     const card = [
-      `${indentation}<article class="card${index === 0 ? " wide" : ""}" id="project-${slug}">`,
+      `${indentation}<article class="card" id="project-${slug}">`,
       `${indentation}  <div class="thumb" data-initial="${escapeHtml(initial)}" data-label="${escapeHtml(previewLabel)}">`,
       `${indentation}    <span class="badge">${escapeHtml(kind)}</span>`,
       `${indentation}    <picture>`,

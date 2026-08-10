@@ -747,6 +747,22 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
     { timeout: 1000 }
   );
   const cloneProjects = () => JSON.parse(JSON.stringify(projects));
+
+  // Indices are derived, not written down: the catalogue's order is the
+  // editorial interface and gets reshuffled, so a hardcoded index silently
+  // stops exercising what it names the moment a project moves. `sourced` is
+  // the first entry carrying a source pair, `otherSourced` the next one, and
+  // `proofed` the first carrying a proof citation.
+  const sourcedIndices = projects
+    .map((project, index) => (Object.hasOwn(project, "sourceLink") ? index : -1))
+    .filter((index) => index !== -1);
+  const proofedIndices = projects
+    .map((project, index) => (Object.hasOwn(project, "proofLink") ? index : -1))
+    .filter((index) => index !== -1);
+  assert.ok(sourcedIndices.length >= 2, "This fixture needs two source-backed projects");
+  assert.ok(proofedIndices.length >= 2, "This fixture needs two proof-backed projects");
+  const [sourced, otherSourced] = sourcedIndices;
+  const [proofed, otherProofed] = proofedIndices;
   const validateCatalogue = (catalogue) => {
     const seenSlugs = new Set();
     const seenLinks = new Set();
@@ -767,35 +783,35 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
   assert.doesNotThrow(() => validateCatalogue(cloneProjects()));
 
   const missingAction = cloneProjects();
-  delete missingAction[1].sourceAction;
+  delete missingAction[sourced].sourceAction;
   assert.throws(() => validateCatalogue(missingAction), /must be provided together/);
 
   const incompleteLabel = cloneProjects();
-  delete incompleteLabel[1].sourceAction.en;
+  delete incompleteLabel[sourced].sourceAction.en;
   assert.throws(() => validateCatalogue(incompleteLabel), /sourceAction\.en.*non-empty string/);
 
   const matchingAction = cloneProjects();
-  matchingAction[1].sourceAction = { ...matchingAction[1].action };
+  matchingAction[sourced].sourceAction = { ...matchingAction[sourced].action };
   assert.throws(() => validateCatalogue(matchingAction), /must differ from "action\.ja"/);
 
   const malformedLink = cloneProjects();
-  malformedLink[1].sourceLink = "not an absolute URL";
+  malformedLink[sourced].sourceLink = "not an absolute URL";
   assert.throws(() => validateCatalogue(malformedLink), /must be an absolute HTTPS URL/);
 
   const insecureLink = cloneProjects();
-  insecureLink[1].sourceLink = "http://github.com/himiyosh/tech-dashboard";
+  insecureLink[sourced].sourceLink = "http://github.com/himiyosh/tech-dashboard";
   assert.throws(() => validateCatalogue(insecureLink), /must be an absolute HTTPS URL/);
 
   const matchingLink = cloneProjects();
-  matchingLink[1].sourceLink = matchingLink[1].link;
+  matchingLink[sourced].sourceLink = matchingLink[sourced].link;
   assert.throws(() => validateCatalogue(matchingLink), /source link must differ/);
 
   const duplicateLink = cloneProjects();
-  duplicateLink[2].sourceLink = duplicateLink[1].sourceLink;
+  duplicateLink[otherSourced].sourceLink = duplicateLink[sourced].sourceLink;
   assert.throws(() => validateCatalogue(duplicateLink), /Duplicate project link detected/);
 
   const missingProofLink = cloneProjects();
-  delete missingProofLink[0].proofLink;
+  delete missingProofLink[proofed].proofLink;
   assert.throws(() => validateCatalogue(missingProofLink), /must be provided together/);
 
   const incompleteProof = cloneProjects();
@@ -807,7 +823,7 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
   assert.throws(() => validateCatalogue(matchingProof), /must add information beyond existing card copy/);
 
   const duplicateProof = cloneProjects();
-  duplicateProof[2].proof.ja = duplicateProof[1].proof.ja;
+  duplicateProof[otherProofed].proof.ja = duplicateProof[proofed].proof.ja;
   assert.throws(() => validateCatalogue(duplicateProof), /Duplicate project proof text detected/);
 
   const mutableProofLink = cloneProjects();
@@ -821,9 +837,15 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
   assert.throws(() => validateCatalogue(unboundedProofLink), /immutable GitHub blob HTTPS URL/);
 
   // Anchored by slug, not position: tech-dashboard is only "foreign" to a
-  // project that is not TechDB, and display order is free to change.
+  // project that is not TechDB, and display order is free to change. The
+  // target must already carry a proof pair, otherwise replacing the link
+  // alone trips the paired-fields check and never reaches the repository
+  // match this case exists to exercise.
   const foreignProofLink = cloneProjects();
-  const foreignTarget = foreignProofLink.find((entry) => entry.slug !== "techdb");
+  const foreignTarget = foreignProofLink.find(
+    (entry) => entry.slug !== "techdb" && Object.hasOwn(entry, "proofLink")
+  );
+  assert.ok(foreignTarget, "This fixture needs a proof-backed project other than TechDB");
   foreignTarget.proofLink =
     "https://github.com/himiyosh/tech-dashboard/blob/6fde819e689fb8f19a238b1877484d8db596c59b/.github/workflows/publisher.yml#L71-L89";
   assert.throws(() => validateCatalogue(foreignProofLink), /must match an existing public GitHub repository action/);

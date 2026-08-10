@@ -566,7 +566,7 @@ test("the prototype composition is complete, ordered, and documented by the lock
     /<div class="hero-marquee"/,
     /<section class="about section-shell" id="about"/,
     /<section class="projects" id="projects"/,
-    /<article\b[^>]*class="card wide"/,
+    /<div class="featured">/,
     /class="panel"/,
     /<section class="stack section-shell" id="stack"/,
     /<section class="contact section-shell" id="contact"/
@@ -638,8 +638,8 @@ test("cards and panel keep the prototype grid at every breakpoint", async () => 
   );
   assert.match(
     modernSource,
-    /\.card\.wide\s*\{\s*grid-column:\s*1 \/ -1;/,
-    "The wide card must span the featured grid"
+    /\.featured \.card:last-child:nth-child\(odd\)\s*\{\s*grid-column:\s*1 \/ -1;/,
+    "A partnerless trailing card must span the featured grid rather than leave a half-empty row"
   );
   assert.match(
     modernSource,

@@ -40,7 +40,7 @@ const publicDiscoveryBodyExpectedSha256 =
   "fca3c52e3e510ae90e620815b9993c796707e5f2c9fa7f7f6d3ac2b99e8cae1d";
 const mutationGuardExpectedBytes = 15_976;
 const mutationGuardExpectedSha256 =
-  "860a4b681c255472aae99bc4bd6a6445864b1fd1f6b40c0748851a3d62d617be";
+  "0e56bb63c939a6536dca7eeb0d52ee30150be96bfe94f1672413f223af13c4af";
 const expectedPublicDiscoveryTestNames = [
   "required SEO and social metadata exist and are consistent",
   "baked project markup preserves every canonical destination in catalogue order",

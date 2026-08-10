@@ -43,6 +43,37 @@
     "sourceLink": "https://github.com/himiyosh/tech-dashboard"
   },
   {
+    "slug": "ucfitness",
+    "title": {
+      "ja": "UCFitness",
+      "en": "UCFitness"
+    },
+    "kind": {
+      "ja": "フィットネスサービス",
+      "en": "Fitness service"
+    },
+    "description": {
+      "ja": "Fitbitの歩数、残り歩数、達成率、仲間とのランキング、UCやバッジを一つの画面で追えるフィットネスサービスです。",
+      "en": "A Fitbit-connected fitness service for tracking steps, progress, group competition, UC rewards, and badges in one place."
+    },
+    "image": "assets/ucfitness-preview.jpg",
+    "desktopImageAvif": "assets/ucfitness-preview-960w.avif",
+    "mobileImageAvif": "assets/ucfitness-preview-720w.avif",
+    "imageAlt": {
+      "ja": "Fitbitの歩数と達成率を表示するUCFitnessのトップ画面",
+      "en": "UCFitness landing page showing Fitbit steps and goal progress"
+    },
+    "stack": [
+      "Fitbit",
+      "PWA"
+    ],
+    "action": {
+      "ja": "UCFitnessを開く",
+      "en": "Open UCFitness"
+    },
+    "link": "https://ucfitness.studio344.net/"
+  },
+  {
     "slug": "jojo-aiagent",
     "title": {
       "ja": "AIエージェント、いま何が起きている?",
@@ -127,37 +158,6 @@
       "en": "View source on GitHub"
     },
     "sourceLink": "https://github.com/himiyosh/JoJo-Git"
-  },
-  {
-    "slug": "ucfitness",
-    "title": {
-      "ja": "UCFitness",
-      "en": "UCFitness"
-    },
-    "kind": {
-      "ja": "フィットネスサービス",
-      "en": "Fitness service"
-    },
-    "description": {
-      "ja": "Fitbitの歩数、残り歩数、達成率、仲間とのランキング、UCやバッジを一つの画面で追えるフィットネスサービスです。",
-      "en": "A Fitbit-connected fitness service for tracking steps, progress, group competition, UC rewards, and badges in one place."
-    },
-    "image": "assets/ucfitness-preview.jpg",
-    "desktopImageAvif": "assets/ucfitness-preview-960w.avif",
-    "mobileImageAvif": "assets/ucfitness-preview-720w.avif",
-    "imageAlt": {
-      "ja": "Fitbitの歩数と達成率を表示するUCFitnessのトップ画面",
-      "en": "UCFitness landing page showing Fitbit steps and goal progress"
-    },
-    "stack": [
-      "Fitbit",
-      "PWA"
-    ],
-    "action": {
-      "ja": "UCFitnessを開く",
-      "en": "Open UCFitness"
-    },
-    "link": "https://ucfitness.studio344.net/"
   },
   {
     "slug": "network-plus",
