@@ -423,7 +423,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { publicDiscovery: `${publicDiscoverySource} ` },
-      /public-discovery-contracts\.test\.mjs must be exactly 5482 bytes/
+      /public-discovery-contracts\.test\.mjs must be exactly 5480 bytes/
     );
   }
 );
@@ -433,7 +433,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
-      /site-quality\.test\.mjs must be exactly 28655 bytes/
+      /site-quality\.test\.mjs must be exactly 28727 bytes/
     );
   }
 );

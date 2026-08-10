@@ -46,7 +46,7 @@ const reviewedSourceSliceExpectedSha256 =
   "e9f0f9c3a692e004f4b28015ba288872152735f36e21d9b1115b56daaeb56d2c";
 const mutationGuardExpectedBytes = 20_470;
 const mutationGuardExpectedSha256 =
-  "44a988cd78962bbf5cdccdbca4af2cc36a3650b6edce02e4df564771f730341d";
+  "190484ad2a5658cd2abfffcd190504e20f342b868e03137e50f9eb6158432e71";
 const expectedFocusContrastTestNames = [
   "final modern focus-ring overrides match the actual project and contact surfaces",
   "focus-ring / backdrop token pairings meet WCAG 1.4.11 non-text contrast (>= 3:1)",

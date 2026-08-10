@@ -56,6 +56,8 @@ test("Pages artifact whitelist is strict and covers all locally referenced produ
     "modern.css",
     "script.js",
     "i18n.js",
+    "hero-3d.js",
+    "motion.js",
     "projects.json",
     "assets",
     "favicon.svg",

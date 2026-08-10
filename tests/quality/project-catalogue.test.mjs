@@ -9,7 +9,7 @@ const pagesWhitelistPath = ".github/pages-artifact-whitelist.txt";
 const projectPreviewAvifBaselineBytes = 554_001;
 const projectPreviewAvifMaximumBytes = 200_000;
 const projectPreviewMinimumSavingsRatio = 0.6;
-const projectPreviewDesktopJpegBaselineBytes = 524_923;
+const projectPreviewDesktopJpegBaselineBytes = 486_968;
 const projectPreviewDesktopAvifMaximumRatio = 0.5;
 const projectPreviewDesktopMedia = "(min-width: 48rem)";
 const projectPreviewMobileMedia = "(max-width: 47.999rem)";
@@ -592,7 +592,7 @@ test("projects.json schema, localization, links, and preview assets are valid", 
   }
 });
 
-test("exactly six live projects expose verified public source actions", async () => {
+test("exactly five live projects expose verified public source actions", async () => {
   const projects = JSON.parse(await readUtf8("projects.json"));
   const indexHtml = await readUtf8("index.html");
   const scriptSource = await readUtf8("script.js");
@@ -601,7 +601,6 @@ test("exactly six live projects expose verified public source actions", async ()
     ["AI Agents: What Is Happening Right Now?", "https://github.com/himiyosh/JoJo-AIAgent"],
     ["Git, Not Scary", "https://github.com/himiyosh/JoJo-Git"],
     ["Encode / Decode Tool", "https://github.com/himiyosh/encode-decode-tool"],
-    ["URLDecoder", "https://github.com/himiyosh/URLDecoder"],
     ["ImageResizer", "https://github.com/himiyosh/ImageResizer"]
   ]);
   const projectsWithSources = projects.filter((project) => Object.hasOwn(project, "sourceLink"));
@@ -694,14 +693,6 @@ test("exactly eight public projects expose reviewed immutable proof citations", 
       }
     ],
     [
-      "URLDecoder",
-      {
-        ja: "入力を encodeURIComponent / decodeURIComponent で処理し、変換結果または失敗理由を出力欄に表示します。",
-        en: "Input is processed with encodeURIComponent or decodeURIComponent, and the output field shows either the result or the failure reason.",
-        link: "https://github.com/himiyosh/URLDecoder/blob/fa686afa5196dd7dc9432c7ab916d5376dc69954/index.html#L108-L126"
-      }
-    ],
-    [
       "ImageResizer",
       {
         ja: "選択画像をブラウザー内で読み込み、192px と 32px の canvas に描画して PNG ダウンロードリンクを生成します。",
@@ -756,6 +747,22 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
     { timeout: 1000 }
   );
   const cloneProjects = () => JSON.parse(JSON.stringify(projects));
+
+  // Indices are derived, not written down: the catalogue's order is the
+  // editorial interface and gets reshuffled, so a hardcoded index silently
+  // stops exercising what it names the moment a project moves. `sourced` is
+  // the first entry carrying a source pair, `otherSourced` the next one, and
+  // `proofed` the first carrying a proof citation.
+  const sourcedIndices = projects
+    .map((project, index) => (Object.hasOwn(project, "sourceLink") ? index : -1))
+    .filter((index) => index !== -1);
+  const proofedIndices = projects
+    .map((project, index) => (Object.hasOwn(project, "proofLink") ? index : -1))
+    .filter((index) => index !== -1);
+  assert.ok(sourcedIndices.length >= 2, "This fixture needs two source-backed projects");
+  assert.ok(proofedIndices.length >= 2, "This fixture needs two proof-backed projects");
+  const [sourced, otherSourced] = sourcedIndices;
+  const [proofed, otherProofed] = proofedIndices;
   const validateCatalogue = (catalogue) => {
     const seenSlugs = new Set();
     const seenLinks = new Set();
@@ -776,35 +783,35 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
   assert.doesNotThrow(() => validateCatalogue(cloneProjects()));
 
   const missingAction = cloneProjects();
-  delete missingAction[1].sourceAction;
+  delete missingAction[sourced].sourceAction;
   assert.throws(() => validateCatalogue(missingAction), /must be provided together/);
 
   const incompleteLabel = cloneProjects();
-  delete incompleteLabel[1].sourceAction.en;
+  delete incompleteLabel[sourced].sourceAction.en;
   assert.throws(() => validateCatalogue(incompleteLabel), /sourceAction\.en.*non-empty string/);
 
   const matchingAction = cloneProjects();
-  matchingAction[1].sourceAction = { ...matchingAction[1].action };
+  matchingAction[sourced].sourceAction = { ...matchingAction[sourced].action };
   assert.throws(() => validateCatalogue(matchingAction), /must differ from "action\.ja"/);
 
   const malformedLink = cloneProjects();
-  malformedLink[1].sourceLink = "not an absolute URL";
+  malformedLink[sourced].sourceLink = "not an absolute URL";
   assert.throws(() => validateCatalogue(malformedLink), /must be an absolute HTTPS URL/);
 
   const insecureLink = cloneProjects();
-  insecureLink[1].sourceLink = "http://github.com/himiyosh/tech-dashboard";
+  insecureLink[sourced].sourceLink = "http://github.com/himiyosh/tech-dashboard";
   assert.throws(() => validateCatalogue(insecureLink), /must be an absolute HTTPS URL/);
 
   const matchingLink = cloneProjects();
-  matchingLink[1].sourceLink = matchingLink[1].link;
+  matchingLink[sourced].sourceLink = matchingLink[sourced].link;
   assert.throws(() => validateCatalogue(matchingLink), /source link must differ/);
 
   const duplicateLink = cloneProjects();
-  duplicateLink[2].sourceLink = duplicateLink[1].sourceLink;
+  duplicateLink[otherSourced].sourceLink = duplicateLink[sourced].sourceLink;
   assert.throws(() => validateCatalogue(duplicateLink), /Duplicate project link detected/);
 
   const missingProofLink = cloneProjects();
-  delete missingProofLink[0].proofLink;
+  delete missingProofLink[proofed].proofLink;
   assert.throws(() => validateCatalogue(missingProofLink), /must be provided together/);
 
   const incompleteProof = cloneProjects();
@@ -816,7 +823,7 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
   assert.throws(() => validateCatalogue(matchingProof), /must add information beyond existing card copy/);
 
   const duplicateProof = cloneProjects();
-  duplicateProof[2].proof.ja = duplicateProof[1].proof.ja;
+  duplicateProof[otherProofed].proof.ja = duplicateProof[proofed].proof.ja;
   assert.throws(() => validateCatalogue(duplicateProof), /Duplicate project proof text detected/);
 
   const mutableProofLink = cloneProjects();
@@ -830,9 +837,15 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
   assert.throws(() => validateCatalogue(unboundedProofLink), /immutable GitHub blob HTTPS URL/);
 
   // Anchored by slug, not position: tech-dashboard is only "foreign" to a
-  // project that is not TechDB, and display order is free to change.
+  // project that is not TechDB, and display order is free to change. The
+  // target must already carry a proof pair, otherwise replacing the link
+  // alone trips the paired-fields check and never reaches the repository
+  // match this case exists to exercise.
   const foreignProofLink = cloneProjects();
-  const foreignTarget = foreignProofLink.find((entry) => entry.slug !== "techdb");
+  const foreignTarget = foreignProofLink.find(
+    (entry) => entry.slug !== "techdb" && Object.hasOwn(entry, "proofLink")
+  );
+  assert.ok(foreignTarget, "This fixture needs a proof-backed project other than TechDB");
   foreignTarget.proofLink =
     "https://github.com/himiyosh/tech-dashboard/blob/6fde819e689fb8f19a238b1877484d8db596c59b/.github/workflows/publisher.yml#L71-L89";
   assert.throws(() => validateCatalogue(foreignProofLink), /must match an existing public GitHub repository action/);
@@ -933,7 +946,7 @@ test("project action groups preserve primary-first safe localized links and resp
 });
 test("mobile project AVIF pairs meet dimension and bandwidth budgets", async () => {
   const projects = JSON.parse(await readUtf8("projects.json"));
-  assert.equal(projects.length, 9, "The current catalogue must provide all nine AVIF/JPEG pairs");
+  assert.equal(projects.length, 8, "The current catalogue must provide all eight AVIF/JPEG pairs");
 
   let totalJpegBytes = 0;
   let totalAvifBytes = 0;
@@ -971,7 +984,7 @@ test("mobile project AVIF pairs meet dimension and bandwidth budgets", async () 
 
 test("desktop project AVIF pairs meet exact format, dimensions, and bandwidth budgets", async () => {
   const projects = JSON.parse(await readUtf8("projects.json"));
-  assert.equal(projects.length, 9, "The current catalogue must provide all nine desktop AVIF pairs");
+  assert.equal(projects.length, 8, "The current catalogue must provide all eight desktop AVIF pairs");
 
   let totalJpegBytes = 0;
   let totalAvifBytes = 0;
@@ -1055,7 +1068,7 @@ test("project rendering emits mutually exclusive AVIF sources before lazy JPEG f
   const cardBlocks = [...indexHtml.matchAll(
     /<article\b[^>]*\bclass="card[^"]*"[^>]*>[\s\S]*?<\/article>/gi
   )].map(([block]) => block);
-  assert.equal(cardBlocks.length, 5);
+  assert.equal(cardBlocks.length, 6);
 
   for (const block of cardBlocks) {
     const sourceIndex = block.search(/<source type="image\/avif" srcset="[^"]+-960w\.avif"/);

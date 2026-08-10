@@ -43,6 +43,37 @@
     "sourceLink": "https://github.com/himiyosh/tech-dashboard"
   },
   {
+    "slug": "ucfitness",
+    "title": {
+      "ja": "UCFitness",
+      "en": "UCFitness"
+    },
+    "kind": {
+      "ja": "フィットネスサービス",
+      "en": "Fitness service"
+    },
+    "description": {
+      "ja": "Fitbitの歩数、残り歩数、達成率、仲間とのランキング、UCやバッジを一つの画面で追えるフィットネスサービスです。",
+      "en": "A Fitbit-connected fitness service for tracking steps, progress, group competition, UC rewards, and badges in one place."
+    },
+    "image": "assets/ucfitness-preview.jpg",
+    "desktopImageAvif": "assets/ucfitness-preview-960w.avif",
+    "mobileImageAvif": "assets/ucfitness-preview-720w.avif",
+    "imageAlt": {
+      "ja": "Fitbitの歩数と達成率を表示するUCFitnessのトップ画面",
+      "en": "UCFitness landing page showing Fitbit steps and goal progress"
+    },
+    "stack": [
+      "Fitbit",
+      "PWA"
+    ],
+    "action": {
+      "ja": "UCFitnessを開く",
+      "en": "Open UCFitness"
+    },
+    "link": "https://ucfitness.studio344.net/"
+  },
+  {
     "slug": "jojo-aiagent",
     "title": {
       "ja": "AIエージェント、いま何が起きている?",
@@ -129,37 +160,6 @@
     "sourceLink": "https://github.com/himiyosh/JoJo-Git"
   },
   {
-    "slug": "ucfitness",
-    "title": {
-      "ja": "UCFitness",
-      "en": "UCFitness"
-    },
-    "kind": {
-      "ja": "フィットネスサービス",
-      "en": "Fitness service"
-    },
-    "description": {
-      "ja": "Fitbitの歩数、残り歩数、達成率、仲間とのランキング、UCやバッジを一つの画面で追えるフィットネスサービスです。",
-      "en": "A Fitbit-connected fitness service for tracking steps, progress, group competition, UC rewards, and badges in one place."
-    },
-    "image": "assets/ucfitness-preview.jpg",
-    "desktopImageAvif": "assets/ucfitness-preview-960w.avif",
-    "mobileImageAvif": "assets/ucfitness-preview-720w.avif",
-    "imageAlt": {
-      "ja": "Fitbitの歩数と達成率を表示するUCFitnessのトップ画面",
-      "en": "UCFitness landing page showing Fitbit steps and goal progress"
-    },
-    "stack": [
-      "Fitbit",
-      "PWA"
-    ],
-    "action": {
-      "ja": "UCFitnessを開く",
-      "en": "Open UCFitness"
-    },
-    "link": "https://ucfitness.studio344.net/"
-  },
-  {
     "slug": "network-plus",
     "title": {
       "ja": "Network+",
@@ -238,47 +238,6 @@
       "en": "View source on GitHub"
     },
     "sourceLink": "https://github.com/himiyosh/encode-decode-tool"
-  },
-  {
-    "slug": "url-decoder",
-    "title": {
-      "ja": "URLDecoder",
-      "en": "URLDecoder"
-    },
-    "kind": {
-      "ja": "Web ツール",
-      "en": "Web tool"
-    },
-    "description": {
-      "ja": "URL のエンコードとデコードをブラウザーで行う、シンプルなユーティリティです。",
-      "en": "A simple browser utility for encoding and decoding URLs."
-    },
-    "image": "assets/url-decoder-preview.jpg",
-    "desktopImageAvif": "assets/url-decoder-preview-960w.avif",
-    "mobileImageAvif": "assets/url-decoder-preview-720w.avif",
-    "imageAlt": {
-      "ja": "入力欄と操作ボタンを備えた URLDecoder の画面",
-      "en": "URLDecoder interface with input, output, and action controls"
-    },
-    "stack": [
-      "HTML",
-      "JavaScript"
-    ],
-    "proof": {
-      "ja": "入力を encodeURIComponent / decodeURIComponent で処理し、変換結果または失敗理由を出力欄に表示します。",
-      "en": "Input is processed with encodeURIComponent or decodeURIComponent, and the output field shows either the result or the failure reason."
-    },
-    "proofLink": "https://github.com/himiyosh/URLDecoder/blob/fa686afa5196dd7dc9432c7ab916d5376dc69954/index.html#L108-L126",
-    "action": {
-      "ja": "ツールを開く",
-      "en": "Open the tool"
-    },
-    "link": "https://himiyosh.github.io/URLDecoder/",
-    "sourceAction": {
-      "ja": "GitHub でソースを見る",
-      "en": "View source on GitHub"
-    },
-    "sourceLink": "https://github.com/himiyosh/URLDecoder"
   },
   {
     "slug": "image-resizer",

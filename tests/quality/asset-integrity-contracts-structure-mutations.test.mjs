@@ -46,9 +46,11 @@ const childProcessEnv = { ...process.env, NO_COLOR: "1" };
 delete childProcessEnv.NODE_TEST_CONTEXT;
 const runtimeFixturePaths = [
   "favicon.svg",
+  "hero-3d.js",
   "i18n.js",
   "index.html",
   "modern.css",
+  "motion.js",
   "projects.json",
   "script.js",
   "sitemap.xml",
@@ -360,7 +362,7 @@ mutationTest(
   async () => {
     await assertMutationRejected(
       { monolith: `${monolithFixtureSource} ` },
-      /site-quality\.test\.mjs must be exactly 28655 bytes/
+      /site-quality\.test\.mjs must be exactly 28727 bytes/
     );
   }
 );
