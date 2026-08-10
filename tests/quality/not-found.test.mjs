@@ -84,7 +84,7 @@ test("404 recovery remains semantic, bilingual, and complete without JavaScript"
     "/Info/en/#projects",
     "/Info/en/#contact",
     "https://github.com/himiyosh",
-    "mailto:himiyosh@gmail.com"
+    "https://zenn.dev/himiyosh"
   ]) {
     assert.match(source, new RegExp(`href="${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
   }

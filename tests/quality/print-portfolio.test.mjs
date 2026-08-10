@@ -104,7 +104,7 @@ const measurementScript = `
           return computed.animationName !== "none" && computed.animationDuration !== "0s";
         }).length,
         clipped,
-        contactHrefs: all('a[href^="mailto:"], a[href^="https://github.com/himiyosh"]')
+        contactHrefs: all('.contact-links a[href^="https://"]')
           .filter(visible).map((element) => element.getAttribute("href")),
         disclaimerVisible: visible(q(".footer-disclaimer")),
         leaked: ${JSON.stringify(mustNotPrint)}.filter((selector) =>

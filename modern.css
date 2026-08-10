@@ -295,33 +295,8 @@ html:lang(ja) :where(.section-heading h2, .projects-intro h2, .contact h2) {
   border-block-start: var(--rule-hair) solid var(--color-rule);
 }
 
-.contact-email-method {
-  border-block-end: var(--rule-hair) solid var(--color-rule);
-}
-
 .contact-links a {
   border-block-end: var(--rule-hair) solid var(--color-rule);
-}
-
-.contact-copy-button {
-  background: var(--color-transparent);
-  color: var(--color-ink);
-  border: var(--rule-hair) solid var(--color-rule);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  font-variation-settings: normal;
-  letter-spacing: 0.01em;
-  text-transform: none;
-}
-
-html:lang(ja) .contact-copy-button {
-  font-family: var(--font-body-ja);
-}
-
-.contact-copy-status {
-  color: var(--color-ink-2);
 }
 
 .contact-panel :where(a, button):focus-visible {
@@ -368,10 +343,6 @@ html:lang(ja) .footer-meta a {
     color: var(--color-ink);
   }
 
-  .contact-copy-button:hover {
-    background: var(--color-paper-2);
-    color: var(--color-ink);
-  }
 }
 
 @media (max-width: 30rem) {
@@ -503,8 +474,6 @@ html:lang(ja) .footer-meta a {
   .wordmark-mark,
   .hero-actions,
   .hero-visual,
-  .contact-copy-button,
-  .contact-copy-status,
   .footer-meta > a {
     display: none !important;
   }
@@ -704,10 +673,6 @@ html:lang(ja) .footer-meta a {
   }
 
   .contact-links,
-  .contact-email-method {
-    border-color: var(--color-print-rule);
-  }
-
   .contact-links {
     margin-block-start: 4mm;
   }
@@ -1616,20 +1581,6 @@ html:lang(ja) .contact-links strong {
   letter-spacing: 0.03em;
 }
 
-.contact-copy-button,
-html:lang(ja) .contact-copy-button {
-  padding: 0.6rem 1.1rem;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-}
-
-.contact-copy-button[data-copy-state="success"] {
-  color: var(--color-ok);
-  border-color: var(--color-ok);
-}
-
 .footer-meta a,
 html:lang(ja) .footer-meta a {
   font-family: var(--font-mono);
@@ -2094,54 +2045,21 @@ html:lang(ja) .card h3 {
   color: var(--color-muted);
 }
 
+/* The contact list is a stack of equal rows, each closed by its own rule.
+ *
+ * `justify-items: center` used to sit here, which made every row shrink to
+ * its own content — a 1160px container held a 609px row above a 161px one,
+ * so each row's bottom rule drew at a different length and the section read
+ * as broken. Rows stretch now and the centring happens inside each row, so
+ * the rules line up whatever a row contains. The gap goes with it: rules
+ * that touch their neighbours read as one list, not as floating fragments. */
 .contact-links {
   display: grid;
-  gap: 2.6rem;
-  justify-items: center;
-}
-
-.mail-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 1.1rem;
-}
-
-.mail {
-  position: relative;
-  display: inline-block;
-  padding-block-end: 0.4rem;
-  color: var(--color-ink);
-  text-decoration: none;
-}
-
-.mail::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  inset-block-end: 0;
-  height: 2px;
-  background: color-mix(in oklab, var(--color-rule) 55%, transparent);
-}
-
-.mail::before {
-  content: "";
-  position: absolute;
-  inset-inline-start: 0;
-  inset-block-end: 0;
-  z-index: var(--z-raised);
-  width: 0%;
-  height: 2px;
-  background: var(--color-accent);
-  transition: width var(--dur-long) var(--ease-out);
-}
-
-.sub-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2rem;
+  gap: 0;
+  justify-items: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* Footer. */
@@ -2220,14 +2138,6 @@ html:lang(ja) .top-link {
     transform: translateX(4px);
   }
 
-  .mail:hover {
-    color: var(--color-accent);
-  }
-
-  .mail:hover::before {
-    width: 100%;
-  }
-
   .top-link:hover {
     color: var(--color-accent);
   }
@@ -2302,8 +2212,7 @@ html:lang(ja) .top-link {
   .row,
   .row .go,
   .row .name,
-  .link::after,
-  .mail::before {
+  .link::after {
     transition: none !important;
   }
 
@@ -2458,5 +2367,62 @@ html:lang(ja) .top-link {
 @media (forced-colors: active) {
   .cursor-ring {
     display: none;
+  }
+}
+
+/* ============================================================
+ * Contact list rows
+ * Each row is one profile: service name on the left, handle on the right,
+ * with the external-link tick trailing the handle. The two-column rhythm
+ * is what makes the list scannable by service rather than by URL.
+ * ============================================================ */
+/* Three columns rather than space-between: with flex, the handle's start
+ * drifted with the length of the service name beside it (GITHUB pushed it
+ * ~10px further than ZENN), so the column of handles read as ragged. A
+ * fixed first track pins every handle to the same x. */
+.contact-links a {
+  display: grid;
+  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-md);
+  min-height: 56px;
+  padding-inline: var(--space-2xs);
+  text-align: start;
+}
+
+.contact-service {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--color-muted);
+}
+
+.contact-handle {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .contact-links a:hover .contact-service,
+  .contact-links a:hover .contact-handle {
+    color: var(--color-accent);
+  }
+}
+
+/* Narrow screens drop the columns: the handle moves under its service name
+ * so neither has to truncate, and the tick stays on the first line. */
+@media (max-width: 30rem) {
+  .contact-links a {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--space-3xs);
+  }
+
+  .contact-links a .contact-handle {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }

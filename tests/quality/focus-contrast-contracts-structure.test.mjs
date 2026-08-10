@@ -34,19 +34,19 @@ const globalInventoryChildMode = globalInventoryEnvironments.some(
   (environmentName) =>
     process.env[environmentName] === globalInventoryEnvironmentValue
 );
-const focusContrastExpectedBytes = 7_888;
+const focusContrastExpectedBytes = 7_890;
 const focusContrastBodyStartExpectedBytes = 273;
 const focusContrastHeaderExpectedSha256 =
   "0e56555309f1cd482e5b0a071cf213f6859415387ac7983795e29915a1781fb3";
-const focusContrastBodyExpectedBytes = 7_615;
+const focusContrastBodyExpectedBytes = 7_617;
 const focusContrastBodyExpectedSha256 =
-  "061a8264e785fbd7560bae123f321b0421cf48eb412b9a1f4f3454fde6e12c2b";
-const reviewedSourceSliceExpectedBytes = 7_616;
+  "16421b47c1042148fa52ba54b5f516c133fa7b112183c399219ee540ad5ae91b";
+const reviewedSourceSliceExpectedBytes = 7_618;
 const reviewedSourceSliceExpectedSha256 =
-  "e9f0f9c3a692e004f4b28015ba288872152735f36e21d9b1115b56daaeb56d2c";
+  "2a15ef35a035c536360a9b8fd1426f5f0014c234835b8d4396e03bbd0cee51d8";
 const mutationGuardExpectedBytes = 20_470;
 const mutationGuardExpectedSha256 =
-  "190484ad2a5658cd2abfffcd190504e20f342b868e03137e50f9eb6158432e71";
+  "daba329234f65b94519713f3296bc4febb96cf4fda3d7327cd34768d1a36c530";
 const expectedFocusContrastTestNames = [
   "final modern focus-ring overrides match the actual project and contact surfaces",
   "focus-ring / backdrop token pairings meet WCAG 1.4.11 non-text contrast (>= 3:1)",
