@@ -730,10 +730,18 @@ html:lang(ja) .footer-meta a {
   color-scheme: dark;
 }
 
+/* --color-paper-2 is the raised-surface slot: cards, panels, tool groups, the
+ * mobile nav sheet. In 白妙 it was 93% against a 96% page, so every card sat
+ * *below* its own ground — measured rgb(235,232,221) on rgb(244,242,233) —
+ * and the warm 0.015 chroma at that lightness reads khaki, which is what made
+ * the project grid look heavy in the light theme. Raised surfaces catch light,
+ * so this now sits above the page and keeps a step clear of --color-surface
+ * (98%) and --color-paper-3 (99%), which still caps the ladder at panel heads.
+ * The dark palettes already run the ladder the right way and are untouched. */
 :root[data-theme="shirotae"] {
   color-scheme: light;
   --color-paper: oklch(96% 0.012 95);
-  --color-paper-2: oklch(93% 0.015 95);
+  --color-paper-2: oklch(97.5% 0.009 95);
   --color-paper-3: oklch(99% 0.005 95);
   --color-surface: oklch(98% 0.007 95);
   --color-surface-raised: oklch(91% 0.02 95);
@@ -764,7 +772,8 @@ html:lang(ja) .footer-meta a {
   :root:not([data-theme]) {
     color-scheme: light;
     --color-paper: oklch(96% 0.012 95);
-    --color-paper-2: oklch(93% 0.015 95);
+    /* Mirrors the 白妙 raised-surface value above — see the note there. */
+    --color-paper-2: oklch(97.5% 0.009 95);
     --color-paper-3: oklch(99% 0.005 95);
     --color-surface: oklch(98% 0.007 95);
     --color-surface-raised: oklch(91% 0.02 95);
