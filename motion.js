@@ -65,8 +65,12 @@
       ...[...document.querySelectorAll(".featured .card")].map((element, index) => ({
         element,
         depth: "--depth-project-max",
-        // Alternating sign separates neighbouring cards into two planes.
-        factor: index % 2 === 0 ? 1 : -1
+        // The sign alternates per row, not per card. Adjacent cards share a
+        // grid row on desktop, so giving neighbours opposite directions
+        // pulled a row visibly out of alignment — measured at 17px apart
+        // mid-scroll and up to ~56px at the extremes. Pairing the sign keeps
+        // each row rigid and still separates successive rows into two planes.
+        factor: Math.floor(index / 2) % 2 === 0 ? 1 : -1
       }))
     ].filter((layer) => layer.element);
 
