@@ -128,9 +128,18 @@ test("Projects exposes one localized focus-revealed bypass to the named Contact 
     styles,
     /:where\(a,\s*button\):focus-visible\s*\{[^}]*outline:\s*3px solid var\(--color-focus\);/s
   );
+  // The in-page targets suppress their own ring; the controls inside them
+  // must not, which the :where(a, button):focus-visible assertion above
+  // pins. A section is a scroll destination, not a keyboard-operable
+  // component, so it owes no visible focus indicator of its own.
   assert.match(
     styles,
-    /\.contact:focus\s+\.contact-panel\s*\{[^}]*outline:\s*3px solid var\(--color-focus\);[^}]*outline-offset:\s*3px;/s
+    /:where\(#main-content, #top, #about, #projects, #stack, #contact\):focus\s*\{\s*outline:\s*none;\s*\}/s
+  );
+  assert.doesNotMatch(
+    styles,
+    /\.contact:focus(-visible)?\s+\.contact-panel\s*\{[^}]*outline:/s,
+    "The retired panel-wide focus ring must not come back"
   );
   assert.match(
     styles,
