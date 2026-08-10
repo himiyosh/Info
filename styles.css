@@ -578,9 +578,19 @@ html:lang(ja) .hero h1 span {
   text-wrap: pretty;
 }
 
-.contact:focus .contact-panel {
-  outline: 3px solid var(--color-focus);
-  outline-offset: 3px;
+/* In-page targets carry tabindex="-1" only so a fragment jump moves focus
+ * and a keyboard or screen-reader visitor continues from where they landed.
+ * They are sections, not controls, so they draw no ring: the jump itself is
+ * the feedback, and a box around a whole section reads as an error state.
+ * Contact used to draw a 3px ring on its panel on top of this, which meant
+ * clicking the hero's 連絡する outlined the entire panel — an affordance
+ * meant for keyboard use, shown to everyone. :focus-visible could not fix
+ * it: a programmatically focused tabindex="-1" element matches it too.
+ * Controls inside these sections keep their own :focus-visible outline,
+ * and WCAG 2.4.7 governs keyboard-operable components, which a section is
+ * not. Zero specificity via :where(), so anything can still override. */
+:where(#main-content, #top, #about, #projects, #stack, #contact):focus {
+  outline: none;
 }
 
 .contact-panel h2 {
