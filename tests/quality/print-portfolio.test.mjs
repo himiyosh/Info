@@ -77,7 +77,7 @@ const measurementScript = `
         return null;
       };
       const named = [
-        ...all("article.card h3"),
+        ...all("article.card h4"),
         ...all(".panel .row .name")
       ];
       const clipped = named

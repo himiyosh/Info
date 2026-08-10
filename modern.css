@@ -2149,16 +2149,15 @@ html:lang(ja) .top-link {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  /* Cards are uniform, so they pair off from odd positions and each
-     adjacent pair in projects.json becomes one row. An odd-positioned last
-     card has no partner and would sit in a half-empty row; letting it span
-     closes the grid instead. Parity does the work, so the rule stays
-     correct whatever FEATURED_COUNT is set to. */
-  .featured .card:last-child:nth-child(odd) {
+  /* A card ending an odd-sized category group has no partner and would sit
+     in a half-empty row; spanning closes the grid. The generator marks it,
+     because :nth-child parity would count the group headings sharing this
+     grid and land on the wrong card. */
+  .featured .card.is-alone {
     grid-column: 1 / -1;
   }
 
-  .featured .card:last-child:nth-child(odd) .thumb {
+  .featured .card.is-alone .thumb {
     aspect-ratio: 21 / 9;
   }
 
@@ -2425,4 +2424,29 @@ html:lang(ja) .top-link {
     grid-column: 1 / -1;
     grid-row: 2;
   }
+}
+
+/* ============================================================
+ * Featured category groups
+ * Each heading labels the pair of cards beneath it. It spans the grid so a
+ * group always starts on its own row, which is what makes the grouping
+ * visible rather than implied by order alone.
+ * ============================================================ */
+.featured-group {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-block-end: var(--space-2xs);
+  border-block-end: var(--rule-hair) solid var(--color-rule);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* Groups after the first need air above them so the heading reads as
+   belonging to the cards below, not the cards above. */
+.featured-group:not(:first-child) {
+  margin-block-start: var(--space-xl);
 }

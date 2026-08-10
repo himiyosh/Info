@@ -89,7 +89,7 @@ function measure(win, width) {
   const cards = [...doc.querySelectorAll("article.card")];
   const rows = [...doc.querySelectorAll(".panel .row")];
   const named = [
-    ...cards.map((card) => card.querySelector("h3")),
+    ...cards.map((card) => card.querySelector("h4")),
     ...rows.map((row) => row.querySelector(".name"))
   ];
 

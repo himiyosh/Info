@@ -86,13 +86,13 @@ function featuredCards(source) {
     const tagsBlock = body.match(/<div class="tags">([\s\S]*?)<\/div>/i)?.[1] ?? "";
     return {
       badge: normalizeText(decodeHtml(body.match(/<span class="badge">([\s\S]*?)<\/span>/i)?.[1] ?? "")),
-      description: normalizeText(decodeHtml(body.match(/<h3>[\s\S]*?<\/h3>\s*<p>([\s\S]*?)<\/p>/i)?.[1] ?? "")),
+      description: normalizeText(decodeHtml(body.match(/<h4>[\s\S]*?<\/h4>\s*<p>([\s\S]*?)<\/p>/i)?.[1] ?? "")),
       imageAlt: decodeHtml(attributeValue(body.match(/<img\b[^>]*>/i)?.[0] ?? "", "alt") ?? ""),
       primary: links[0] ?? null,
       source: links[1] ?? null,
       tags: [...tagsBlock.matchAll(/<span>([\s\S]*?)<\/span>/gi)].map(([, tag]) => decodeHtml(tag)),
       targetId: attributeValue(openingTag, "id"),
-      title: normalizeText(decodeHtml(body.match(/<h3>([\s\S]*?)<\/h3>/i)?.[1] ?? "")),
+      title: normalizeText(decodeHtml(body.match(/<h4>([\s\S]*?)<\/h4>/i)?.[1] ?? "")),
       wide: /\bcard wide\b/.test(openingTag)
     };
   });
@@ -214,6 +214,7 @@ test("baked project markup escapes every inserted value and rejects bad slugs", 
     link: `https://example.test/?query="<tag>"&mode='safe'`,
     title: { ja: `題名 <t>`, en: `A <title> & "label"` },
     kind: { ja: `種別`, en: "Tool 'type' & <kind>" },
+    category: { ja: `分類`, en: `A <category> & "group"` },
     description: { ja: `説明`, en: `A <description> & "detail"` },
     imageAlt: { ja: `代替`, en: `Alt <text> & "quote"` },
     action: { ja: `開く`, en: `Open <primary> & "inspect"` },
@@ -231,12 +232,16 @@ test("baked project markup escapes every inserted value and rejects bad slugs", 
     card,
     /href="https:\/\/example\.test\/\?query=&quot;&lt;tag&gt;&quot;&amp;mode=&#39;safe&#39;"/
   );
-  assert.match(card, />A &lt;title&gt; &amp; &quot;label&quot;<\/h3>/);
+  assert.match(card, />A &lt;title&gt; &amp; &quot;label&quot;<\/h4>/);
+  assert.match(
+    card,
+    /<h3 class="featured-group">A &lt;category&gt; &amp; &quot;group&quot;<\/h3>/
+  );
   assert.match(card, />Tool &#39;type&#39; &amp; &lt;kind&gt;<\/span>/);
   assert.match(card, />A &lt;description&gt; &amp; &quot;detail&quot;<\/p>/);
   assert.match(card, /alt="Alt &lt;text&gt; &amp; &quot;quote&quot;"/);
   assert.match(card, /<span>Stack &lt;one&gt;<\/span><span>Stack &amp; &quot;two&quot;<\/span>/);
-  assert.doesNotMatch(card, /<tag>|<title>|<kind>|<description>|<primary>|<source>|<one>/);
+  assert.doesNotMatch(card, /<tag>|<title>|<kind>|<category>|<description>|<primary>|<source>|<one>/);
 
   // The renderer takes its rows from behind the featured slice, so the fixture
   // needs one placeholder per featured card before the row under test.

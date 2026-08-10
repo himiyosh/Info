@@ -287,6 +287,16 @@ function validateProject(
     validateLocalizedField(project, index, fieldName);
   }
 
+  // Featured cards are grouped under their category heading; panel rows are
+  // one undivided block, so a category there would label nothing.
+  if (index < FEATURED_COUNT) {
+    validateLocalizedField(project, index, "category");
+  } else if (Object.hasOwn(project, "category")) {
+    throw new TypeError(
+      `Project ${index + 1} is a panel row and must not declare "category".`
+    );
+  }
+
   const projectLink = requireNonEmptyString(project.link, `Project ${index + 1} field "link"`);
   const url = new URL(projectLink, "https://build.invalid/");
   if (!["http:", "https:"].includes(url.protocol)) {
@@ -505,7 +515,29 @@ export function renderProjectFeaturedCards(projects, page, indentation = "") {
   const { language, siteRoot } = page;
   const previewLabel = localizedTranslation(language, "projects.previewLabel");
 
-  return projects.slice(0, FEATURED_COUNT).map((project, index) => {
+  // Consecutive entries sharing a category form one group, so file order
+  // still decides both the grouping and the order inside it.
+  const featured = projects.slice(0, FEATURED_COUNT);
+  // A card with no partner has to span the row, and CSS cannot work that
+  // out any more: the group headings sit in the same grid, so counting card
+  // positions by :nth-child parity counts headings too and marks the wrong
+  // card. The group sizes are known here, so the generator decides.
+  const groupSizes = featured.map((project, index) =>
+    localizedProjectString(project, index, "category", language)
+  ).reduce((groups, category) => {
+    const last = groups.at(-1);
+    if (last && last.category === category) {
+      last.size += 1;
+    } else {
+      groups.push({ category, size: 1 });
+    }
+    return groups;
+  }, []);
+  let renderedCategory = null;
+  let positionInGroup = 0;
+  let currentGroup = -1;
+
+  return featured.map((project, index) => {
     const slug = projectString(project, index, "slug");
     const title = localizedProjectString(project, index, "title", language);
     const kind = localizedProjectString(project, index, "kind", language);
@@ -520,8 +552,21 @@ export function renderProjectFeaturedCards(projects, page, indentation = "") {
       .charAt(0)
       .toLocaleUpperCase("en-US");
 
-    const card = [
-      `${indentation}<article class="card" id="project-${slug}">`,
+    const category = localizedProjectString(project, index, "category", language);
+    const card = [];
+    if (category !== renderedCategory) {
+      renderedCategory = category;
+      currentGroup += 1;
+      positionInGroup = 0;
+      card.push(
+        `${indentation}<h3 class="featured-group">${escapeHtml(category)}</h3>`
+      );
+    }
+    positionInGroup += 1;
+    const groupSize = groupSizes[currentGroup].size;
+    const spansRow = positionInGroup === groupSize && groupSize % 2 === 1;
+    card.push(
+      `${indentation}<article class="card${spansRow ? " is-alone" : ""}" id="project-${slug}">`,
       `${indentation}  <div class="thumb" data-initial="${escapeHtml(initial)}" data-label="${escapeHtml(previewLabel)}">`,
       `${indentation}    <span class="badge">${escapeHtml(kind)}</span>`,
       `${indentation}    <picture>`,
@@ -530,12 +575,12 @@ export function renderProjectFeaturedCards(projects, page, indentation = "") {
       `${indentation}    </picture>`,
       `${indentation}  </div>`,
       `${indentation}  <div class="body">`,
-      `${indentation}    <h3>${escapeHtml(title)}</h3>`,
+      `${indentation}    <h4>${escapeHtml(title)}</h4>`,
       `${indentation}    <p>${escapeHtml(description)}</p>`,
       `${indentation}    <div class="tags">${stack.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}</div>`,
       `${indentation}    <div class="links">`,
       externalLinkMarkup(link, action, language, `${indentation}      `)
-    ];
+    );
     if (source) {
       card.push(externalLinkMarkup(source.url, source.text, language, `${indentation}      `));
     }

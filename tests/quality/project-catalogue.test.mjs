@@ -597,7 +597,7 @@ test("exactly five live projects expose verified public source actions", async (
   const indexHtml = await readUtf8("index.html");
   const scriptSource = await readUtf8("script.js");
   const expectedSources = new Map([
-    ["TechDB", "https://github.com/himiyosh/tech-dashboard"],
+    ["Tech Dashboard", "https://github.com/himiyosh/tech-dashboard"],
     ["AI Agents: What Is Happening Right Now?", "https://github.com/himiyosh/JoJo-AIAgent"],
     ["Git, Not Scary", "https://github.com/himiyosh/JoJo-Git"],
     ["Encode / Decode Tool", "https://github.com/himiyosh/encode-decode-tool"],
@@ -653,7 +653,7 @@ test("exactly eight public projects expose reviewed immutable proof citations", 
       }
     ],
     [
-      "TechDB",
+      "Tech Dashboard",
       {
         ja: "自動収集データは、秘密情報検査・型検査・ユニットテスト・Web build・ブラウザーE2Eを通過した場合だけ公開用コミットへ進みます。",
         en: "Collected data advances to a publication commit only after secret scanning, type checks, unit tests, the web build, and browser E2E pass.",
@@ -734,6 +734,8 @@ test("project runtime rejects incomplete, malformed, duplicate, and primary-equa
     {
       URL,
       localizedProjectFields: ["title", "description", "kind", "action", "imageAlt"],
+      // validateProject gates the category field on the featured/panel split.
+      FEATURED_COUNT: 6,
       projectSlugPattern: /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
       reservedProjectSlugs: new Set([
         "top",

@@ -638,7 +638,7 @@ test("cards and panel keep the prototype grid at every breakpoint", async () => 
   );
   assert.match(
     modernSource,
-    /\.featured \.card:last-child:nth-child\(odd\)\s*\{\s*grid-column:\s*1 \/ -1;/,
+    /\.featured \.card\.is-alone\s*\{\s*grid-column:\s*1 \/ -1;/,
     "A partnerless trailing card must span the featured grid rather than leave a half-empty row"
   );
   assert.match(
