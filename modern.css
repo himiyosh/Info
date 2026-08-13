@@ -1572,7 +1572,7 @@ html:lang(ja) .footer-meta a {
   }
 }
 
-/* --- Independent-review fixes -------------------------------------- */
+/* --- Review follow-up fixes ---------------------------------------- */
 
 /* Hover affordances must not stick on touch: these five were the only
  * ungated :hover rules in the file. */

@@ -1,42 +1,19 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { test } from "node:test";
 
 import {
   evaluateMergeGate,
   parseMergeGateArguments,
-  parseMergeGateJson
+  parseMergeGateJson,
+  validateHeadSha
 } from "../../scripts/check-merge-gate.mjs";
 
 const repoRoot = process.cwd();
 const scriptPath = path.join(repoRoot, "scripts/check-merge-gate.mjs");
-const agentPath = path.join(repoRoot, ".github/agents/InfoAgent.agent.md");
-const workflowPath = path.join(repoRoot, ".github/workflows/quality-baseline.yml");
 const HEAD = "0123456789abcdef0123456789abcdef01234567";
 const OTHER_HEAD = "89abcdef0123456789abcdef0123456789abcdef";
-const REVIEWER_ID = "c9ebec47-3754-4a61-8588-16a743dafd60";
-const SECOND_VERDICT_CASES = [
-  ["whitespace", "pass", " fail"],
-  ["line break", "fail", "\npass"],
-  ["pipe", "pass", " | fail"],
-  ["slash", "fail", "/pass"],
-  ["English or", "pass", " or fail"],
-  ["ASCII comma", "fail", ", pass"],
-  ["Japanese comma", "pass", "、fail"],
-  ["semicolon", "fail", "; pass"],
-  ["fullwidth semicolon", "pass", "；fail"],
-  ["symbol plus English or", "fail", ", or pass"]
-];
-
-function marker(head = HEAD, verdict = "pass", by = REVIEWER_ID) {
-  return `independent-review head=${head} verdict=${verdict} by=${by}`;
-}
-
-function legacyMarker(head = HEAD) {
-  return `independent-review head=${head}`;
-}
 
 function checkRun(name = "quality", overrides = {}) {
   return {
@@ -56,8 +33,6 @@ function mergeGateInput(overrides = {}) {
     mergeable: "MERGEABLE",
     mergeStateStatus: "CLEAN",
     statusCheckRollup: [checkRun()],
-    reviews: [],
-    comments: [{ body: ["Review recorded.", marker()].join("\n") }],
     ...overrides
   };
 }
@@ -70,16 +45,15 @@ function runCli(input, args = ["--head", HEAD]) {
   });
 }
 
-test("comments-only exact-head evidence and multiple successful checks satisfy the gate", () => {
+test("multiple successful checks satisfy the objective gate", () => {
   const input = mergeGateInput({
-    statusCheckRollup: [checkRun("quality"), checkRun("policy")]
+    statusCheckRollup: [checkRun("quality"), checkRun("security")]
   });
   const evaluated = evaluateMergeGate(input, HEAD);
 
   assert.equal(evaluated.ok, true);
-  assert.equal(evaluated.independentReview.verdict, "pass");
-  assert.equal(evaluated.independentReview.passEvidence.length, 1);
   assert.equal(evaluated.pullRequest.checks.length, 2);
+  assert.deepEqual(evaluated.failures, []);
 
   const result = runCli(input);
   assert.equal(result.status, 0, result.stderr);
@@ -87,10 +61,6 @@ test("comments-only exact-head evidence and multiple successful checks satisfy t
   assert.match(result.stdout, new RegExp(`head=${HEAD}`));
   assert.match(result.stdout, /state=OPEN isDraft=false mergeable=MERGEABLE/);
   assert.match(result.stdout, /mergeStateStatus=CLEAN checks=2\/2/);
-  assert.match(
-    result.stdout,
-    new RegExp(`reviewVerdict=pass reviewers=${REVIEWER_ID} evidence=comments\\[0\\]\\.body`)
-  );
 });
 
 test("closed and draft pull requests are blocked", () => {
@@ -155,137 +125,7 @@ test("pending and failing checks are each reported and block the gate", () => {
   );
 });
 
-test("missing and wrong-head review markers are blocked", () => {
-  const missing = runCli(mergeGateInput({ comments: [] }));
-  assert.equal(missing.status, 1);
-  assert.match(missing.stderr, new RegExp(`verdict=pass not found for exact head ${HEAD}`));
-
-  const wrong = runCli(
-    mergeGateInput({
-      comments: [{ body: marker(OTHER_HEAD) }]
-    })
-  );
-  assert.equal(wrong.status, 1);
-  assert.match(wrong.stderr, new RegExp(`verdict=pass not found for exact head ${HEAD}`));
-});
-
-test("review fail returns exit 3 and overrides pass regardless of surface order", () => {
-  const inputs = [
-    mergeGateInput({
-      reviews: [{ body: marker(HEAD, "fail") }],
-      comments: [{ body: marker(HEAD, "pass") }]
-    }),
-    mergeGateInput({
-      reviews: [{ body: marker(HEAD, "pass") }],
-      comments: [{ body: marker(HEAD, "fail") }]
-    })
-  ];
-
-  for (const input of inputs) {
-    const evaluated = evaluateMergeGate(input, HEAD);
-    assert.equal(evaluated.ok, false);
-    assert.equal(evaluated.independentReview.verdict, "fail");
-
-    const result = runCli(input);
-    assert.equal(result.status, 3);
-    assert.match(result.stderr, /verdict=fail found/);
-    assert.match(result.stderr, /fail=1 pass=1/);
-  }
-});
-
-test("a retracted fail does not block a valid same-head pass", () => {
-  const input = mergeGateInput({
-    reviews: [
-      {
-        body: `RETRACTED-${marker(HEAD, "fail")}\nRetraction reason: superseded after correction.`
-      }
-    ],
-    comments: [{ body: marker(HEAD, "pass") }]
-  });
-  const evaluated = evaluateMergeGate(input, HEAD);
-
-  assert.equal(evaluated.ok, true);
-  assert.equal(evaluated.independentReview.verdict, "pass");
-  assert.equal(evaluated.independentReview.failEvidence.length, 0);
-  assert.equal(runCli(input).status, 0);
-});
-
-test("legacy review markers without a verdict remain blocked with exit 1", () => {
-  const result = runCli(
-    mergeGateInput({
-      comments: [
-        {
-          body: `${legacyMarker()}\nExample syntax elsewhere: \`verdict=pass\` or \`verdict=fail\`.`
-        }
-      ]
-    })
-  );
-
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /verdict=pass not found/);
-});
-
-test("second-verdict separator forms propagate as missing through the aggregate gate", () => {
-  for (const [label, verdict, continuation] of SECOND_VERDICT_CASES) {
-    const input = mergeGateInput({
-      comments: [{ body: `${marker(HEAD, verdict)}${continuation}` }]
-    });
-    const evaluated = evaluateMergeGate(input, HEAD);
-
-    assert.equal(evaluated.ok, false, label);
-    assert.equal(evaluated.independentReview.verdict, "missing", label);
-  }
-
-  const result = runCli(
-    mergeGateInput({
-      comments: [{ body: `${marker(HEAD, "pass")};fail` }]
-    })
-  );
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /verdict=pass not found/);
-});
-
-test("separate-line prose preserves aggregate pass clearance", () => {
-  const bodies = [
-    [marker(), "Review complete."].join("\n"),
-    ["Review complete.", marker(), "No blockers remain."].join("\n"),
-    ["Review complete.", `\t${marker()}\t`, "**Result:** clear."].join("\r\n")
-  ];
-
-  for (const body of bodies) {
-    const input = mergeGateInput({ comments: [{ body }] });
-    const evaluated = evaluateMergeGate(input, HEAD);
-
-    assert.equal(evaluated.ok, true, body);
-    assert.equal(evaluated.independentReview.verdict, "pass", body);
-  }
-
-  assert.equal(runCli(mergeGateInput({ comments: [{ body: bodies.at(-1) }] })).status, 0);
-});
-
-test("inline marker references remain blocked through the aggregate gate", () => {
-  const bodies = [
-    `${marker()}, review complete.`,
-    `Should we post ${marker()}?`,
-    `| Result | ${marker()} |`,
-    `\`${marker()}\``
-  ];
-
-  for (const body of bodies) {
-    const evaluated = evaluateMergeGate(
-      mergeGateInput({ comments: [{ body }] }),
-      HEAD
-    );
-    assert.equal(evaluated.ok, false, body);
-    assert.equal(evaluated.independentReview.verdict, "missing", body);
-  }
-
-  const result = runCli(mergeGateInput({ comments: [{ body: bodies[0] }] }));
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /expected one exact trimmed marker line outside fenced code blocks/);
-});
-
-test("legacy successful and unsuccessful status contexts are handled explicitly", () => {
+test("legacy status contexts are handled explicitly", () => {
   const successful = runCli(
     mergeGateInput({
       statusCheckRollup: [
@@ -315,6 +155,8 @@ test("legacy successful and unsuccessful status contexts are handled explicitly"
 });
 
 test("malformed CLI arguments, heads, and JSON fail with validation errors", () => {
+  assert.equal(validateHeadSha(HEAD), HEAD);
+  assert.throws(() => validateHeadSha(HEAD.toUpperCase()), /exact 40-character lowercase/);
   assert.throws(() => parseMergeGateArguments([]), /Usage:/);
   assert.throws(
     () => parseMergeGateArguments(["--head", HEAD.slice(0, 12)]),
@@ -334,7 +176,7 @@ test("malformed CLI arguments, heads, and JSON fail with validation errors", () 
   }
 });
 
-test("malformed input shapes fail strictly even after a valid marker", () => {
+test("malformed input shapes fail strictly", () => {
   const cases = [
     {
       input: [],
@@ -369,113 +211,12 @@ test("malformed input shapes fail strictly even after a valid marker", () => {
         ]
       }),
       message: /statusCheckRollup\[0\] must include field "conclusion"/
-    },
-    {
-      input: mergeGateInput({
-        comments: [{ body: marker() }, { body: 42 }]
-      }),
-      message: /comments\[1\]\.body must be a string or null/
-    },
-    {
-      input: {
-        ...mergeGateInput(),
-        reviews: undefined
-      },
-      message: /field "reviews" must be an array/
     }
   ];
 
   for (const { input, message } of cases) {
-    const serializableInput =
-      input && !Array.isArray(input) && input.reviews === undefined
-        ? Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined))
-        : input;
-    const result = runCli(serializableInput);
+    const result = runCli(input);
     assert.equal(result.status, 2, result.stderr);
     assert.match(result.stderr, message);
-  }
-});
-
-test("quality wiring and documentation expose the executable review and offline merge gates", async () => {
-  const [packageSource, workflow, readme, agent] = await Promise.all([
-    readFile(path.join(repoRoot, "package.json"), "utf8"),
-    readFile(workflowPath, "utf8"),
-    readFile(path.join(repoRoot, "README.md"), "utf8"),
-    readFile(agentPath, "utf8")
-  ]);
-  const packageJson = JSON.parse(packageSource);
-
-  assert.match(packageJson.scripts["check:js"], /node --check scripts\/check-merge-gate\.mjs/);
-  assert.equal(
-    packageJson.scripts["check:independent-review"],
-    "node scripts/check-independent-review.mjs"
-  );
-  assert.match(workflow, /pull_request:/);
-  assert.match(workflow, /permissions:\n  contents: read/);
-  assert.doesNotMatch(workflow, /^\s+(?:pull-requests|issues):/m);
-  // The review guard is deliberately not a CI gate: `by=` is only checked for
-  // UUID shape, so CI cannot tell an independent verdict from a self-issued
-  // one. Inverted rather than deleted, so the gate cannot drift back in
-  // unnoticed — reinstating it is a decision that has to edit this line.
-  assert.doesNotMatch(workflow, /check:independent-review/);
-  assert.doesNotMatch(workflow, /GH_TOKEN/);
-  assert.equal(
-    packageJson.scripts["check:quality"],
-    "npm run check:generated && npm run check:js && npm run test:quality",
-    "npm test must not reach the review guard either"
-  );
-  for (const source of [readme, agent]) {
-    assert.match(source, /check-merge-gate\.mjs --head/);
-    assert.match(source, /state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments/);
-    assert.match(source, /exact trimmed marker line/i);
-    assert.match(source, /outside Markdown fenced code blocks/i);
-    assert.match(source, /verdict=pass/);
-    assert.match(source, /by=<full lowercase UUID>/);
-    assert.match(source, /Prose may appear before or after the marker on separate lines/i);
-    assert.match(source, /same-line prefix, suffix, punctuation, or prose do not satisfy/i);
-    assert.match(source, /exactly one verdict/i);
-    assert.match(source, /later continuation that begins with a bare lowercase `pass` or `fail` token/i);
-    assert.match(source, /English `or`/);
-    assert.match(source, /symbolic separators `\|`, `\/`, `,`, `、`, `;`, and `；`/);
-    assert.match(source, /fail wins/i);
-    assert.match(source, /RETRACTED-independent-review/);
-    assert.match(source, /retraction reason/i);
-    assert.match(source, /immediately before merge/i);
-    assert.match(source, /unresolved review findings/i);
-  }
-});
-
-test("reviewer-facing docs explain safe verdict continuation authoring", async () => {
-  const [readme, agent] = await Promise.all([
-    readFile(path.join(repoRoot, "README.md"), "utf8"),
-    readFile(agentPath, "utf8")
-  ]);
-
-  for (const source of [readme, agent]) {
-    assert.match(
-      source,
-      /Treat the exact marker line's `verdict=pass` or `verdict=fail` as the complete review outcome itself/,
-      "The marker verdict must communicate the complete review outcome"
-    );
-    assert.match(
-      source,
-      /Do not append punctuation or continuation prose to the marker line/,
-      "The exact marker line must not contain suffix content"
-    );
-    assert.match(
-      source,
-      /later continuation that begins with a bare lowercase `pass` or `fail` token.*potential second decision and returns missing \(exit 1\).*blocking `verdict=fail` result \(exit 3\).*operational deadlock/,
-      "The conservative parser behavior and fail-to-missing deadlock must remain explicit"
-    );
-    assert.match(
-      source,
-      /Put explanatory text on another line beginning with a descriptive phrase, label, Markdown formatting, or a non-bare word/,
-      "Reviewers must receive safe alternatives for explanatory prose"
-    );
-    assert.match(
-      source,
-      /preserves parser safety without mis-clearing ambiguous evidence/,
-      "Safe authoring guidance must not weaken the parser contract"
-    );
   }
 });

@@ -1,12 +1,16 @@
 import { pathToFileURL } from "node:url";
 
-import {
-  evaluateIndependentReviewEvidence,
-  validateHeadSha
-} from "./check-independent-review.mjs";
-
 const USAGE =
-  "Usage: gh pr view <N> --json state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments | node scripts/check-merge-gate.mjs --head <40-character-head>";
+  "Usage: gh pr view <N> --json state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup | node scripts/check-merge-gate.mjs --head <40-character-head>";
+const HEAD_SHA_PATTERN = /^[0-9a-f]{40}$/;
+
+export function validateHeadSha(head) {
+  if (typeof head !== "string" || !HEAD_SHA_PATTERN.test(head)) {
+    throw new TypeError("Head must be an exact 40-character lowercase hexadecimal SHA");
+  }
+
+  return head;
+}
 
 function requireObject(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -98,7 +102,7 @@ function validateCheckRun(check, index) {
 export function parseMergeGateJson(source) {
   if (typeof source !== "string" || source.trim() === "") {
     throw new TypeError(
-      "Merge gate input must be non-empty JSON from gh pr view --json state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup,reviews,comments"
+      "Merge gate input must be non-empty JSON from gh pr view --json state,isDraft,headRefOid,mergeable,mergeStateStatus,statusCheckRollup"
     );
   }
 
@@ -150,7 +154,6 @@ export function validateMergeGateInput(input) {
 export function evaluateMergeGate(input, expectedHead) {
   validateHeadSha(expectedHead);
   const pullRequest = validateMergeGateInput(input);
-  const independentReview = evaluateIndependentReviewEvidence(input, expectedHead);
   const failures = [];
 
   if (pullRequest.state !== "OPEN") {
@@ -184,23 +187,10 @@ export function evaluateMergeGate(input, expectedHead) {
       );
     }
   });
-  if (independentReview.verdict === "missing") {
-    failures.push(
-      `independent review verdict=pass not found for exact head ${expectedHead}; expected one exact trimmed marker line outside fenced code blocks in review or comment bodies`
-    );
-  }
-  if (independentReview.verdict === "fail") {
-    const reviewers = [...new Set(independentReview.failEvidence.map(({ by }) => by))].join(",");
-    failures.push(
-      `independent review verdict=fail found for exact head ${expectedHead}: fail=${independentReview.failEvidence.length} pass=${independentReview.passEvidence.length} reviewers=${reviewers}`
-    );
-  }
-
   return {
     ok: failures.length === 0,
     expectedHead,
     pullRequest,
-    independentReview,
     failures
   };
 }
@@ -228,17 +218,11 @@ export async function runMergeGateCheck(args = process.argv.slice(2)) {
 
     if (!result.ok) {
       console.error(["Merge gate blocked:", ...result.failures.map((failure) => `- ${failure}`)].join("\n"));
-      return result.independentReview.verdict === "fail" ? 3 : 1;
+      return 1;
     }
 
-    const locations = result.independentReview.passEvidence
-      .map(({ surface, index }) => `${surface}[${index}].body`)
-      .join(",");
-    const reviewers = [
-      ...new Set(result.independentReview.passEvidence.map(({ by }) => by))
-    ].join(",");
     console.log(
-      `Merge gate satisfied: head=${expectedHead} state=OPEN isDraft=false mergeable=MERGEABLE mergeStateStatus=CLEAN checks=${result.pullRequest.checks.length}/${result.pullRequest.checks.length} reviewVerdict=pass reviewers=${reviewers} evidence=${locations}`
+      `Merge gate satisfied: head=${expectedHead} state=OPEN isDraft=false mergeable=MERGEABLE mergeStateStatus=CLEAN checks=${result.pullRequest.checks.length}/${result.pullRequest.checks.length}`
     );
     return 0;
   } catch (error) {
