@@ -75,11 +75,6 @@ const nonNestedSpawnerFiles = [
       "runs scripts/generate-static-pages.mjs --check through a promisified execFile, so it has no direct call site"
   },
   {
-    path: "tests/quality/independent-review-evidence.test.mjs",
-    spawnCallCount: 2,
-    reason: "runs scripts/check-independent-review.mjs, the review-marker CLI"
-  },
-  {
     path: "tests/quality/merge-gate.test.mjs",
     spawnCallCount: 1,
     reason: "runs scripts/check-merge-gate.mjs, the snapshot merge-gate CLI"

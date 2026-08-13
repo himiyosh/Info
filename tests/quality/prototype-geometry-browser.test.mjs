@@ -18,7 +18,7 @@ import { chromeJourneyTimeoutMs } from "../helpers/chrome-journey-budget.mjs";
 // rules actually win in the cascade, on the real generated markup with the
 // real stylesheets. They exist because a leftover legacy layout rule once
 // squeezed About/Projects/Contact into a broken layout while every string
-// contract stayed green (PR #88 independent review, finding A).
+// contract stayed green (PR #88 review, finding A).
 const repoRoot = process.cwd();
 const desktopViewportWidth = 1280;
 const desktopViewportHeight = 900;
