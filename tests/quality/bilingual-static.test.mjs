@@ -208,6 +208,24 @@ test("checked-in language pages are deterministic outputs of one template and lo
   assert.match(packageJson.scripts["check:quality"], /npm run check:generated/);
 });
 
+test("Poko cameo uses a public in-page project path instead of the private source repository", async () => {
+  const [template, jaPage, enPage] = await Promise.all([
+    readUtf8("templates/index.html"),
+    readUtf8("index.html"),
+    readUtf8("en/index.html")
+  ]);
+
+  for (const source of [template, jaPage, enPage]) {
+    assert.doesNotMatch(source, /https:\/\/github\.com\/himiyosh\/poko-animation/);
+    assert.match(
+      source,
+      /<a\s+class="text-link poko-cameo-link"\s+href="#projects"\s*>/m
+    );
+  }
+  assert.match(jaPage, />公開プロジェクトを見る<\/span>/);
+  assert.match(enPage, />See the projects<\/span>/);
+});
+
 test("baked project markup escapes every inserted value and rejects bad slugs", () => {
   const hostile = (slug) => ({
     slug,

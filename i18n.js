@@ -58,7 +58,7 @@
         title: "なんでだろう？",
         description:
           "好奇心から始まる小さな制作。ポコと一緒に、問いを形にしています。",
-        link: "ポコの制作ノートを見る",
+        link: "公開プロジェクトを見る",
         caption: "Poko / 制作途中のデザイン候補"
       },
       projects: {
@@ -163,7 +163,7 @@
         title: "Why not?",
         description:
           "A small creative project that starts with curiosity — shaping questions with Poko.",
-        link: "See the Poko working notes",
+        link: "See the projects",
         caption: "Poko / design candidate under review"
       },
       projects: {
