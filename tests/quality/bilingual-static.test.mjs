@@ -209,10 +209,11 @@ test("checked-in language pages are deterministic outputs of one template and lo
 });
 
 test("Poko is a decorative multi-scene layer rather than a standalone content section", async () => {
-  const [template, jaPage, enPage] = await Promise.all([
+  const [template, jaPage, enPage, motion] = await Promise.all([
     readUtf8("templates/index.html"),
     readUtf8("index.html"),
-    readUtf8("en/index.html")
+    readUtf8("en/index.html"),
+    readUtf8("motion.js")
   ]);
 
   for (const source of [template, jaPage, enPage]) {
@@ -233,6 +234,12 @@ test("Poko is a decorative multi-scene layer rather than a standalone content se
     );
   }
   assert.doesNotMatch(JSON.stringify(translations), /"poko"\s*:/);
+  assert.match(motion, /querySelectorAll\("\[data-poko-peek\]"\)/);
+  assert.match(
+    motion,
+    /Math\.max\(\s*-1,\s*Math\.min\(\s*1,/s,
+    "scroll depth must remain clamped when the viewport changes transiently"
+  );
 });
 
 test("baked project markup escapes every inserted value and rejects bad slugs", () => {

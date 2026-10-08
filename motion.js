@@ -112,8 +112,16 @@
         if (rect.bottom < 0 || rect.top > viewportHeight) {
           return;
         }
-        // -1..1 across the viewport, 0 when the layer is centred.
-        const centre = (rect.top + rect.height / 2 - viewportHeight / 2) / viewportHeight;
+        // Clamp to the promised -1..1 range so transient viewport changes
+        // (including full-page capture and browser chrome resizing) cannot
+        // leave an outlier translate on a layer.
+        const centre = Math.max(
+          -1,
+          Math.min(
+            1,
+            (rect.top + rect.height / 2 - viewportHeight / 2) / viewportHeight
+          )
+        );
         const offset = centre * layer.distance * layer.factor * 2;
         layer.element.style.translate = `0 ${offset.toFixed(2)}px`;
       });
