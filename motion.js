@@ -71,6 +71,13 @@
         // mid-scroll and up to ~56px at the extremes. Pairing the sign keeps
         // each row rigid and still separates successive rows into two planes.
         factor: Math.floor(index / 2) % 2 === 0 ? 1 : -1
+      })),
+      ...[...document.querySelectorAll("[data-poko-peek]")].map((element, index) => ({
+        element,
+        depth: "--depth-poko-max",
+        fallback: 14,
+        factor: Number.parseFloat(element.dataset.pokoFactor) ||
+          (index % 2 === 0 ? 1 : -1)
       }))
     ].filter((layer) => layer.element);
 
@@ -85,7 +92,7 @@
     };
 
     layers.forEach((layer) => {
-      layer.distance = distanceFor(layer.depth, 5);
+      layer.distance = distanceFor(layer.depth, layer.fallback ?? 5);
     });
 
     let frame = null;

@@ -208,7 +208,7 @@ test("checked-in language pages are deterministic outputs of one template and lo
   assert.match(packageJson.scripts["check:quality"], /npm run check:generated/);
 });
 
-test("Poko cameo uses a public in-page project path instead of the private source repository", async () => {
+test("Poko is a decorative multi-scene layer rather than a standalone content section", async () => {
   const [template, jaPage, enPage] = await Promise.all([
     readUtf8("templates/index.html"),
     readUtf8("index.html"),
@@ -217,13 +217,22 @@ test("Poko cameo uses a public in-page project path instead of the private sourc
 
   for (const source of [template, jaPage, enPage]) {
     assert.doesNotMatch(source, /https:\/\/github\.com\/himiyosh\/poko-animation/);
-    assert.match(
-      source,
-      /<a\s+class="text-link poko-cameo-link"\s+href="#projects"\s*>/m
+    assert.doesNotMatch(source, /\bpoko-cameo\b/);
+    assert.doesNotMatch(source, /data-i18n="poko\./);
+    assert.equal(
+      [...source.matchAll(/\bdata-poko-peek\b/g)].length,
+      4,
+      "Poko must appear across four existing page moments"
+    );
+    assert.equal(
+      [...source.matchAll(
+        /<img\s+[^>]*src="[^"]*assets\/poko\/poko-review-v0\.2\.0-cutout\.png"[^>]*alt=""[^>]*>/g
+      )].length,
+      4,
+      "Every Poko appearance must use the local decorative cutout"
     );
   }
-  assert.match(jaPage, />公開プロジェクトを見る<\/span>/);
-  assert.match(enPage, />See the projects<\/span>/);
+  assert.doesNotMatch(JSON.stringify(translations), /"poko"\s*:/);
 });
 
 test("baked project markup escapes every inserted value and rejects bad slugs", () => {
