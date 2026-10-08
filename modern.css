@@ -2330,32 +2330,44 @@ html:lang(ja) .top-link {
 
 @media (max-width: 35rem) {
   .poko-peek--hero {
-    --poko-rest-x: 42%;
+    --poko-rest-x: 30%;
     --poko-rotate: -8deg;
     inset-block-start: 67%;
-    inset-inline-end: -4.5rem;
-    width: 8.5rem;
+    inset-inline-end: -3.3rem;
+    width: 9rem;
   }
 
   .poko-peek--threshold {
-    --poko-rest-x: -20%;
+    --poko-rest-x: -12%;
     inset-block-end: -2.2rem;
-    inset-inline-start: -2.3rem;
-    width: 6.5rem;
+    inset-inline-start: -1.7rem;
+    width: 7rem;
   }
 
   .poko-peek--projects {
-    --poko-rest-x: 42%;
-    inset-block-start: 15.5rem;
-    inset-inline-end: -4.7rem;
-    width: 7rem;
+    --poko-rest-x: 28%;
+    inset-block-start: 23rem;
+    inset-inline-end: -3.2rem;
+    width: 7.5rem;
   }
 
   .poko-peek--contact {
-    --poko-rest-x: -40%;
-    inset-block-end: -2rem;
-    inset-inline-start: -3.6rem;
-    width: 7rem;
+    --poko-rest-x: -36%;
+    inset-block-end: -2.8rem;
+    inset-inline-start: -2.2rem;
+    width: 7.5rem;
+  }
+
+  .hero:has(.hero-actions a:focus-visible) .poko-peek--hero {
+    --poko-rest-x: 24%;
+  }
+
+  .projects:has(a:focus-visible) .poko-peek--projects {
+    --poko-rest-x: 22%;
+  }
+
+  .contact:has(.contact-links a:focus-visible) .poko-peek--contact {
+    --poko-rest-x: -29%;
   }
 
   .row {
@@ -2375,6 +2387,20 @@ html:lang(ja) .top-link {
     overflow: visible;
     text-overflow: clip;
     white-space: normal;
+  }
+}
+
+@media (max-width: 22rem) {
+  .poko-peek--projects {
+    inset-block-start: 25rem;
+  }
+
+  .contact {
+    padding-block-end: calc(var(--space-4xl) + 4rem);
+  }
+
+  .poko-peek--contact {
+    inset-block-end: 0;
   }
 }
 

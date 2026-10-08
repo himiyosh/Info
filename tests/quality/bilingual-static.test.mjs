@@ -248,8 +248,28 @@ test("Poko is a decorative multi-scene layer rather than a standalone content se
   );
   assert.match(
     styles,
-    /@media \(max-width:\s*35rem\)\s*\{[\s\S]*?\.poko-peek--hero\s*\{[^}]*inset-block-start:\s*67%;[^}]*inset-inline-end:\s*-4\.5rem;[^}]*width:\s*8\.5rem;/,
-    "narrow hero Poko must clear the localized copy and CTA"
+    /@media \(max-width:\s*35rem\)\s*\{[\s\S]*?\.poko-peek--hero\s*\{[^}]*--poko-rest-x:\s*30%;[^}]*inset-block-start:\s*67%;[^}]*inset-inline-end:\s*-3\.3rem;[^}]*width:\s*9rem;/,
+    "narrow hero Poko must remain recognizable while clearing localized copy and CTA"
+  );
+  assert.match(
+    styles,
+    /\.poko-peek--threshold\s*\{[^}]*--poko-rest-x:\s*-12%;[^}]*inset-inline-start:\s*-1\.7rem;[^}]*width:\s*7rem;/,
+    "narrow threshold Poko must expose enough of the sideways pose to be noticed"
+  );
+  assert.match(
+    styles,
+    /\.poko-peek--projects\s*\{[^}]*--poko-rest-x:\s*28%;[^}]*inset-block-start:\s*23rem;[^}]*inset-inline-end:\s*-3\.2rem;[^}]*width:\s*7\.5rem;/,
+    "narrow Projects Poko must sit in the heading-to-card boundary with a recognizable upper body"
+  );
+  assert.match(
+    styles,
+    /\.poko-peek--contact\s*\{[^}]*--poko-rest-x:\s*-36%;[^}]*inset-block-end:\s*-2\.8rem;[^}]*inset-inline-start:\s*-2\.2rem;[^}]*width:\s*7\.5rem;/,
+    "narrow Contact Poko must remain visible below the contact controls"
+  );
+  assert.match(
+    styles,
+    /@media \(max-width:\s*22rem\)\s*\{[\s\S]*?\.poko-peek--projects\s*\{[^}]*inset-block-start:\s*25rem;[^}]*\}[\s\S]*?\.contact\s*\{[^}]*padding-block-end:\s*calc\(var\(--space-4xl\) \+ 4rem\);[^}]*\}[\s\S]*?\.poko-peek--contact\s*\{[^}]*inset-block-end:\s*0;/,
+    "the narrowest viewport must clear the Projects heading and reserve a full-body Contact Poko moment"
   );
 });
 
