@@ -268,8 +268,8 @@ test("Poko is a decorative multi-scene layer rather than a standalone content se
   );
   assert.match(
     styles,
-    /@media \(max-width:\s*22rem\)\s*\{[\s\S]*?\.poko-peek--projects\s*\{[^}]*inset-block-start:\s*25rem;[^}]*\}[\s\S]*?\.contact\s*\{[^}]*padding-block-end:\s*calc\(var\(--space-4xl\) \+ 4rem\);[^}]*\}[\s\S]*?\.poko-peek--contact\s*\{[^}]*inset-block-end:\s*0;/,
-    "the narrowest viewport must clear the Projects heading and reserve a full-body Contact Poko moment"
+    /@media \(max-width:\s*22rem\)\s*\{[\s\S]*?\.poko-peek--threshold\s*\{[^}]*inset-block-end:\s*-3\.1rem;[^}]*\}[\s\S]*?\.poko-peek--projects\s*\{[^}]*inset-block-start:\s*25rem;[^}]*\}[\s\S]*?\.contact\s*\{[^}]*padding-block-end:\s*calc\(var\(--space-4xl\) \+ 4rem\);[^}]*\}[\s\S]*?\.poko-peek--contact\s*\{[^}]*inset-block-end:\s*0;/,
+    "the narrowest viewport must clear the About copy and Projects heading while reserving a full-body Contact Poko moment"
   );
 });
 
