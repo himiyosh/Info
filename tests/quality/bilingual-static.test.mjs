@@ -209,11 +209,12 @@ test("checked-in language pages are deterministic outputs of one template and lo
 });
 
 test("Poko is a decorative multi-scene layer rather than a standalone content section", async () => {
-  const [template, jaPage, enPage, motion] = await Promise.all([
+  const [template, jaPage, enPage, motion, styles] = await Promise.all([
     readUtf8("templates/index.html"),
     readUtf8("index.html"),
     readUtf8("en/index.html"),
-    readUtf8("motion.js")
+    readUtf8("motion.js"),
+    readUtf8("modern.css")
   ]);
 
   for (const source of [template, jaPage, enPage]) {
@@ -239,6 +240,16 @@ test("Poko is a decorative multi-scene layer rather than a standalone content se
     motion,
     /Math\.max\(\s*-1,\s*Math\.min\(\s*1,/s,
     "scroll depth must remain clamped when the viewport changes transiently"
+  );
+  assert.match(
+    styles,
+    /\.poko-peek--hero\s*\{[^}]*--poko-rest-x:\s*50%;[^}]*inset-inline-end:\s*clamp\(-11rem,\s*-10vw,\s*-7rem\);/s,
+    "desktop hero Poko must stay edge-biased instead of covering the hero image"
+  );
+  assert.match(
+    styles,
+    /@media \(max-width:\s*35rem\)\s*\{[\s\S]*?\.poko-peek--hero\s*\{[^}]*inset-block-start:\s*67%;[^}]*inset-inline-end:\s*-4\.5rem;[^}]*width:\s*8\.5rem;/,
+    "narrow hero Poko must clear the localized copy and CTA"
   );
 });
 

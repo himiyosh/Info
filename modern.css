@@ -322,11 +322,11 @@ html:lang(ja) :where(.section-heading h2, .projects-intro h2, .contact h2) {
 }
 
 .poko-peek--hero {
-  --poko-rest-x: 42%;
+  --poko-rest-x: 50%;
   --poko-rest-y: 0%;
   --poko-rotate: -9deg;
   inset-block-start: 22%;
-  inset-inline-end: clamp(-8.5rem, -8vw, -4.5rem);
+  inset-inline-end: clamp(-11rem, -10vw, -7rem);
   width: clamp(11rem, 18vw, 17rem);
 }
 
@@ -369,21 +369,21 @@ html:lang(ja) :where(.section-heading h2, .projects-intro h2, .contact h2) {
 }
 
 .poko-peek--projects {
-  --poko-rest-x: 38%;
+  --poko-rest-x: 46%;
   --poko-rest-y: 0%;
   --poko-rotate: -12deg;
   inset-block-start: clamp(8.5rem, 14vw, 12rem);
-  inset-inline-end: clamp(-7.5rem, -7vw, -4rem);
+  inset-inline-end: clamp(-9.5rem, -9vw, -5.5rem);
   width: clamp(9rem, 15vw, 14rem);
   z-index: 0;
 }
 
 .poko-peek--contact {
-  --poko-rest-x: -43%;
+  --poko-rest-x: -48%;
   --poko-rest-y: 20%;
   --poko-rotate: 11deg;
-  inset-block-end: clamp(-3rem, -3vw, -1.5rem);
-  inset-inline-start: clamp(-7.5rem, -7vw, -4rem);
+  inset-block-end: clamp(-5rem, -4vw, -3rem);
+  inset-inline-start: clamp(-9rem, -9vw, -5.5rem);
   width: clamp(9rem, 14vw, 13rem);
   transform-origin: 50% 100%;
 }
@@ -391,34 +391,34 @@ html:lang(ja) :where(.section-heading h2, .projects-intro h2, .contact h2) {
 @media (hover: hover) and (pointer: fine) {
   .hero:has(.hero-actions a:hover) .poko-peek--hero,
   .hero:has(.hero-visual:hover) .poko-peek--hero {
-    --poko-rest-x: 30%;
+    --poko-rest-x: 43%;
     --poko-rotate: -4deg;
   }
 
   .projects:has(.card:hover, .row:hover) .poko-peek--projects {
-    --poko-rest-x: 24%;
+    --poko-rest-x: 39%;
     --poko-rotate: -7deg;
   }
 
   .contact:has(.contact-links a:hover) .poko-peek--contact {
-    --poko-rest-x: -31%;
+    --poko-rest-x: -41%;
     --poko-rest-y: 13%;
     --poko-rotate: 6deg;
   }
 }
 
 .hero:has(.hero-actions a:focus-visible) .poko-peek--hero {
-  --poko-rest-x: 30%;
+  --poko-rest-x: 43%;
   --poko-rotate: -4deg;
 }
 
 .projects:has(a:focus-visible) .poko-peek--projects {
-  --poko-rest-x: 24%;
+  --poko-rest-x: 39%;
   --poko-rotate: -7deg;
 }
 
 .contact:has(.contact-links a:focus-visible) .poko-peek--contact {
-  --poko-rest-x: -31%;
+  --poko-rest-x: -41%;
   --poko-rest-y: 13%;
   --poko-rotate: 6deg;
 }
@@ -2330,11 +2330,11 @@ html:lang(ja) .top-link {
 
 @media (max-width: 35rem) {
   .poko-peek--hero {
-    --poko-rest-x: 34%;
+    --poko-rest-x: 42%;
     --poko-rotate: -8deg;
-    inset-block-start: 54%;
-    inset-inline-end: -3rem;
-    width: 9rem;
+    inset-block-start: 67%;
+    inset-inline-end: -4.5rem;
+    width: 8.5rem;
   }
 
   .poko-peek--threshold {
@@ -2345,17 +2345,17 @@ html:lang(ja) .top-link {
   }
 
   .poko-peek--projects {
-    --poko-rest-x: 34%;
-    inset-block-start: 14rem;
-    inset-inline-end: -3rem;
-    width: 7.5rem;
+    --poko-rest-x: 42%;
+    inset-block-start: 15.5rem;
+    inset-inline-end: -4.7rem;
+    width: 7rem;
   }
 
   .poko-peek--contact {
-    --poko-rest-x: -34%;
-    inset-block-end: -1rem;
-    inset-inline-start: -2.8rem;
-    width: 7.5rem;
+    --poko-rest-x: -40%;
+    inset-block-end: -2rem;
+    inset-inline-start: -3.6rem;
+    width: 7rem;
   }
 
   .row {
