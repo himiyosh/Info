@@ -54,6 +54,13 @@
           "このサイトでは、個人で公開している小さなツールと実験を紹介しています。内容はすべて個人の見解です。",
         statement: "好奇心を、実用へ。"
       },
+      poko: {
+        title: "なんでだろう？",
+        description:
+          "好奇心から始まる小さな制作。ポコと一緒に、問いを形にしています。",
+        link: "ポコの制作ノートを見る",
+        caption: "Poko / 制作途中のデザイン候補"
+      },
       projects: {
         eyebrow: "WORKS — 09 PUBLIC PROJECTS",
         title: "小さな不便を、道具に。",
@@ -151,6 +158,13 @@
         site:
           "This site introduces small tools and experiments I publish independently. All content reflects my personal views.",
         statement: "Curiosity, put to work."
+      },
+      poko: {
+        title: "Why not?",
+        description:
+          "A small creative project that starts with curiosity — shaping questions with Poko.",
+        link: "See the Poko working notes",
+        caption: "Poko / design candidate under review"
       },
       projects: {
         eyebrow: "WORKS — 09 PUBLIC PROJECTS",

@@ -270,6 +270,85 @@ html:lang(ja) :where(.section-heading h2, .projects-intro h2, .contact h2) {
   margin: 0;
 }
 
+/* A small narrative bridge from curiosity to the work catalogue. The image
+ * is deliberately secondary: the bilingual copy and repository link remain
+ * useful when the candidate artwork is unavailable. */
+.poko-cameo {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(9rem, 16rem);
+  align-items: center;
+  gap: clamp(1.5rem, 5vw, 5rem);
+  padding-block: var(--space-xl);
+  border-block: var(--rule-hair) solid var(--color-rule);
+}
+
+.poko-cameo-copy {
+  min-width: 0;
+  max-width: 38rem;
+}
+
+.poko-cameo h2 {
+  max-width: 11ch;
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 4vw, 3.75rem);
+  font-weight: 650;
+  font-variation-settings: "wght" 650;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+html:lang(ja) .poko-cameo h2 {
+  font-family: var(--font-heading-ja);
+  font-weight: 700;
+}
+
+.poko-cameo-copy p {
+  max-width: 34em;
+  margin: var(--space-md) 0 0;
+  color: var(--color-muted);
+  overflow-wrap: anywhere;
+}
+
+.poko-cameo-link {
+  width: fit-content;
+  margin-block-start: var(--space-md);
+}
+
+.poko-cameo-link .ext {
+  margin-inline-start: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+}
+
+.poko-cameo-art {
+  justify-self: end;
+  width: min(100%, 13rem);
+  margin: 0;
+  text-align: end;
+}
+
+.poko-cameo-art img {
+  width: 100%;
+  height: auto;
+  max-height: 15rem;
+  object-fit: contain;
+  object-position: center bottom;
+  filter: saturate(0.92) contrast(1.02);
+}
+
+.poko-cameo-art figcaption {
+  margin-block-start: var(--space-2xs);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+}
+
 .projects {
   background: var(--color-transparent);
   color: var(--color-ink);
@@ -2153,6 +2232,10 @@ html:lang(ja) .top-link {
 
 /* The prototype's responsive row collapse. */
 @media (max-width: 60rem) {
+  .poko-cameo {
+    grid-template-columns: minmax(0, 1fr) 10rem;
+  }
+
   .row {
     grid-template-columns: 4.6rem 1fr auto;
     gap: 0.9rem;
@@ -2165,6 +2248,17 @@ html:lang(ja) .top-link {
 }
 
 @media (max-width: 35rem) {
+  .poko-cameo {
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+  }
+
+  .poko-cameo-art {
+    justify-self: center;
+    width: min(11rem, 54vw);
+    text-align: center;
+  }
+
   .row {
     grid-template-columns: 1fr auto;
     padding: 1rem 1.1rem;
@@ -2186,6 +2280,10 @@ html:lang(ja) .top-link {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .poko-cameo-art img {
+    transition: none !important;
+  }
+
   .card,
   .card .thumb img,
   .row,
@@ -2211,6 +2309,10 @@ html:lang(ja) .top-link {
 @media print {
   .site-backdrop,
   .panel-head .dots {
+    display: none !important;
+  }
+
+  .poko-cameo-art {
     display: none !important;
   }
 
