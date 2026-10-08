@@ -270,6 +270,159 @@ html:lang(ja) :where(.section-heading h2, .projects-intro h2, .contact h2) {
   margin: 0;
 }
 
+/* Poko is an environmental character, not a new content section. Each
+ * appearance occupies existing negative space and stays outside the
+ * accessibility and pointer trees. Width/height attributes reserve the image
+ * ratio even though every placement is absolute, so the layer cannot cause
+ * layout shift while the shared local asset decodes. */
+.poko-peek {
+  --poko-rest-x: 0%;
+  --poko-rest-y: 0%;
+  --poko-rotate: 0deg;
+  position: absolute;
+  z-index: 1;
+  width: clamp(6rem, 13vw, 13rem);
+  pointer-events: none;
+  user-select: none;
+  transform:
+    translate(var(--poko-rest-x), var(--poko-rest-y))
+    rotate(var(--poko-rotate));
+  transform-origin: 50% 82%;
+  transition: transform 420ms var(--ease-out);
+}
+
+.poko-peek img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 636 / 904;
+  filter:
+    saturate(0.94)
+    contrast(1.02)
+    drop-shadow(0 1.1rem 1.4rem color-mix(in oklab, var(--color-ink) 24%, transparent));
+}
+
+.hero-sticky,
+.projects .section-shell,
+.contact {
+  position: relative;
+  isolation: isolate;
+}
+
+.hero-stage,
+.hero-support,
+.hero-visual,
+.scroll-cue,
+.projects .section-head,
+.projects .featured,
+.projects .panel,
+.contact-panel {
+  position: relative;
+  z-index: 2;
+}
+
+.poko-peek--hero {
+  --poko-rest-x: 50%;
+  --poko-rest-y: 0%;
+  --poko-rotate: -9deg;
+  inset-block-start: 22%;
+  inset-inline-end: clamp(-11rem, -10vw, -7rem);
+  width: clamp(11rem, 18vw, 17rem);
+}
+
+.js-enabled .poko-peek--hero {
+  animation: poko-hero-arrive 760ms var(--ease-out) 180ms both;
+}
+
+@keyframes poko-hero-arrive {
+  from {
+    opacity: 0;
+    transform: translate(108%, 8%) rotate(-18deg);
+    clip-path: inset(0 0 0 76%);
+  }
+  to {
+    opacity: 1;
+    transform:
+      translate(var(--poko-rest-x), var(--poko-rest-y))
+      rotate(var(--poko-rotate));
+    clip-path: inset(0);
+  }
+}
+
+.poko-threshold {
+  position: relative;
+  z-index: 3;
+  width: min(1160px, 92vw);
+  height: 0;
+  margin-inline: auto;
+  pointer-events: none;
+}
+
+.poko-peek--threshold {
+  --poko-rest-x: -24%;
+  --poko-rest-y: 18%;
+  --poko-rotate: 73deg;
+  inset-block-end: -3.3rem;
+  inset-inline-start: clamp(-4.8rem, -5vw, -2.5rem);
+  width: clamp(7rem, 10vw, 9.5rem);
+  transform-origin: 50% 50%;
+}
+
+.poko-peek--projects {
+  --poko-rest-x: 46%;
+  --poko-rest-y: 0%;
+  --poko-rotate: -12deg;
+  inset-block-start: clamp(8.5rem, 14vw, 12rem);
+  inset-inline-end: clamp(-9.5rem, -9vw, -5.5rem);
+  width: clamp(9rem, 15vw, 14rem);
+  z-index: 0;
+}
+
+.poko-peek--contact {
+  --poko-rest-x: -48%;
+  --poko-rest-y: 20%;
+  --poko-rotate: 11deg;
+  inset-block-end: clamp(-5rem, -4vw, -3rem);
+  inset-inline-start: clamp(-9rem, -9vw, -5.5rem);
+  width: clamp(9rem, 14vw, 13rem);
+  transform-origin: 50% 100%;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero:has(.hero-actions a:hover) .poko-peek--hero,
+  .hero:has(.hero-visual:hover) .poko-peek--hero {
+    --poko-rest-x: 43%;
+    --poko-rotate: -4deg;
+  }
+
+  .projects:has(.card:hover, .row:hover) .poko-peek--projects {
+    --poko-rest-x: 39%;
+    --poko-rotate: -7deg;
+  }
+
+  .contact:has(.contact-links a:hover) .poko-peek--contact {
+    --poko-rest-x: -41%;
+    --poko-rest-y: 13%;
+    --poko-rotate: 6deg;
+  }
+}
+
+.hero:has(.hero-actions a:focus-visible) .poko-peek--hero {
+  --poko-rest-x: 43%;
+  --poko-rotate: -4deg;
+}
+
+.projects:has(a:focus-visible) .poko-peek--projects {
+  --poko-rest-x: 39%;
+  --poko-rotate: -7deg;
+}
+
+.contact:has(.contact-links a:focus-visible) .poko-peek--contact {
+  --poko-rest-x: -41%;
+  --poko-rest-y: 13%;
+  --poko-rotate: 6deg;
+}
+
 .projects {
   background: var(--color-transparent);
   color: var(--color-ink);
@@ -409,6 +562,12 @@ html:lang(ja) .footer-meta a {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .poko-peek {
+    animation: none !important;
+    translate: none !important;
+    transition: none !important;
+  }
+
   .hero-sticky {
     opacity: 1 !important;
     transform: none !important;
@@ -467,6 +626,11 @@ html:lang(ja) .footer-meta a {
   .hero-actions,
   .hero-visual,
   .footer-meta > a {
+    display: none !important;
+  }
+
+  .poko-peek,
+  .poko-threshold {
     display: none !important;
   }
 
@@ -2165,6 +2329,47 @@ html:lang(ja) .top-link {
 }
 
 @media (max-width: 35rem) {
+  .poko-peek--hero {
+    --poko-rest-x: 30%;
+    --poko-rotate: -8deg;
+    inset-block-start: 67%;
+    inset-inline-end: -3.3rem;
+    width: 9rem;
+  }
+
+  .poko-peek--threshold {
+    --poko-rest-x: -12%;
+    inset-block-end: -2.2rem;
+    inset-inline-start: -1.7rem;
+    width: 7rem;
+  }
+
+  .poko-peek--projects {
+    --poko-rest-x: 28%;
+    inset-block-start: 23rem;
+    inset-inline-end: -3.2rem;
+    width: 7.5rem;
+  }
+
+  .poko-peek--contact {
+    --poko-rest-x: -36%;
+    inset-block-end: -2.8rem;
+    inset-inline-start: -2.2rem;
+    width: 7.5rem;
+  }
+
+  .hero:has(.hero-actions a:focus-visible) .poko-peek--hero {
+    --poko-rest-x: 24%;
+  }
+
+  .projects:has(a:focus-visible) .poko-peek--projects {
+    --poko-rest-x: 22%;
+  }
+
+  .contact:has(.contact-links a:focus-visible) .poko-peek--contact {
+    --poko-rest-x: -29%;
+  }
+
   .row {
     grid-template-columns: 1fr auto;
     padding: 1rem 1.1rem;
@@ -2182,6 +2387,24 @@ html:lang(ja) .top-link {
     overflow: visible;
     text-overflow: clip;
     white-space: normal;
+  }
+}
+
+@media (max-width: 22rem) {
+  .poko-peek--threshold {
+    inset-block-end: -3.1rem;
+  }
+
+  .poko-peek--projects {
+    inset-block-start: 25rem;
+  }
+
+  .contact {
+    padding-block-end: calc(var(--space-4xl) + 4rem);
+  }
+
+  .poko-peek--contact {
+    inset-block-end: 0;
   }
 }
 

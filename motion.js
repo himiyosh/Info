@@ -71,6 +71,13 @@
         // mid-scroll and up to ~56px at the extremes. Pairing the sign keeps
         // each row rigid and still separates successive rows into two planes.
         factor: Math.floor(index / 2) % 2 === 0 ? 1 : -1
+      })),
+      ...[...document.querySelectorAll("[data-poko-peek]")].map((element, index) => ({
+        element,
+        depth: "--depth-poko-max",
+        fallback: 14,
+        factor: Number.parseFloat(element.dataset.pokoFactor) ||
+          (index % 2 === 0 ? 1 : -1)
       }))
     ].filter((layer) => layer.element);
 
@@ -85,7 +92,7 @@
     };
 
     layers.forEach((layer) => {
-      layer.distance = distanceFor(layer.depth, 5);
+      layer.distance = distanceFor(layer.depth, layer.fallback ?? 5);
     });
 
     let frame = null;
@@ -105,8 +112,16 @@
         if (rect.bottom < 0 || rect.top > viewportHeight) {
           return;
         }
-        // -1..1 across the viewport, 0 when the layer is centred.
-        const centre = (rect.top + rect.height / 2 - viewportHeight / 2) / viewportHeight;
+        // Clamp to the promised -1..1 range so transient viewport changes
+        // (including full-page capture and browser chrome resizing) cannot
+        // leave an outlier translate on a layer.
+        const centre = Math.max(
+          -1,
+          Math.min(
+            1,
+            (rect.top + rect.height / 2 - viewportHeight / 2) / viewportHeight
+          )
+        );
         const offset = centre * layer.distance * layer.factor * 2;
         layer.element.style.translate = `0 ${offset.toFixed(2)}px`;
       });

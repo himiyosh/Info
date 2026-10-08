@@ -208,6 +208,71 @@ test("checked-in language pages are deterministic outputs of one template and lo
   assert.match(packageJson.scripts["check:quality"], /npm run check:generated/);
 });
 
+test("Poko is a decorative multi-scene layer rather than a standalone content section", async () => {
+  const [template, jaPage, enPage, motion, styles] = await Promise.all([
+    readUtf8("templates/index.html"),
+    readUtf8("index.html"),
+    readUtf8("en/index.html"),
+    readUtf8("motion.js"),
+    readUtf8("modern.css")
+  ]);
+
+  for (const source of [template, jaPage, enPage]) {
+    assert.doesNotMatch(source, /https:\/\/github\.com\/himiyosh\/poko-animation/);
+    assert.doesNotMatch(source, /\bpoko-cameo\b/);
+    assert.doesNotMatch(source, /data-i18n="poko\./);
+    assert.equal(
+      [...source.matchAll(/\bdata-poko-peek\b/g)].length,
+      4,
+      "Poko must appear across four existing page moments"
+    );
+    assert.equal(
+      [...source.matchAll(
+        /<img\s+[^>]*src="[^"]*assets\/poko\/poko-review-v0\.2\.0-cutout\.png"[^>]*alt=""[^>]*>/g
+      )].length,
+      4,
+      "Every Poko appearance must use the local decorative cutout"
+    );
+  }
+  assert.doesNotMatch(JSON.stringify(translations), /"poko"\s*:/);
+  assert.match(motion, /querySelectorAll\("\[data-poko-peek\]"\)/);
+  assert.match(
+    motion,
+    /Math\.max\(\s*-1,\s*Math\.min\(\s*1,/s,
+    "scroll depth must remain clamped when the viewport changes transiently"
+  );
+  assert.match(
+    styles,
+    /\.poko-peek--hero\s*\{[^}]*--poko-rest-x:\s*50%;[^}]*inset-inline-end:\s*clamp\(-11rem,\s*-10vw,\s*-7rem\);/s,
+    "desktop hero Poko must stay edge-biased instead of covering the hero image"
+  );
+  assert.match(
+    styles,
+    /@media \(max-width:\s*35rem\)\s*\{[\s\S]*?\.poko-peek--hero\s*\{[^}]*--poko-rest-x:\s*30%;[^}]*inset-block-start:\s*67%;[^}]*inset-inline-end:\s*-3\.3rem;[^}]*width:\s*9rem;/,
+    "narrow hero Poko must remain recognizable while clearing localized copy and CTA"
+  );
+  assert.match(
+    styles,
+    /\.poko-peek--threshold\s*\{[^}]*--poko-rest-x:\s*-12%;[^}]*inset-inline-start:\s*-1\.7rem;[^}]*width:\s*7rem;/,
+    "narrow threshold Poko must expose enough of the sideways pose to be noticed"
+  );
+  assert.match(
+    styles,
+    /\.poko-peek--projects\s*\{[^}]*--poko-rest-x:\s*28%;[^}]*inset-block-start:\s*23rem;[^}]*inset-inline-end:\s*-3\.2rem;[^}]*width:\s*7\.5rem;/,
+    "narrow Projects Poko must sit in the heading-to-card boundary with a recognizable upper body"
+  );
+  assert.match(
+    styles,
+    /\.poko-peek--contact\s*\{[^}]*--poko-rest-x:\s*-36%;[^}]*inset-block-end:\s*-2\.8rem;[^}]*inset-inline-start:\s*-2\.2rem;[^}]*width:\s*7\.5rem;/,
+    "narrow Contact Poko must remain visible below the contact controls"
+  );
+  assert.match(
+    styles,
+    /@media \(max-width:\s*22rem\)\s*\{[\s\S]*?\.poko-peek--threshold\s*\{[^}]*inset-block-end:\s*-3\.1rem;[^}]*\}[\s\S]*?\.poko-peek--projects\s*\{[^}]*inset-block-start:\s*25rem;[^}]*\}[\s\S]*?\.contact\s*\{[^}]*padding-block-end:\s*calc\(var\(--space-4xl\) \+ 4rem\);[^}]*\}[\s\S]*?\.poko-peek--contact\s*\{[^}]*inset-block-end:\s*0;/,
+    "the narrowest viewport must clear the About copy and Projects heading while reserving a full-body Contact Poko moment"
+  );
+});
+
 test("baked project markup escapes every inserted value and rejects bad slugs", () => {
   const hostile = (slug) => ({
     slug,
